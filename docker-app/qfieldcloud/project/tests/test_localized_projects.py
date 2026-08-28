@@ -60,10 +60,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         return filenames
 
     def test_shared_datasets_project_id(self):
-        """
-        Verifies that the localized dataset project ID is correctly returned
-        as part of the main project's API metadata.
-        """
+        """Verifies that the localized dataset project ID is correctly returned as part of the main project's API metadata."""
         data = self.client.get(f"/api/v1/projects/{self.project1.id}/").json()
         self.assertEqual(
             data.get("shared_datasets_project_id"),
@@ -71,10 +68,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         )
 
     def test_localized_datasets_property(self):
-        """
-        Uploads a QGIS project with references to localized layers,
-        and checks that two such layers are detected in the project metadata.
-        """
+        """Uploads a QGIS project with references to localized layers, and checks that two such layers are detected in the project metadata."""
         resp = self._upload_file(
             self.user1,
             self.project1,
@@ -98,8 +92,8 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         self.assertEqual(len(localized_layers), 2)
 
     def test_localized_layers_and_missing_localized_layers(self):
-        """
-        Tests the detection of available and missing localized layers:
+        """Tests the detection of available and missing localized layers.
+
         - Uploads one localized file and a QGIS project referencing two
         - Verifies which layers are marked as missing
         - Uploads the second file and confirms only one remains missing
@@ -171,7 +165,8 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         self.assertEqual(len(missing_localized_layers_filenames), 1)
 
     def test_no_missing_localized_layers(self):
-        """
+        """Checks for missing localized layers.
+
         Ensures that when all localized layers referenced in the QGIS project
         are available in the localized datasets project, the list of missing
         localized layers is empty.
@@ -209,10 +204,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         self.assertListEqual(project.get_missing_localized_layers(), [])
 
     def test_get_missing_localized_layers_without_localized_project(self):
-        """
-        Verifies that when no localized datasets project is configured,
-        all localized layers are reported as missing.
-        """
+        """Verifies that when no localized datasets project is configured, all localized layers are reported as missing."""
         token = AuthToken.objects.get_or_create(user=self.user2)[0]
         self.client.credentials(HTTP_AUTHORIZATION="Token " + token.key)
 

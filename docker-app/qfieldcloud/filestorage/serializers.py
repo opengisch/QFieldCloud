@@ -81,13 +81,13 @@ class FileSerializer(serializers.ModelSerializer):
     )
 
     def get_md5sum(self, obj: File) -> str:
-        return cast(FileVersion, obj.latest_version).etag
+        return cast("FileVersion", obj.latest_version).etag
 
     def get_sha256(self, obj: File) -> str:
-        return cast(FileVersion, obj.latest_version).sha256sum.hex()
+        return cast("FileVersion", obj.latest_version).sha256sum.hex()
 
     def get_size(self, obj: File) -> int:
-        return cast(FileVersion, obj.latest_version).size
+        return cast("FileVersion", obj.latest_version).size
 
     class Meta:
         model = File

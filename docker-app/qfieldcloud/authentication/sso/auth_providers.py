@@ -1,5 +1,3 @@
-from typing import Optional
-
 from allauth.socialaccount.adapter import get_adapter
 from allauth.socialaccount.providers.base import Provider
 from allauth.socialaccount.providers.oauth2.views import OAuth2Adapter
@@ -31,7 +29,7 @@ def get_credentials_provider() -> dict[str, str]:
 
 def get_oauth2_provider(
     provider: Provider,
-    request: Optional[HttpRequest] = None,
+    request: HttpRequest | None = None,
 ) -> dict:
     oauth2_adapter = provider.get_oauth2_adapter(request)
 

@@ -14,7 +14,6 @@ def is_virtual_layer_with_embedded_layers(datasource: str) -> bool:
     - "?query=SELECT%20*%20FROM%20points"
     - "?layer=ogr:%2Fhome%2Fuser%2Ftestdata.gpkg%7Clayername%3Dpoints_xy:points_xy:&layer=ogr:%2Fhome%2Fuser%2Ftestdata.gpkg%7Clayername%3Dpoints_xy:points_xy:&query=SELECT%20*%20FROM%20points"
     """
-
     url = urlparse(datasource)
     query = parse_qs(url.query)
 
@@ -24,8 +23,7 @@ def is_virtual_layer_with_embedded_layers(datasource: str) -> bool:
 
 
 def has_online_vector_data(project: Project) -> bool:
-    """Returns `False` if the project has no associated `QgisProject`, or no online vector layers"""
-
+    """Returns `False` if the project has no associated `QgisProject`, or no online vector layers."""
     qgis_project = getattr(project, "qgis_project", None)
 
     if qgis_project is None:
@@ -68,7 +66,6 @@ def get_qgis_major_version(version: str) -> int:
     - "3.30.0-rc1" -> 3
     - "4.0.0" -> 4
     """
-
     try:
         major_version_str = version.split(".")[0]
         major_version = int(major_version_str)

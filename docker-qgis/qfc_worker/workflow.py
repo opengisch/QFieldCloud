@@ -12,10 +12,10 @@ from typing import IO, Any
 from qfieldcloud_sdk import sdk
 
 from qfc_worker.exceptions import (
-    InvalidXmlFileException,
-    UnableToContinueException,
-    WorkflowModificationException,
-    WorkflowValidationException,
+    InvalidXmlFileError,
+    UnableToContinueError,
+    WorkflowModificationError,
+    WorkflowValidationError,
 )
 from qfc_worker.utils import PROJECT_DOWNLOAD_DIR
 
@@ -40,7 +40,7 @@ class Workflow:
 
     def validate(self):
         if not self.steps:
-            raise WorkflowValidationException(
+            raise WorkflowValidationError(
                 f'The workflow "{self.id}" should contain at least one step.'
             )
 
@@ -49,7 +49,7 @@ class Workflow:
         for step in self.steps:
             # check step id uniqueness
             if step.id in step_ids:
-                raise WorkflowValidationException(
+                raise WorkflowValidationError(
                     f'The workflow "{self.id}" has duplicated step id "{step.id}".'
                 )
 
@@ -63,12 +63,12 @@ class Workflow:
                     param.kind != inspect.Parameter.KEYWORD_ONLY
                     and param.kind != inspect.Parameter.POSITIONAL_OR_KEYWORD
                 ):
-                    raise WorkflowValidationException(
+                    raise WorkflowValidationError(
                         f'The workflow "{self.id}" method "{step.method.__name__}" has a non keyword parameter "{param.name}".'
                     )
 
                 if param.default == inspect._empty and param.name not in step.arguments:
-                    raise WorkflowValidationException(
+                    raise WorkflowValidationError(
                         f'The workflow "{self.id}" method "{step.method.__name__}" has an argument "{param.name}" without default value that is not available in the step definition "arguments", expected one of {list(step.arguments.keys())}.'
                     )
 
@@ -78,17 +78,17 @@ class Workflow:
             for name, value in step.arguments.items():
                 if isinstance(value, StepOutput):
                     if value.step_id not in all_step_returns:
-                        raise WorkflowValidationException(
+                        raise WorkflowValidationError(
                             f'The workflow "{self.id}" has step "{step.id}" that requires a non-existing step return value "{value.step_id}.{value.return_name}" for argument "{name}". Previous step with that id does not exist.'
                         )
 
                     if value.return_name not in all_step_returns[value.step_id]:
-                        raise WorkflowValidationException(
+                        raise WorkflowValidationError(
                             f'The workflow "{self.id}" has step "{step.id}" that requires a non-existing step return value "{value.step_id}.{value.return_name}" for argument "{name}". Previous step with that id found, but returns no value with such name.'
                         )
 
                 if name not in param_names:
-                    raise WorkflowValidationException(
+                    raise WorkflowValidationError(
                         f'The workflow "{self.id}" method "{step.method.__name__}" receives a parameter "{name}" that is not available in the method definition, expected one of {param_names}.'
                     )
 
@@ -111,7 +111,7 @@ class Workflow:
         if (before_id is None and after_id is None) or (
             before_id is not None and after_id is not None
         ):
-            raise WorkflowModificationException(
+            raise WorkflowModificationError(
                 "Either before_id or after_id must be provided, but not both."
             )
 
@@ -119,7 +119,7 @@ class Workflow:
 
         if before_id is not None:
             if before_id not in self._step_idx_by_id:
-                raise WorkflowModificationException(
+                raise WorkflowModificationError(
                     f'Step with id "{before_id}" not found.'
                 )
 
@@ -127,14 +127,12 @@ class Workflow:
 
         if after_id is not None:
             if after_id not in self._step_idx_by_id:
-                raise WorkflowModificationException(
-                    f'Step with id "{after_id}" not found.'
-                )
+                raise WorkflowModificationError(f'Step with id "{after_id}" not found.')
 
             insert_idx = self._step_idx_by_id[after_id] + 1
 
         if insert_idx == -1:
-            raise WorkflowModificationException("Invalid insert index computed.")
+            raise WorkflowModificationError("Invalid insert index computed.")
 
         self.steps.insert(insert_idx, step)
         self._step_idx_by_id = self._get_step_idx_by_id(self.steps)
@@ -224,7 +222,7 @@ def run_workflow(
     workflow: Workflow,
     feedback_filename: Path | IO | None,
 ) -> dict[str, Any]:
-    """Executes the steps required to run a task and return structured feedback from the execution
+    """Executes the steps required to run a task and return structured feedback from the execution.
 
     Each step has a method that is executed.
     Method may take arguments as defined in `arguments` and ordered in `arg_names`.
@@ -290,9 +288,9 @@ def run_workflow(
                 feedback["error_type"] = "API_OTHER"
         elif isinstance(err, FileNotFoundError):
             feedback["error_type"] = "FILE_NOT_FOUND"
-        elif isinstance(err, InvalidXmlFileException):
+        elif isinstance(err, InvalidXmlFileError):
             feedback["error_type"] = "INVALID_PROJECT_FILE"
-        elif isinstance(err, UnableToContinueException):
+        elif isinstance(err, UnableToContinueError):
             feedback["error_type"] = "UNABLE_TO_CONTINUE"
         else:
             feedback["error_type"] = "UNKNOWN"

@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 def get_subscription_model() -> "Subscription":
     model = apps.get_model(settings.QFIELDCLOUD_SUBSCRIPTION_MODEL)
-    return cast(Subscription, model)
+    return cast("Subscription", model)
 
 
 class SubscriptionStatus(models.TextChoices):
@@ -61,7 +61,9 @@ class Plan(models.Model):
     @classmethod
     def get_or_create_default(cls) -> Self:
         """Returns the default plan, creating one if none exists.
-        To be used as a default value for UserAccount.type"""
+
+        To be used as a default value for UserAccount.type
+        """
         if not cls.objects.exists():
             with transaction.atomic():
                 cls.objects.create(
@@ -95,10 +97,7 @@ class Plan(models.Model):
 
     @classmethod
     def get_plans_for_user(cls, user: User, user_type: User.Type) -> QuerySet[Self]:
-        """
-        Return all public plans of the given `user_type`, filtering out
-        trial plans for organizations when no trials remain.
-        """
+        """Return all public plans of the given `user_type`, filtering out trial plans for organizations when no trials remain."""
         filters = {
             "is_public": True,
             "user_type": user_type,
@@ -491,8 +490,8 @@ class Package(models.Model):
 
 class SubscriptionQuerySet(models.QuerySet):
     def current(self):
-        """
-        Returns the subscriptions which are relevant to the current moment.
+        """Returns the subscriptions which are relevant to the current moment.
+
         NOTE Some of the subscriptions in the queryset might not be active, but cancelled or drafted.
         """
         now = timezone.now()
@@ -727,7 +726,7 @@ class AbstractSubscription(models.Model):
 
     @property
     def active_users(self):
-        "Returns the queryset of active users for running stripe billing period or None."
+        """Returns the queryset of active users for running stripe billing period or None."""
         if not self.account.user.is_organization:
             return None
 
@@ -885,7 +884,7 @@ class AbstractSubscription(models.Model):
         except cls.DoesNotExist:
             subscription = cls.create_default_plan_subscription(account)
 
-        return cast(Self, subscription)
+        return cast("Self", subscription)
 
     @classmethod
     def get_upcoming_subscription(cls, account: UserAccount) -> Self | None:
@@ -907,6 +906,7 @@ class AbstractSubscription(models.Model):
 
         Args:
             subscription: subscription to be updated
+            **kwargs: additional keyword arguments
 
         Returns:
             the same as the subscription argument
@@ -1086,10 +1086,7 @@ class AbstractSubscription(models.Model):
         return trial_subscription_obj, regular_subscription_obj
 
     def clean(self):
-        """
-        Validates that the subscription's active period does not overlap with
-        any other active subscriptions for the same account.
-        """
+        """Validates that the subscription's active period does not overlap with any other active subscriptions for the same account."""
         # If there is no `active_since`, nothing to check.
         if not self.active_since:
             return

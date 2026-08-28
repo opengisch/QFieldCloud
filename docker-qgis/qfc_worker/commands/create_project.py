@@ -3,11 +3,10 @@ import enum
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TypedDict, cast
+from typing import TYPE_CHECKING, TypedDict, cast
 from uuid import UUID
 
 from convert2qgis.errors import Convert2QgisBaseError
-from convert2qgis.xlsform2qgis.type_defs import ConverterSettings
 from convert2qgis.xlsform2qgis.xlsform2qgis import (
     convert_xlsform_to_qgis_project,
 )
@@ -36,10 +35,13 @@ from qfc_worker.utils import (
 from qfc_worker.workflow import (
     Step,
     StepOutput,
-    UnableToContinueException,
+    UnableToContinueError,
     WorkDirPath,
     Workflow,
 )
+
+if TYPE_CHECKING:
+    from convert2qgis.xlsform2qgis.type_defs import ConverterSettings
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +80,7 @@ class BasemapStyle(str, enum.Enum):
 
 @dataclass
 class ProjectSeedSettings:
-    schemaId: SchemaId
+    schemaId: SchemaId  # noqa: N815
     xlsform: XlsformConfigDict | None = None
     basemaps: list[BasemapConfig] = field(default_factory=list)
 
@@ -163,7 +165,7 @@ def _create_project_from_xlsform(
 
     output_dir = Path(tmp_project_dir).joinpath("files")
     converter_settings = cast(
-        ConverterSettings,
+        "ConverterSettings",
         {
             "title": project_seed.name,
             "show_groups_as_tabs": project_seed.settings.xlsform["show_groups_as_tabs"],
@@ -185,7 +187,7 @@ def _create_project_from_xlsform(
             "Failed to convert XLSForm to QGIS project: %s", humanize_error(err)
         )
 
-        raise UnableToContinueException(
+        raise UnableToContinueError(
             reason="Unable to continue project creation, this job will be cancelled and have failed status!",
         ) from err
 

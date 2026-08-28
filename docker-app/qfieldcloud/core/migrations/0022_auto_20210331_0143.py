@@ -5,7 +5,7 @@ from django.db.models.aggregates import Count
 
 
 class Migration(migrations.Migration):
-    def forwards_func(apps, schema_editor):
+    def forwards_func(apps, schema_editor):  # noqa: N805
         OrganizationMember = apps.get_model("core", "OrganizationMember")
 
         duplicated_members_data = (

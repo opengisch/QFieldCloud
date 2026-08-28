@@ -658,8 +658,7 @@ class QfcTestCase(APITransactionTestCase):
                     )
 
     def test_private_project_memberships(self):
-        """Tests for QF-1553 - limit collaboration on private projects"""
-
+        """Tests for QF-1553 - limit collaboration on private projects."""
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
         # Create a project with a collaborator
@@ -673,11 +672,11 @@ class QfcTestCase(APITransactionTestCase):
 
         self.client.raise_request_exception = True
 
-        def assertNoRole():
+        def assertNoRole():  # noqa: N802
             response = self.client.get(apiurl, follow=True)
             self.assertEqual(response.status_code, 403)
 
-        def assertRole(role, origin):
+        def assertRole(role, origin):  # noqa: N802
             response = self.client.get(apiurl, follow=True)
             self.assertEqual(response.status_code, 200)
             json = response.json()
@@ -1173,7 +1172,6 @@ class QfcTestCase(APITransactionTestCase):
 
     def test_restricted_data_last_updated_at_on_file_upload(self):
         """Test that restricted_data_last_updated_at is updated when restricted files are uploaded."""
-
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
         # Create a project
@@ -1231,7 +1229,6 @@ class QfcTestCase(APITransactionTestCase):
 
     def test_restricted_data_last_updated_at_on_file_delete(self):
         """Test that restricted_data_last_updated_at is updated when restricted files are deleted."""
-
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
         # Create a project

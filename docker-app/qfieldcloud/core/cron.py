@@ -21,7 +21,7 @@ class DeleteExpiredInvitationsJob(CronJobBase):
     code = "qfieldcloud.delete_expired_confirmations"
 
     def do(self):
-        Invitation = get_invitation_model()
+        Invitation = get_invitation_model()  # noqa: N806
         Invitation.objects.delete_expired_confirmations()
 
 
@@ -30,7 +30,7 @@ class ResendFailedInvitationsJob(CronJobBase):
     code = "qfieldcloud.resend_failed_invitations"
 
     def do(self):
-        Invitation = get_invitation_model()
+        Invitation = get_invitation_model()  # noqa: N806
 
         invitation_emails = []
         for invitation in Invitation.objects.filter(sent__isnull=True):

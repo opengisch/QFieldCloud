@@ -7,9 +7,7 @@ from rest_framework import pagination, response
 
 
 def parameterize_pagination(_class: type) -> Callable:
-    """
-    Set as class attributes the items passed as kwargs.
-    """
+    """Set as class attributes the items passed as kwargs."""
 
     def configure_class_object(*args, **kwargs) -> type:
         for k, v in kwargs.items():
@@ -22,17 +20,15 @@ def parameterize_pagination(_class: type) -> Callable:
 
 @parameterize_pagination
 class QfcLimitOffsetPagination(pagination.LimitOffsetPagination):
-    """
-    Based on LimitOffsetPagination.
+    """Based on LimitOffsetPagination.
+
     Custom implementation such that `response.data = LimitOffsetPagination.data.results` from DRF's blanket implementation.
     Inject pagination controls and counter into the response headers.
     Can be customized when assigning `pagination_class`.
     """
 
     def get_headers(self) -> dict[str, Any]:
-        """
-        Set new header fields to carry pagination controls.
-        """
+        """Set new header fields to carry pagination controls."""
         headers = {
             "X-Total-Count": str(self.count),
         }
@@ -49,9 +45,7 @@ class QfcLimitOffsetPagination(pagination.LimitOffsetPagination):
         return headers
 
     def get_paginated_response(self, data) -> response.Response:
-        """
-        Paginate results injecting pagination controls and counter into response headers.
-        """
+        """Paginate results injecting pagination controls and counter into response headers."""
         if (
             self.request is not None
             and self.request.GET.get("offset")
@@ -63,5 +57,5 @@ class QfcLimitOffsetPagination(pagination.LimitOffsetPagination):
         return response.Response(data, headers=self.get_headers())
 
     def get_paginated_response_schema(self, schema) -> dict[str, Any]:
-        """Overrides schema with just the results"""
+        """Overrides schema with just the results."""
         return schema

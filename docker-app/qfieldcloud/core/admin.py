@@ -135,7 +135,7 @@ class QfcAdminSite(AdminSite):
 
         results: dict[str, dict[str, Any]] = {}
         person_result: Person | None = None
-        PAGE_SIZE = 5
+        PAGE_SIZE = 5  # noqa: N806
 
         if query:
             # Validate query length
@@ -283,12 +283,10 @@ qfc_admin_site = QfcAdminSite(name="qfc_admin_site")
 
 
 class NoPkOrderChangeList(ChangeList):
-    """
-    DjangoAdmin ChangeList adds an ordering -pk to ensure
-    'deterministic ordering to all db backends'. This has a negative
-    impact on performance and optimization.
-    Therefore remove the extra ordering -pk if custom
-    order fields are provided.
+    """DjangoAdmin ChangeList adds an ordering -pk to ensure 'deterministic ordering to all db backends'.
+
+    This has a negative impact on performance and optimization.
+    Therefore remove the extra ordering -pk if custom order fields are provided.
     """
 
     def get_ordering(self, request, queryset):
@@ -317,9 +315,7 @@ class ModelAdminEstimateCountMixin:
 
 
 class ModelAdminSearchParserMixin:
-    """
-    Mixin to add search parser to the model admin.
-    """
+    """Mixin to add search parser to the model admin."""
 
     search_parser_config: dict[str, dict[str, Any]] | None = None
 
@@ -444,15 +440,15 @@ class QFieldCloudInlineAdmin(admin.TabularInline):
 def admin_urlname_by_obj(value, arg):
     if isinstance(value, User):
         if value.is_person:
-            return "admin:core_person_%s" % (arg)
+            return "admin:core_person_{}".format(arg)
         elif value.is_organization:
-            return "admin:core_organization_%s" % (arg)
+            return "admin:core_organization_{}".format(arg)
         elif value.is_team:
-            return "admin:core_team_%s" % (arg)
+            return "admin:core_team_{}".format(arg)
         else:
             raise NotImplementedError("Unknown user type!")
     elif isinstance(value, Job):
-        return "admin:core_job_%s" % (arg)
+        return "admin:core_job_{}".format(arg)
     else:
         return admin_urlname(value._meta, arg)
 
@@ -579,7 +575,7 @@ class EmailAddressAdmin(EmailAddressAdminBase):
 
     @admin.action(description="Export all users' email contact details to .csv")  # type: ignore
     def export_emails_to_csv(self, request) -> StreamingHttpResponse:
-        """ "Export all users' email contact details to .csv"""
+        """Export all users' email contact details to .csv."""
 
         class PseudoBuffer:
             # Good idea from https://docs.djangoproject.com/en/4.1/howto/outputting-csv/
@@ -624,7 +620,7 @@ def search_parser(
     _request, _queryset, search_term: str, filter_config: dict[str, dict[str, Any]]
 ) -> dict[str, Any]:
     custom_filter = {}
-    CUSTOM_SEARCH_DIVIDER = ":"
+    CUSTOM_SEARCH_DIVIDER = ":"  # noqa: N806
     if CUSTOM_SEARCH_DIVIDER in search_term:
         prefix, search = search_term.split(CUSTOM_SEARCH_DIVIDER, 1)
         prefix_config = filter_config.get(prefix)
@@ -1703,7 +1699,6 @@ class FaultyDeltaFilesAdmin(QFieldCloudModelAdmin):
     @admin.display(description=_("Faulty deltafile"))
     def short_file_link(self, obj: FaultyDeltaFile) -> str:
         """Shorten storage path to make list view less unwieldy."""
-
         if obj.deltafile:
             filename = basename(obj.deltafile.name)
             return format_html(

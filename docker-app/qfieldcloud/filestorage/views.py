@@ -214,15 +214,15 @@ class AvatarFileReadView(views.APIView):
         """Returns an internal redirect within nginx to serve the `avatar` file directly from the Object Storage.
 
         NOTE the filename field is completely ignored and redundant, it exists only to satisfy backwards compatible expectations in QField/QFieldSync that avatars will have filename with file extension.
+
         Args:
             request: incoming request
-            username: the username we are serving avatar for
+            public_id: the public identifier, usually the `username` of the served file.
             filename: the filename in the URL, but ignored in the function execution. Defaults to "".
 
         Returns:
             internal redirect to the Object Storage
         """
-
         try:
             data = signing.loads(public_id)
             user_id = data["id"]

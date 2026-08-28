@@ -13,7 +13,8 @@ logger = logging.getLogger(__name__)
 
 
 class S3ObjectVersion:
-    """
+    """A QFC wrapper around a raw `S3ObjectVersion` from `boto3`.
+
     Todo:
         * Delete with QF-4963 Drop support for legacy storage
     """
@@ -26,7 +27,7 @@ class S3ObjectVersion:
 
     @property
     def id(self) -> str:
-        """Returns the version id"""
+        """Returns the version id."""
         # NOTE id and version_id are the same thing
         return self._data.id
 
@@ -60,7 +61,8 @@ class S3ObjectVersion:
 
 
 class S3ObjectWithVersions(NamedTuple):
-    """
+    """A QFC wrapper around a raw `S3Object` from `boto3`.
+
     Todo:
         * Delete with QF-4963 Drop support for legacy storage
     """
@@ -70,7 +72,7 @@ class S3ObjectWithVersions(NamedTuple):
 
     @property
     def total_size(self) -> int:
-        """Total size of all versions"""
+        """Total size of all versions."""
         # latest is also in versions
         return sum(v.size for v in self.versions if v.size is not None)
 
@@ -86,8 +88,7 @@ def strip_json_null_bytes(file: IO) -> IO:
 
 
 def get_deltafile_schema_validator() -> jsonschema.Draft7Validator:
-    """Creates a JSON schema validator to check whether the provided delta
-    file is valid.
+    """Creates a JSON schema validator to check whether the provided delta file is valid.
 
     Returns:
         jsonschema.Draft7Validator -- JSON Schema validator
@@ -105,9 +106,6 @@ def get_deltafile_schema_validator() -> jsonschema.Draft7Validator:
 
 
 def get_file_storage_choices() -> list[tuple[str, str]]:
-    """
-    Returns configured storages keys.
-    Can be used e.g. for ModelForm's field choices.
-    """
+    """Returns configured storages keys. Can be used e.g. for ModelForm's field choices."""
     storages = list(settings.STORAGES.keys())[:-1]
     return [(storage, storage) for storage in storages]

@@ -8,16 +8,15 @@ from django.utils.inspect import method_has_no_args
 
 
 class LargeTablePaginator(Paginator):
-    """
-    Only for Postgres:
-    Overrides the count method to get an estimate instead of actual count when not filtered
-    inspired by: https://djangosnippets.org/snippets/2855/
+    """Overrides the `count` method to get an estimate instead of actual `count` when not filtered.
+
+    This method works only in PostgreSQL. Inspired by: https://djangosnippets.org/snippets/2855/
     """
 
     @cached_property
     def count(self):
-        """
-        Returns the total number of objects, across all pages.
+        """Returns the total number of objects, across all pages.
+
         Changed to use an estimate if the estimate is greater than QFIELDCLOUD_ADMIN_EXACT_COUNT_LIMIT
         """
         c = getattr(self.object_list, "count", None)

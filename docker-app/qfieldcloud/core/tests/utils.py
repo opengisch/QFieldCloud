@@ -1,3 +1,4 @@
+import contextlib
 import io
 import os
 import tempfile
@@ -139,12 +140,12 @@ def qgz_from_qgs(qgs_path: str | Path, qgz_name: str | None = None) -> Iterator[
 
 
 def get_random_file(mb: float) -> IO:
-    """Helper that returns a file of given size in megabytes"""
+    """Helper that returns a file of given size in megabytes."""
     bytes_size = 1000 * int(mb * 1000)
     return io.BytesIO(os.urandom(bytes_size))
 
 
-class get_named_file_with_size:
+class get_named_file_with_size:  # noqa: N801
     def __init__(self, mb: int) -> None:
         self.bytes_size = 1000 * int(mb * 1000)
 
@@ -163,8 +164,8 @@ class get_named_file_with_size:
 
 
 def wait_for_project_ok_status(project: Project, wait_s: int = 30):
-    """
-    Helper that waits for any jobs (worker) of the project to finish.
+    """Helper that waits for any jobs (worker) of the project to finish.
+
     NOTE this does not mean the project is updated yet as there
     is some processing to be done and saved to the project in the app.
     So maybe a better name would be 'wait_for_project_jobs_ok_status'.
@@ -186,10 +187,8 @@ def wait_for_project_ok_status(project: Project, wait_s: int = 30):
         fail(f"Still pending jobs after waiting for {wait_s} seconds")
 
     for _ in range(wait_s):
-        try:
+        with contextlib.suppress(AttributeError):
             del project.status  # type: ignore
-        except AttributeError:
-            pass
 
         project.refresh_from_db()
 

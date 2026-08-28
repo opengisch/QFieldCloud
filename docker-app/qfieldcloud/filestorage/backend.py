@@ -1,4 +1,5 @@
 import base64
+import contextlib
 import mimetypes
 import os
 from abc import ABC
@@ -30,8 +31,7 @@ class QfcBackendStorageMixin(ABC):
         )
 
     def patch_nginx_download_redirect(self, response: HttpResponse) -> None:
-        """Patches a nginx redirect response for usage with the storage backend.
-        At the moment, does nothing.
+        """Patches a nginx redirect response for usage with the storage backend. At the moment, does nothing.
 
         Arguments:
             response: HTTP redirect response to patch.
@@ -56,8 +56,7 @@ class QfcS3Boto3Storage(QfcBackendStorageMixin, S3Storage):
         return True
 
     def patch_nginx_download_redirect(self, response: HttpResponse) -> None:
-        """Patches a nginx redirect response for usage with S3.
-        At the moment, does nothing.
+        """Patches a nginx redirect response for usage with S3. At the moment, does nothing.
 
         Arguments:
             response: HTTP redirect response to patch.
@@ -100,8 +99,8 @@ HTTP_RETRIES_BACKOFF_FACTOR = 0.5
 
 
 class QfcWebDavStorage(QfcBackendStorageMixin, Storage):
-    """
-    Storage backend using WebDAV.
+    """Storage backend using WebDAV.
+
     Adapted and inspired by this repository: https://github.com/marazmiki/django-webdav-storage
     Copyright (c) 2020, Mikhail Porokhovnichenko
     """
@@ -135,8 +134,8 @@ class QfcWebDavStorage(QfcBackendStorageMixin, Storage):
         return True
 
     def get_requests_session(self, **kwargs) -> requests.Session:
-        """
-        Creates a HTTP session for requesting webdav later.
+        """Creates a HTTP session for requesting webdav later.
+
         Authenticates using the `basic_auth` storage option.
         """
         session = requests.Session()
@@ -165,6 +164,8 @@ class QfcWebDavStorage(QfcBackendStorageMixin, Storage):
         Arguments:
             method: webdav method, e.g. "HEAD", "GET", "PUT", "DELETE", etc.
             name: relative path of the file on the webdav server.
+            *args: additional arguments
+            **kwargs: additional keyword arguments
 
         Returns:
             HTTP response related to the sent request.
@@ -178,9 +179,7 @@ class QfcWebDavStorage(QfcBackendStorageMixin, Storage):
         return response
 
     def encode_webdav_path(self, name: str) -> str:
-        """
-        Encodes each segment of a relative file path.
-        """
+        """Encodes each segment of a relative file path."""
         segments = []
         for segment in name.split("/"):
             segments.append(quote(segment, safe=""))
@@ -247,6 +246,7 @@ class QfcWebDavStorage(QfcBackendStorageMixin, Storage):
 
     def make_collection(self, name: str) -> None:
         """Creates a so-called collection on the configured webdav storage for a file.
+
         Typically creates parent folders if not existing.
 
         Arguments:
@@ -271,10 +271,8 @@ class QfcWebDavStorage(QfcBackendStorageMixin, Storage):
         Arguments:
             name: relative path of the file on the webdav server.
         """
-        try:
+        with contextlib.suppress(requests.HTTPError):
             self.perform_webdav_request("DELETE", name)
-        except requests.HTTPError:
-            pass
 
     def exists(self, name: str) -> bool:
         """Checks if a file exists on a configured webdav storage.
@@ -309,13 +307,14 @@ class QfcWebDavStorage(QfcBackendStorageMixin, Storage):
                 self.perform_webdav_request("HEAD", name).headers["content-length"]
             )
         except (ValueError, requests.exceptions.HTTPError):
-            raise IOError("Unable get size for %s" % name)
+            raise OSError("Unable get size for {}".format(name))
 
     def url(self, name: str, **kwargs) -> str:  # type: ignore
         """Returns the URL of a file from the configured webdav storage.
 
         Arguments:
             name: relative path of the file on the webdav server.
+            **kwargs: additional keyword arguments
 
         Returns:
             Public webdav URL of the file.
@@ -324,6 +323,7 @@ class QfcWebDavStorage(QfcBackendStorageMixin, Storage):
 
     def patch_nginx_download_redirect(self, response: HttpResponse) -> None:
         """Patches a nginx redirect response for usage with WebDAV.
+
         Adds configured webdav/HTTP basic auth, required for nginx redirect.
 
         Arguments:
@@ -338,8 +338,8 @@ class QfcWebDavStorage(QfcBackendStorageMixin, Storage):
 
         Arguments:
             name: desired relative path of the file on the webdav server.
-            max_length: maximum length of the filename (not used)."""
-
+            max_length: maximum length of the filename (not used).
+        """
         if self.is_name_available(name, max_length):
             return super().get_available_name(name, max_length)
 

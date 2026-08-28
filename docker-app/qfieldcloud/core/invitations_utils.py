@@ -27,8 +27,7 @@ def is_valid_email(email: str) -> bool:
 def invite_user_by_email(
     email: str, inviter: Person, send: bool = True
 ) -> tuple[bool, str]:
-    """
-    Sends an invite for a given email address
+    """Sends an invite for a given email address.
 
     Args :
         email:      recipient's email
@@ -38,7 +37,6 @@ def invite_user_by_email(
     Returns :
         (bool, str) success, message
     """
-
     try:
         validate_email(email)
     except ValidationError:
@@ -49,7 +47,7 @@ def invite_user_by_email(
     if not permissions_utils.can_send_invitations(inviter, inviter):
         return False, _("Your user cannot send invitations.")
 
-    Invitation = get_invitation_model()
+    Invitation = get_invitation_model()  # noqa: N806
     Invitation.objects.filter(email=email, sent__isnull=True).delete()
     qs = Invitation.objects.filter(email=email)
 
@@ -101,6 +99,7 @@ def send_invitation(invite, **kwargs):
 
     Args:
         invite: the invitation to be sent
+        **kwargs: additional arguments
 
     The same as the original Invitation.send_invitation, but without passing the request object.
     https://github.com/bee-keeper/django-invitations/blob/invitations/models.py#L42

@@ -62,12 +62,12 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             from_queryset=Project.objects.select_related("the_qgis_file")
         )
 
-    def assertFileUploaded(
+    def assertFileUploaded(  # noqa: N802
         self, user: User, project: Project, filename: str, content: IO
     ) -> HttpResponse | Response:
         return self._assertFileUploaded(user, project, filename, content)
 
-    def _assertFileUploaded(
+    def _assertFileUploaded(  # noqa: N802
         self, user: User, project: Project, filename: str, content: IO
     ) -> HttpResponse | Response:
         files_count = project.project_files.exclude(name=filename).count()
@@ -98,7 +98,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
         return response
 
-    def assertFileDeleted(
+    def assertFileDeleted(  # noqa: N802
         self,
         user: User,
         project: Project,
@@ -216,7 +216,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         self.assertEqual(self.p1.project_files.count(), 0)
 
     def test_upload_file_with_filename_longer_than_max_chars_fails(self):
-        """S3 protocol has limit of 255 and Windows o 140 characters"""
+        """S3 protocol has limit of 255 and Windows o 140 characters."""
         max_chars_len = settings.STORAGE_FILENAME_MAX_CHAR_LENGTH
 
         filename = "x" * max_chars_len

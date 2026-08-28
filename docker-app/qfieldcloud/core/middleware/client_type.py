@@ -22,6 +22,7 @@ class ClientTypeMiddleware:
 
     def __call__(self, request: HttpRequest) -> HttpResponse:
         """Sets the client type in the session.
+
         This client type will be required later for the QField/Sync requests process.
         """
         if getattr(request, "auth", None) and hasattr(request.auth, "client_type"):  # type: ignore[attr-defined]

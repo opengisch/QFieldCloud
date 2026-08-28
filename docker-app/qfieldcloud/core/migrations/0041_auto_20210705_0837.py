@@ -4,7 +4,7 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-    def forwards_job_feedback_func(apps, schema_editor):
+    def forwards_job_feedback_func(apps, schema_editor):  # noqa: N805
         Job = apps.get_model("core", "Job")
         ExportJob = apps.get_model("core", "ExportJob")
         ProcessProjectfileJob = apps.get_model("core", "ProcessProjectfileJob")
@@ -23,7 +23,7 @@ class Migration(migrations.Migration):
             job.feedback = process_projectfile_job.feedback_old
             job.save()
 
-    def backwards_job_feedback_func(apps, schema_editor):
+    def backwards_job_feedback_func(apps, schema_editor):  # noqa: N805
         Job = apps.get_model("core", "Job")
         ExportJob = apps.get_model("core", "ExportJob")
         ProcessProjectfileJob = apps.get_model("core", "ProcessProjectfileJob")

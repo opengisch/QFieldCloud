@@ -51,7 +51,7 @@ class QfcTestCase(APITransactionTestCase):
         subscription.plan = self.plan_premium
         subscription.save()
 
-    def assertStorage(
+    def assertStorage(  # noqa: N802
         self,
         active_storage_total_mb,
         active_storage_package,

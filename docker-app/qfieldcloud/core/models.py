@@ -39,8 +39,7 @@ from qfieldcloud.project.enums import ProjectCollaboratorRole, ProjectRoleOrigin
 from qfieldcloud.subscription.exceptions import ReachedMaxOrganizationMembersError
 
 if TYPE_CHECKING:
-    from qfieldcloud.project.models import Project
-
+    from qfieldcloud.project.models import Project  # noqa: TC004
 
 # http://springmeblog.com/2018/how-to-implement-multiple-user-types-with-django/
 
@@ -78,7 +77,7 @@ class PersonQueryset(models.QuerySet):
     This query is very similar to `ProjectQueryset.for_user`, don't forget to update it too.
     """
 
-    def for_project(self, project: "Project", skip_invalid: bool) -> "PersonQueryset":
+    def for_project(self, project: Project, skip_invalid: bool) -> PersonQueryset:
         count_collaborators = Count(
             "project_roles__project__collaborators",
             filter=Q(
@@ -130,7 +129,7 @@ class PersonQueryset(models.QuerySet):
 
         return qs
 
-    def for_organization(self, organization: "Organization") -> "PersonQueryset":
+    def for_organization(self, organization: Organization) -> PersonQueryset:
         qs = (
             self.defer(
                 "organization_roles__user_id",
@@ -149,7 +148,7 @@ class PersonQueryset(models.QuerySet):
 
         return qs
 
-    def for_team(self, team: "Team") -> "PersonQueryset":
+    def for_team(self, team: Team) -> PersonQueryset:
         permissions_config = [
             # Direct ownership of the organization
             (
@@ -184,19 +183,19 @@ class PersonQueryset(models.QuerySet):
 
         return qs
 
-    def for_entity(self, entity: "User") -> "PersonQueryset":
-        """Returns all users grouped in given entity (any type)
+    def for_entity(self, entity: User) -> PersonQueryset:
+        """Returns all users grouped in given entity (any type).
 
-        Internally calls for_team or for_organization depending on the entity."""
-
+        Internally calls for_team or for_organization depending on the entity.
+        """
         if entity.type == User.Type.PERSON:
             return self.filter(pk=entity.pk)
 
         if entity.type == User.Type.TEAM:
-            return self.for_team(cast(Team, entity))
+            return self.for_team(cast("Team", entity))
 
         if entity.type == User.Type.ORGANIZATION:
-            return self.for_organization(cast(Organization, entity))
+            return self.for_organization(cast("Organization", entity))
 
         raise RuntimeError(f"Unsupported entity : {entity}")
 
@@ -207,8 +206,8 @@ class UserManager(InheritanceManagerMixin, DjangoUserManager):
     def get_queryset(self):
         return super().get_queryset().select_subclasses()
 
-    def fast_search(self, username_or_email: str) -> "User":
-        """Searches a user by `username` or `email` field
+    def fast_search(self, username_or_email: str) -> User:
+        """Searches a user by `username` or `email` field.
 
         Args:
             username_or_email: username or email to search for
@@ -223,7 +222,7 @@ class PersonManager(UserManager):
     def get_queryset(self):
         return PersonQueryset(self.model, using=self._db)
 
-    def for_project(self, project: "Project", skip_invalid: bool = False):
+    def for_project(self, project: Project, skip_invalid: bool = False):
         return self.get_queryset().for_project(project, skip_invalid)
 
     def for_organization(self, organization):
@@ -253,7 +252,7 @@ class User(AbstractUser):
     projects: models.QuerySet[Project]
 
     # The secrets that are assigned to a user.
-    assigned_secrets: "models.QuerySet[Secret]"
+    assigned_secrets: models.QuerySet[Secret]
 
     # The `UserAccount` stores non-critical user information such as avatar, bio, timezone settings etc.
     useraccount: UserAccount
@@ -326,7 +325,7 @@ class User(AbstractUser):
     def save(self, *args, **kwargs):
         from qfieldcloud.subscription.models import get_subscription_model
 
-        Subscription = get_subscription_model()
+        Subscription = get_subscription_model()  # noqa: N806
 
         # if the user is created, we need to create a user account
         if self._state.adding and self.type != User.Type.TEAM:
@@ -410,7 +409,7 @@ def get_user_account_avatar_upload_to(
     instance: models.Model,
     filename: str,
 ) -> str:
-    instance = cast(UserAccount, instance)
+    instance = cast("UserAccount", instance)
     filename_path = Path(filename)
 
     return f"account/{instance.user.username}/avatars/{filename_path.name}"
@@ -422,7 +421,7 @@ def get_user_account_avatar_download_from(
     if not value:
         return None
 
-    useraccount = cast(UserAccount, value.instance)
+    useraccount = cast("UserAccount", value.instance)
 
     return reverse(
         "filestorage_avatars",
@@ -495,19 +494,19 @@ class UserAccount(models.Model):
     def current_subscription(self):
         from qfieldcloud.subscription.models import get_subscription_model
 
-        Subscription = get_subscription_model()
+        Subscription = get_subscription_model()  # noqa: N806
         return Subscription.get_or_create_current_subscription(self)
 
     @property
     def upcoming_subscription(self):
         from qfieldcloud.subscription.models import get_subscription_model
 
-        Subscription = get_subscription_model()
+        Subscription = get_subscription_model()  # noqa: N806
         return Subscription.get_upcoming_subscription(self)
 
     @property
     def storage_used_bytes(self) -> int:
-        """Returns the storage used in bytes"""
+        """Returns the storage used in bytes."""
         from qfieldcloud.filestorage.models import File, FileVersion
 
         project_files_used_quota = (
@@ -524,8 +523,7 @@ class UserAccount(models.Model):
 
     @property
     def storage_free_bytes(self) -> float:
-        """Returns the storage quota left in bytes (quota from account and packages minus storage of all owned projects)"""
-
+        """Returns the storage quota left in bytes (quota from account and packages minus storage of all owned projects)."""
         return (
             self.current_subscription.active_storage_total_bytes
             - self.storage_used_bytes
@@ -533,7 +531,7 @@ class UserAccount(models.Model):
 
     @property
     def storage_used_ratio(self) -> float:
-        """Returns the storage used in fraction of the total storage"""
+        """Returns the storage used in fraction of the total storage."""
         if self.current_subscription.active_storage_total_bytes > 0:
             return min(
                 self.storage_used_bytes
@@ -545,7 +543,7 @@ class UserAccount(models.Model):
 
     @property
     def storage_free_ratio(self) -> float:
-        """Returns the storage used in fraction of the total storage"""
+        """Returns the storage used in fraction of the total storage."""
         return 1 - self.storage_used_ratio
 
     @property
@@ -574,9 +572,7 @@ class UserAccount(models.Model):
 
 
 def random_string() -> str:
-    """Generate random sting starting with a lowercase letter and then
-    lowercase letters and digits"""
-
+    """Generate random sting starting with a lowercase letter and then lowercase letters and digits."""
     first_letter = secrets.choice(string.ascii_lowercase)
     letters_and_digits = string.ascii_lowercase + string.digits
     secure_str = first_letter + "".join(
@@ -586,9 +582,7 @@ def random_string() -> str:
 
 
 def random_password() -> str:
-    """Generate secure random password composed of
-    letters, digits and special characters"""
-
+    """Generate secure random password composed of letters, digits and special characters."""
     password_characters = (
         string.ascii_letters + string.digits + "!#$%&()*+,-.:;<=>?@[]_{}~"
     )
@@ -635,7 +629,7 @@ class OrganizationManager(UserManager):
 
 
 class Organization(User):
-    members: models.QuerySet["OrganizationMember"]
+    members: models.QuerySet[OrganizationMember]
     organization_owner_id: int
 
     class Meta(User.Meta):
@@ -755,7 +749,7 @@ class Organization(User):
 class OrganizationMemberQueryset(models.QuerySet):
     def get_by_natural_key(
         self, organization_username: str, member_username: str
-    ) -> "OrganizationMember":
+    ) -> OrganizationMember:
         return self.get(
             organization__username=organization_username,
             member__username=member_username,
@@ -942,7 +936,7 @@ class Team(User):
 class TeamMemberQuerySet(models.QuerySet):
     def get_by_natural_key(
         self, team_username: str, member_username: str
-    ) -> "TeamMember":
+    ) -> TeamMember:
         return self.get(
             team__username=team_username,
             member__username=member_username,
@@ -1008,7 +1002,8 @@ class ProjectCollaboratorQueryset(models.QuerySet):
         `max_premium_collaborators_per_private_project` >= of the total count of project collaborators.
 
         Args:
-            skip_invalid:   if true, invalid rows are removed"""
+            skip_invalid:   if true, invalid rows are removed
+        """
         count = Count(
             "project__collaborators",
             filter=Q(
@@ -1622,6 +1617,8 @@ class SecretQueryset(models.QuerySet):
         Returns:
             a Secret queryset assigned secrets for the given user.
         """
+        from qfieldcloud.project.models import Project
+
         # ensure the user type is a person
         assert user.type == User.Type.PERSON, (
             f"Expected the passed user to be of type PERSON, but got {user.type}!"
@@ -1758,7 +1755,7 @@ def get_faulty_deltafile_upload_to(
     instance: models.Model,
     filename: str,
 ) -> str:
-    instance = cast(FaultyDeltaFile, instance)
+    instance = cast("FaultyDeltaFile", instance)
     key = f"{datetime.now().isoformat()}-{filename}"
     return f"projects/{instance.project.id}/deltafiles/{key}"
 

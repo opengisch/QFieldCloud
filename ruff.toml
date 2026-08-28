@@ -25,12 +25,27 @@ extend-select = [
     "B006",     # Mutable argument default
     "BLE001",   # Checks for except clauses that catch all exceptions, see https://docs.astral.sh/ruff/rules/blind-except/
     "UP035",    # Checks for uses of deprecated imports based on the minimum supported Python version, see https://docs.astral.sh/ruff/rules/deprecated-import/
-    "TID252",   # Bans relative imports, requires absolute imports, see https://docs.astral.sh/ruff/rules/relative-imports/
+    "TID252",   # Bans relative imports, requires absolute imports, see https://docs.astral.sh/ruff/rules/relative-imports/    "TC",
+    "TC", # Type checking rules, https://docs.astral.sh/ruff/rules/#flake8-type-checking-tc
+    "N", # Naming rules, see https://docs.astral.sh/ruff/rules/#pep8-naming-n
+    "D", # Documentation rules, see https://docs.astral.sh/ruff/rules/#pydoclint-doc
 ]
-ignore = []
+ignore = [
+    # No need to force f-strings everywhere, something `"".format()` is more readable
+    # See https://docs.astral.sh/ruff/rules/f-string/
+    "UP032",
+    # Django encourages `Value as V`, so don't flag it as an error
+    # See https://docs.astral.sh/ruff/rules/camelcase-imported-as-acronym/
+    "N817",
+    # We do not require documentation by default
+    "D10",
+]
 
 [lint.flake8-tidy-imports]
 ban-relative-imports = "all"
 
 [lint.mccabe]
 max-complexity = 30
+
+[lint.pydocstyle]
+convention = "google"

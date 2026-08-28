@@ -129,7 +129,7 @@ class QfcTestCase(APITransactionTestCase):
 
         super().fail(msg)
 
-    def assertHttpOk(self, response: response.Response):
+    def assertHttpOk(self, response: response.Response):  # noqa: N802
         self.assertTrue(
             status.is_success(response.status_code),
             f"Response: {response.content}",
@@ -546,10 +546,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(json["code"], "object_not_found")
 
     def test_push_delta_allowed_for_insufficient_subscription(self):
-        """
-        Test that deltas can always be pushed, even if project has
-        unsoppurted online layer or owner (token3) is inactive or over qouta .
-        """
+        """Test that deltas can always be pushed, even if project has unsoppurted online layer or owner (token3) is inactive or over qouta ."""
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token3.key)
         project = self.upload_project_files(self.project1)
 
@@ -1135,8 +1132,7 @@ class QfcTestCase(APITransactionTestCase):
         )
 
     def test_push_list_multilayer_multidelta_same_pk(self):
-        """
-        Test that multiple deltas with same PK value in different layers are applied correctly
+        """Test that multiple deltas with same PK value in different layers are applied correctly.
 
         1. Create two features with same local PK in different layers (and unknown remote PK).
         2. Push the deltas (NOT sync, we should not know the remote PK on the client).
@@ -1214,7 +1210,7 @@ class QfcTestCase(APITransactionTestCase):
             return response.content
 
     def get_delta_file_with_project_id(self, project, delta_filename):
-        """Retrieves a delta json file with the project id replaced by the project.id"""
+        """Retrieves a delta json file with the project id replaced by the project.id."""
         with open(delta_filename) as f:
             deltafile = json.load(f)
             deltafile["project"] = str(project.id)

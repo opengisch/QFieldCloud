@@ -155,7 +155,7 @@ class QfcTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_add_team_as_collaborators(self):
-        def assertBecomeCollaborator(u: User, p: Project, error: Exception = None):
+        def assertBecomeCollaborator(u: User, p: Project, error: Exception = None):  # noqa: N802
             if error is None:
                 self.assertTrue(perms.check_can_become_collaborator(u, p))
             else:
