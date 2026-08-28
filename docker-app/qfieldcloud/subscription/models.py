@@ -732,7 +732,7 @@ class AbstractSubscription(models.Model):
             return None
 
         if self.has_current_period:
-            return self.account.user.active_users(
+            return self.account.user.organization.active_users(
                 self.current_period_since,
                 self.current_period_until,
             )
