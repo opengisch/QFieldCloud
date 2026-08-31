@@ -826,6 +826,16 @@ QFIELDCLOUD_WORKER_DEQUEUE_INTERVAL_S = int(
     os.environ["QFIELDCLOUD_WORKER_DEQUEUE_INTERVAL_S"]
 )
 
+# Connect timeout for the `qfieldcloud-sdk` inside the worker, in seconds. `0` or less disables it.
+QFIELDCLOUD_WORKER_SDK_CONNECT_TIMEOUT_S = float(
+    os.environ["QFIELDCLOUD_WORKER_SDK_CONNECT_TIMEOUT_S"]
+)
+
+# Read timeout for the `qfieldcloud-sdk` inside the worker, in seconds. `0` or less disables it.
+QFIELDCLOUD_WORKER_SDK_READ_TIMEOUT_S = float(
+    os.environ["QFIELDCLOUD_WORKER_SDK_READ_TIMEOUT_S"]
+)
+
 # Name of the QGIS 3 docker image used as a worker by `worker_wrapper`
 QFIELDCLOUD_QGIS3_IMAGE_NAME = os.environ["QFIELDCLOUD_QGIS3_IMAGE_NAME"]
 
