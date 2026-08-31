@@ -13,7 +13,6 @@ class TimezoneMiddleware:
             user_tz = request.user.useraccount.timezone
 
             assert user_tz, "UserAccount.timezone must not be empty"
-
         elif settings.TIME_ZONE:
             user_tz = zoneinfo.ZoneInfo(settings.TIME_ZONE)
         else:
