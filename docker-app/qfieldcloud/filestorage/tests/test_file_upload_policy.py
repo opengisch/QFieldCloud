@@ -64,9 +64,9 @@ class QfcTestCase(APITransactionTestCase):
         # Check user has inactive subscription
         self.assertFalse(account.current_subscription.is_active)
         # Check user cannot have online vector data
-        self.assertFalse(subscription.plan.is_external_db_supported)
+        self.assertFalse(subscription.regular_plan.is_external_db_supported)
 
-        plan = subscription.plan
+        plan = subscription.regular_plan
         plan.storage_mb = 1
         plan.storage_threshold_warning_bytes = 200_000
         plan.storage_threshold_critical_bytes = 100_000

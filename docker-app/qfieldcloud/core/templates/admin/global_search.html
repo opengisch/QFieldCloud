@@ -113,7 +113,7 @@
                                                     {% elif model_key == 'subscriptions' %}
                                                         <td>{{ obj.id|default:"-" }}</td>
                                                         <td>{{ obj.account.user|default:"-" }}</td>
-                                                        <td>{{ obj.plan.display_name|default:"-" }}</td>
+                                                        <td>{{ obj.regular_plan.display_name|default:"-" }}</td>
                                                         <td>{{ obj.status|default:"-" }}</td>
                                                         <td>{{ obj.active_since|date:"M. j, Y, g:i a"|default:"-" }}</td>
                                                     {% endif %}
