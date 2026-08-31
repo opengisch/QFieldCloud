@@ -7,12 +7,14 @@ from rest_framework.test import APITransactionTestCase
 
 from qfieldcloud.core.middleware.timezone import TimezoneMiddleware
 from qfieldcloud.core.models import Person
+from qfieldcloud.core.tests.utils import setup_subscription_plans
 
 logging.disable(logging.CRITICAL)
 
 
 class QfcTestCase(APITransactionTestCase):
     def setUp(self):
+        setup_subscription_plans()
         self.factory = RequestFactory()
 
     def get_response(self, request):
