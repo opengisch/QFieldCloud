@@ -122,6 +122,7 @@ jobs:
           COMPOSE_SERVICE: ${{ matrix.services.compose_service }}
           DEBUG: "0"
         run: |
+          cp .env.example .env
           {
             echo 'build_args<<EOF'
             docker compose -f docker-compose.yml config --format json \
