@@ -18,6 +18,7 @@ from django.utils.translation import gettext as _
 from model_utils.managers import InheritanceManagerMixin
 
 from qfieldcloud.core.models import Organization, Person, User, UserAccount
+from qfieldcloud.core.utils2.db import advisory_lock
 from qfieldcloud.subscription.exceptions import NotPremiumPlanException
 
 logger = logging.getLogger(__name__)
@@ -557,6 +558,7 @@ class SubscriptionManager(models.Manager):
 
 class AbstractSubscription(models.Model):
     id: int
+    account_id: int
 
     class Meta:
         abstract = True
@@ -915,29 +917,33 @@ class AbstractSubscription(models.Model):
             return subscription
 
         with transaction.atomic():
-            cls.objects.select_for_update().get(id=subscription.id)  # type: ignore
-            update_fields = []
+            # Using advisory lock to prevent deadlock between concurrent updates in some rare edge cases
+            with advisory_lock(f"billing:account:{subscription.account_id}"):
+                cls.objects.select_for_update().get(id=subscription.id)  # type: ignore
+                update_fields = []
 
-            if (
-                subscription.active_since is None
-                and kwargs.get("active_since") is not None
-            ):
-                cls.objects.current().filter(
-                    account=subscription.account,
-                ).exclude(  # type: ignore
-                    pk=subscription.pk,
-                ).update(
-                    status=Subscription.Status.INACTIVE_CANCELLED,
-                    active_until=kwargs["active_since"],
+                if (
+                    subscription.active_since is None
+                    and kwargs.get("active_since") is not None
+                ):
+                    cls.objects.current().filter(
+                        account=subscription.account,
+                    ).exclude(  # type: ignore
+                        pk=subscription.pk,
+                    ).update(
+                        status=Subscription.Status.INACTIVE_CANCELLED,
+                        active_until=kwargs["active_since"],
+                    )
+
+                for attr_name, attr_value in kwargs.items():
+                    update_fields.append(attr_name)
+                    setattr(subscription, attr_name, attr_value)
+
+                logger.info(
+                    f"Updated subscription's fields: {', '.join(update_fields)}"
                 )
 
-            for attr_name, attr_value in kwargs.items():
-                update_fields.append(attr_name)
-                setattr(subscription, attr_name, attr_value)
-
-            logger.info(f"Updated subscription's fields: {', '.join(update_fields)}")
-
-            subscription.save(update_fields=update_fields)
+                subscription.save(update_fields=update_fields)
 
         return subscription
 
