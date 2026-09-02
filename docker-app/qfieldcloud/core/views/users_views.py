@@ -1,7 +1,8 @@
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
 from drf_spectacular.utils import extend_schema, extend_schema_view
-from qfieldcloud.core import pagination, permissions_utils, querysets_utils
+from qfieldcloud.core import permissions_utils, querysets_utils
 from qfieldcloud.core.models import Organization, Team
 from qfieldcloud.core.serializers import (
     CompleteUserSerializer,
@@ -31,7 +32,9 @@ class ListCreateUsersViewPermissions(permissions.BasePermission):
 class ListCreateUsersView(generics.ListCreateAPIView):
     serializer_class = PublicInfoUserSerializer
     permission_classes = [permissions.IsAuthenticated, ListCreateUsersViewPermissions]
-    pagination_class = pagination.QfcLimitOffsetPagination()
+    # This view is intentionally not paginated, `get_queryset` enforces a hard
+    # `USER_LIST_LIMIT` so a single request can never be used to enumerate the whole user base.
+    pagination_class = None
 
     def get_queryset(self):
         params = self.request.GET
@@ -76,7 +79,7 @@ class ListCreateUsersView(generics.ListCreateAPIView):
             exclude_organizations=exclude_organizations,
             exclude_teams=exclude_teams,
             invert=invert,
-        )
+        )[: settings.USER_LIST_LIMIT]
 
     def post(self, request):
         serializer = CreateUserSerializer(data=request.data)

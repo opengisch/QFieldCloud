@@ -697,6 +697,9 @@ QFIELDCLOUD_ADMIN_EXACT_COUNT_LIMIT = 10000
 # Default limit for paginating data from views using QfcLimitOffsetPagination
 QFIELDCLOUD_API_DEFAULT_PAGE_LIMIT = 50
 
+# Max number of users returned by the `/api/v1/users/` list endpoint.
+USER_LIST_LIMIT = 20
+
 APPLY_DELTAS_LIMIT = 1000
 
 # The value of the "source" key in each logger entry.
