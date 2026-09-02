@@ -221,7 +221,7 @@ sqlparse==0.6.0
     #   django-debug-toolbar
 stripe==4.2.0
     # via -r requirements/requirements.in
-swapper==1.4.0
+swapper==1.5.0
     # via django-notifications-hq
 types-pyyaml==6.0.12.20260815
     # via
