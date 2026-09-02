@@ -13,7 +13,7 @@ django-constance==4.3.5
 django-countries==9.0.0
 django-cron-django5==0.6.3
 django-currentuser==0.10.0
-django-debug-toolbar==7.1.1
+django-debug-toolbar==8.0.0
 django-extensions==4.1
 django-fernet-encrypted-fields==0.4.0
 django-filter==26.1
