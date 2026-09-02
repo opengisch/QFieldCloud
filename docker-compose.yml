@@ -172,7 +172,7 @@ services:
         DEBUG_BUILD: ${DEBUG}
         UBUNTU_VERSION: resolute
         QGIS_REPOSITORY: debian
-        QGIS_VERSION: 1:4.2.1+44resolute
+        QGIS_VERSION: 1:4.2.2+44resolute
     tty: true
     command: bash -c "echo QGIS4 built"
     logging: *default-logging
