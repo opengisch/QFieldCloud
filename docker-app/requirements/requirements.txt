@@ -93,7 +93,7 @@ django-cors-headers==4.9.0
     # via -r requirements/requirements.in
 django-countries==9.0.0
     # via -r requirements/requirements.in
-django-cron-django5==0.6.2
+django-cron-django5==0.6.3
     # via -r requirements/requirements.in
 django-currentuser==0.10.0
     # via -r requirements/requirements.in
