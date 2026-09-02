@@ -147,7 +147,7 @@ djangorestframework==3.18.0
     # via
     #   -r requirements/requirements.in
     #   drf-spectacular
-djangorestframework-stubs==3.18.0
+djangorestframework-stubs==3.18.1
     # via -r requirements/requirements.in
 drf-spectacular==0.30.0
     # via -r requirements/requirements.in
