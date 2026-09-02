@@ -243,5 +243,5 @@ urllib3==2.7.0
     #   botocore
     #   requests
     #   sentry-sdk
-wrapt==2.3.0
+wrapt==2.4.0
     # via deprecated
