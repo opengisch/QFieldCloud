@@ -32,7 +32,7 @@ cffi==2.1.1
     # via cryptography
 charset-normalizer==3.5.1
     # via requests
-cryptography==50.0.0
+cryptography==50.0.1
     # via
     #   django-fernet-encrypted-fields
     #   pyjwt
