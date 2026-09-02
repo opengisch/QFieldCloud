@@ -110,7 +110,7 @@ The repository includes a test suite (`test.py`) that uses `unittest` and requir
     ```bash
     export AWS_ACCESS_KEY_ID=rustfsadmin
     export AWS_SECRET_ACCESS_KEY=rustfsadmin
-    export AWS_ENDPOINT_URL=http://localhost:8009
+    export AWS_ENDPOINT_URL=http://localhost:9000
     export AWS_DEFAULT_REGION=us-east-1
     ```
 
