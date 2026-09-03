@@ -220,6 +220,22 @@ services:
     volumes:
       - transformation_grids:/transformation_grids
 
+  purge-deleted-objects:
+    build:
+      context: ./docker-purge-deleted-objects
+    restart: unless-stopped
+    environment:
+      STORAGES: ${STORAGES}
+      STORAGES_PROJECT_DEFAULT_STORAGE: ${STORAGES_PROJECT_DEFAULT_STORAGE:-}
+    logging: *default-logging
+    labels:
+      ofelia.enabled: "true"
+      ofelia.job-exec.purge-deleted-objects.no-overlap: "true"
+      ofelia.job-exec.purge-deleted-objects.schedule: "@daily"
+      ofelia.job-exec.purge-deleted-objects.command: >-
+        python purge_deleted_objects.py
+        --retention-period "90 days"
+
   memcached:
     image: memcached:1
     restart: unless-stopped

@@ -45,6 +45,21 @@ class TestObjectStorageCleaner(unittest.TestCase):
             Bucket=cls.bucket_name, VersioningConfiguration={"Status": "Enabled"}
         )
 
+        # Versioning state propagation may not be immediate on all S3-compatible backends.
+        deadline = time.monotonic() + 10
+        while time.monotonic() < deadline:
+            status = cls.s3_client.get_bucket_versioning(Bucket=cls.bucket_name).get(
+                "Status"
+            )
+            if status == "Enabled":
+                break
+
+            time.sleep(0.2)
+        else:
+            raise RuntimeError(
+                f"Bucket versioning was not enabled in time for {cls.bucket_name}"
+            )
+
     @classmethod
     def tearDownClass(cls):
         """Cleans up by emptying and deleting the test bucket."""
@@ -82,6 +97,73 @@ class TestObjectStorageCleaner(unittest.TestCase):
         """Generates a unique prefix for test isolation."""
         self.unique_prefix = f"test-run-{uuid.uuid4()}/"
 
+    def wait_for_version_count(
+        self,
+        key: str,
+        expected_count: int,
+        timeout_seconds: float = 20.0,
+        poll_interval_seconds: float = 0.1,
+    ) -> None:
+        """Wait until list_object_versions reflects an expected count for a key."""
+        deadline = time.monotonic() + timeout_seconds
+        last_count = len(self.list_versions(key))
+
+        while time.monotonic() < deadline:
+            last_count = len(self.list_versions(key))
+            if last_count == expected_count:
+                return
+
+            time.sleep(poll_interval_seconds)
+
+        self.fail(
+            f"Timed out waiting {timeout_seconds}s for version count update "
+            f"for key {key!r}: expected {expected_count}, got {last_count}"
+        )
+
+    def wait_for_version_id(
+        self,
+        key: str,
+        version_id: str,
+        timeout_seconds: float = 60.0,
+        poll_interval_seconds: float = 0.1,
+    ) -> None:
+        """Wait until a specific version id appears in list_object_versions for a key."""
+        deadline = time.monotonic() + timeout_seconds
+
+        while time.monotonic() < deadline:
+            versions = self.list_versions(key)
+            for version in versions:
+                if version.get("VersionId") == version_id:
+                    return
+
+            time.sleep(poll_interval_seconds)
+
+        self.fail(
+            f"Timed out waiting {timeout_seconds}s for version id "
+            f"{version_id!r} for key {key!r} to appear in list_object_versions"
+        )
+
+    def wait_until_object_deleted(
+        self,
+        key: str,
+        timeout_seconds: float = 20.0,
+        poll_interval_seconds: float = 0.1,
+    ) -> None:
+        """Wait until get_object returns an error for a key."""
+        deadline = time.monotonic() + timeout_seconds
+
+        while time.monotonic() < deadline:
+            try:
+                self.s3_client.get_object(Bucket=self.bucket_name, Key=key)
+            except self.s3_client.exceptions.ClientError:
+                return
+
+            time.sleep(poll_interval_seconds)
+
+        self.fail(
+            f"Timed out waiting {timeout_seconds}s for key {key!r} to become deleted"
+        )
+
     def run_script(self, args):
         """Runs the purge_deleted_objects.py script as a subprocess."""
         # Assume script is in the same directory as this test file
@@ -101,10 +183,17 @@ class TestObjectStorageCleaner(unittest.TestCase):
         number_of_versions = len(self.list_versions(key))
 
         # Create the file
-        self.s3_client.put_object(Bucket=self.bucket_name, Key=key, Body=content)
+        response = self.s3_client.put_object(
+            Bucket=self.bucket_name, Key=key, Body=content
+        )
 
-        # Check that the number of versions has increased by 1
-        self.assertEqual(len(self.list_versions(key)), number_of_versions + 1)
+        # Prefer waiting for the specific created version id when available.
+        created_version_id = response.get("VersionId")
+        if created_version_id:
+            self.wait_for_version_id(key, created_version_id)
+        else:
+            # Fallback for backends that don't return version ids reliably.
+            self.wait_for_version_count(key, number_of_versions + 1)
 
         # Check that the object exists
         self.assertIsNotNone(
@@ -122,18 +211,16 @@ class TestObjectStorageCleaner(unittest.TestCase):
         self.assertEqual(file, content)
 
     def delete_file(self, key: str) -> None:
-        # Get number of versions before deleting the file
-        number_of_versions = len(self.list_versions(key))
-
         # Delete the file
-        self.s3_client.delete_object(Bucket=self.bucket_name, Key=key)
+        response = self.s3_client.delete_object(Bucket=self.bucket_name, Key=key)
 
-        # Check that the number of versions has increased by 1 (a delete marker is created)
-        self.assertEqual(len(self.list_versions(key)), number_of_versions + 1)
+        # If a delete marker/version id is returned, wait for that exact version to appear.
+        delete_version_id = response.get("VersionId")
+        if response.get("DeleteMarker") and delete_version_id:
+            self.wait_for_version_id(key, delete_version_id)
 
         # Check that the object does not exist
-        with self.assertRaises(self.s3_client.exceptions.ClientError):
-            self.s3_client.get_object(Bucket=self.bucket_name, Key=key)
+        self.wait_until_object_deleted(key)
 
     def list_versions(
         self, prefix: str

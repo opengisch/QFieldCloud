@@ -6,13 +6,15 @@ latest version is a Delete Marker) and optionally permanently deletes all versio
 of those objects to reclaim storage space.
 
 Usage:
-    python purge_deleted_objects.py <bucket> --retention-period "30 days" [options]
+    python purge_deleted_objects.py [bucket] --retention-period "30 days" [options]
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import logging
+import os
 import re
 import signal
 import sys
@@ -56,6 +58,124 @@ class LogicallyDeletedObject:
     total_size_bytes: int
     versions_count: int
     versions: list[dict[str, Any]]
+
+
+@dataclass
+class StorageConnectionConfig:
+    bucket_name: str | None = None
+    endpoint_url: str | None = None
+    access_key_id: str | None = None
+    secret_access_key: str | None = None
+    region_name: str | None = None
+
+
+def _first_non_empty(*values: str | None) -> str | None:
+    for value in values:
+        if value is None:
+            continue
+
+        stripped = value.strip()
+        if stripped:
+            return stripped
+
+    return None
+
+
+def get_storage_config_from_storages_env() -> StorageConnectionConfig | None:
+    """
+    Parse STORAGES env var and extract S3-compatible config for the default storage.
+    """
+    storages_raw = os.getenv("STORAGES")
+    if not storages_raw:
+        return None
+
+    try:
+        storages = json.loads(storages_raw)
+    except json.JSONDecodeError as err:
+        logger.warning(f"Ignoring invalid STORAGES JSON: {err}")
+        return None
+
+    if not isinstance(storages, dict):
+        logger.warning("Ignoring STORAGES: expected a JSON object at top level")
+        return None
+
+    default_storage_name = os.getenv("STORAGES_PROJECT_DEFAULT_STORAGE") or "default"
+    storage = storages.get(default_storage_name)
+
+    if not isinstance(storage, dict):
+        return None
+
+    if storage.get("BACKEND") != "qfieldcloud.filestorage.backend.QfcS3Boto3Storage":
+        return None
+
+    options = storage.get("OPTIONS")
+    if not isinstance(options, dict):
+        logger.warning(
+            f"Ignoring STORAGES entry '{default_storage_name}': OPTIONS is missing or invalid"
+        )
+        return None
+
+    return StorageConnectionConfig(
+        bucket_name=options.get("bucket_name"),
+        endpoint_url=options.get("endpoint_url"),
+        access_key_id=options.get("access_key"),
+        secret_access_key=options.get("secret_key"),
+        region_name=options.get("region_name"),
+    )
+
+
+def resolve_storage_connection_config(
+    args: argparse.Namespace, profile: str | None
+) -> StorageConnectionConfig:
+    """
+    Resolve storage connection settings with this precedence:
+
+    1. Positional [bucket] CLI arg
+    2. AWS_* environment variables
+    3. STORAGES environment var
+
+    If an AWS profile is specified, profile credentials take precedence over
+    credentials discovered in STORAGES.
+    """
+    storages_config = get_storage_config_from_storages_env()
+
+    if not storages_config:
+        storages_config = StorageConnectionConfig()
+
+    bucket_name = _first_non_empty(
+        args.bucket,
+        storages_config.bucket_name,
+    )
+
+    endpoint_url = _first_non_empty(
+        os.getenv("AWS_ENDPOINT_URL"),
+        storages_config.endpoint_url,
+    )
+
+    region_name = _first_non_empty(
+        os.getenv("AWS_REGION"),
+        storages_config.region_name,
+    )
+
+    access_key_id = _first_non_empty(
+        os.getenv("AWS_ACCESS_KEY_ID"),
+    )
+    secret_access_key = _first_non_empty(
+        os.getenv("AWS_SECRET_ACCESS_KEY"),
+    )
+
+    # Only fall back to STORAGES credentials if no AWS env credentials are set and no profile is specified.
+    if not access_key_id and not secret_access_key and not profile:
+        access_key_id = storages_config.access_key_id
+        secret_access_key = storages_config.secret_access_key
+
+    return StorageConnectionConfig(
+        bucket_name=bucket_name,
+        endpoint_url=endpoint_url,
+        access_key_id=access_key_id,
+        secret_access_key=secret_access_key,
+        region_name=region_name,
+    )
 
 
 def format_bytes(num_bytes: int) -> str:
@@ -345,12 +465,12 @@ def action_permanently_delete_versions(
         delete_versions_batch(s3_client, bucket, batch)
 
 
-def get_s3_client(bucket: str, profile: str | None) -> BaseClient:
+def get_s3_client(config: StorageConnectionConfig, profile: str | None) -> BaseClient:
     """
     Create an object storage client and validate that the bucket has versioning enabled.
 
     Args:
-        bucket: The name of the object storage bucket.
+        config: Resolved object storage connection settings.
         profile: Optional AWS profile name.
 
     Returns:
@@ -361,19 +481,31 @@ def get_s3_client(bucket: str, profile: str | None) -> BaseClient:
     if profile:
         session_kwargs["profile_name"] = profile
 
-    client = boto3.Session(**session_kwargs).client("s3")
+    # If no CLI/env credentials are set, credentials may still come from STORAGES fallback.
+    if config.access_key_id and config.secret_access_key:
+        session_kwargs["aws_access_key_id"] = config.access_key_id
+        session_kwargs["aws_secret_access_key"] = config.secret_access_key
+
+    client_kwargs = {}
+    if config.endpoint_url:
+        client_kwargs["endpoint_url"] = config.endpoint_url
+    if config.region_name:
+        client_kwargs["region_name"] = config.region_name
+
+    client = boto3.Session(**session_kwargs).client("s3", **client_kwargs)
 
     # Validate bucket versioning is enabled
     try:
-        response = client.get_bucket_versioning(Bucket=bucket)
+        assert config.bucket_name is not None
+        response = client.get_bucket_versioning(Bucket=config.bucket_name)
         status = response.get("Status")
         if status != "Enabled":
             raise RuntimeError(
-                f"Bucket '{bucket}' versioning is not Enabled (Status: {status})."
+                f"Bucket '{config.bucket_name}' versioning is not Enabled (Status: {status})."
             )
     except ClientError as err:
         raise RuntimeError(
-            f"Could not check versioning status for '{bucket}': {err}"
+            f"Could not check versioning status for '{config.bucket_name}': {err}"
         ) from err
 
     return client
@@ -439,7 +571,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description="Scan and clean logically deleted objects in object storage like S3."
     )
-    parser.add_argument("bucket", help="Target Object Storage bucket")
+    parser.add_argument(
+        "bucket",
+        nargs="?",
+        help="Target Object Storage bucket. Optional if provided via STORAGES.",
+    )
     parser.add_argument("--prefix", help="Filter by prefix")
     parser.add_argument("--profile", help="Optional AWS Profile")
     parser.add_argument(
@@ -476,11 +612,17 @@ def main() -> int:
     )
 
     try:
+        profile = _first_non_empty(args.profile, os.getenv("AWS_PROFILE"))
+        config = resolve_storage_connection_config(args, profile)
+
+        assert config.bucket_name is not None
+        bucket_name = config.bucket_name
+
         # 1. Setup Connection
-        client = get_s3_client(args.bucket, args.profile)
+        client = get_s3_client(config, profile)
 
         # 2. Build Pipeline
-        raw_iterator = iter_all_versions(client, args.bucket, args.prefix)
+        raw_iterator = iter_all_versions(client, bucket_name, args.prefix)
 
         # Transform
         clean_iterator = iter_logically_deleted(raw_iterator, args.retention_cutoff_ts)
@@ -493,13 +635,13 @@ def main() -> int:
         else:
             if not args.force:
                 confirmation_input = input(
-                    f"Permanently delete from '{args.bucket}'? (yes/no): "
+                    f"Permanently delete from '{bucket_name}'? (yes/no): "
                 ).lower()
 
                 if confirmation_input != "yes":
                     return 0
 
-            action_permanently_delete_versions(client, args.bucket, clean_iterator)
+            action_permanently_delete_versions(client, bucket_name, clean_iterator)
 
     except Exception as e:
         logger.error(f"Error: {e}")
