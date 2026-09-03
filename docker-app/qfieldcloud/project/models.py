@@ -41,6 +41,7 @@ from qfieldcloud.core.models import (
     TeamMember,
     User,
 )
+from qfieldcloud.core.models_utils import get_stored_value
 from qfieldcloud.project.enums import (
     LayerErrorCode,
     ProjectCollaboratorRole,
@@ -1008,7 +1009,6 @@ class Project(models.Model):
         else:
             status = Project.Status.OK
             status_code = Project.StatusCode.OK
-            max_premium_collaborators_per_private_project = self.owner.useraccount.current_subscription.plan.max_premium_collaborators_per_private_project
 
             # TODO use self.problems to get if there are project problems
             if (
@@ -1016,12 +1016,7 @@ class Project(models.Model):
             ) and not self.is_shared_datasets_project:
                 status = Project.Status.FAILED
                 status_code = Project.StatusCode.FAILED_PROCESS_PROJECTFILE
-            elif (
-                not self.is_public
-                and max_premium_collaborators_per_private_project != -1
-                and max_premium_collaborators_per_private_project
-                < self.direct_collaborators.count()
-            ):
+            elif not self.is_public and self.exceeds_private_collaborator_limit:
                 status = Project.Status.FAILED
                 status_code = Project.StatusCode.TOO_MANY_COLLABORATORS
 
@@ -1102,6 +1097,17 @@ class Project(models.Model):
         return self.total_collaborators.count()
 
     @property
+    def exceeds_private_collaborator_limit(self) -> bool:
+        """Whether the project has more direct collaborators than the owner's plan
+        allows on a private project. Always `False` when the plan sets no limit."""
+        max_premium_collaborators_per_private_project = self.owner.useraccount.current_subscription.plan.max_premium_collaborators_per_private_project
+        return (
+            max_premium_collaborators_per_private_project != -1
+            and max_premium_collaborators_per_private_project
+            < self.direct_collaborators.count()
+        )
+
+    @property
     def owner_can_create_job(self):
         # NOTE consider including in status refactoring
 
@@ -1138,7 +1144,52 @@ class Project(models.Model):
                 )
             )
 
+        self._validate_make_private()
+
         super().clean(*args, **kwargs)
+
+    def _validate_make_private(self) -> None:
+        """Blocks turning a "public" project "private" while it has collaborators that a
+        "private" project would not accept. That happens when a collaborator is not a
+        member of the owning organization, or when the collaborator count is over
+        what the owner's plan allows on a private project.
+
+        Only the switch from public to private is checked. A project that is already
+        private and over the limit (say, after a plan downgrade) is left as it is.
+        """
+
+        # only when an existing public project is being turned private
+        if self.is_public or get_stored_value(self, "is_public") is not True:
+            return
+
+        if self.owner.is_organization:
+            member_ids = self.owner.organization.members.values_list(
+                "member_id", flat=True
+            )
+            non_member_usernames = sorted(
+                self.direct_collaborators.exclude(
+                    collaborator_id__in=member_ids
+                ).values_list("collaborator__username", flat=True)
+            )
+            if non_member_usernames:
+                raise ValidationError(
+                    _(
+                        "This project has collaborators who are not members of the "
+                        "organization: {}. Remove them, or add them to the "
+                        "organization, before making it private."
+                    ).format(", ".join(non_member_usernames))
+                )
+
+        if self.exceeds_private_collaborator_limit:
+            # NOTE: if `exceeds_private_collaborator_limit` changes, this validation logic should be updated accordingly.
+            plan_limit = self.owner.useraccount.current_subscription.plan.max_premium_collaborators_per_private_project
+            raise ValidationError(
+                _(
+                    "This project has {} collaborators but the owner's plan allows "
+                    "only {} on a private project. Remove some collaborators before "
+                    "making it private."
+                ).format(self.direct_collaborators.count(), plan_limit)
+            )
 
     def save(self, recompute_storage=False, *args, **kwargs):
         self.clean()

@@ -749,16 +749,18 @@ def check_can_become_collaborator(user: QfcUser, project: Project) -> bool:
                     )
                 )
         else:
-            # And only members of these organizations can join
-            check_user_has_organization_roles(
-                user,
-                project.owner,
-                [
-                    OrganizationMember.Roles.MEMBER,
-                    OrganizationMember.Roles.CREATOR,
-                    OrganizationMember.Roles.ADMIN,
-                ],
-            )
+            # On a private project only organization members can join. A public
+            # project can have collaborators who are not members of the organization.
+            if not project.is_public:
+                check_user_has_organization_roles(
+                    user,
+                    project.owner,
+                    [
+                        OrganizationMember.Roles.MEMBER,
+                        OrganizationMember.Roles.CREATOR,
+                        OrganizationMember.Roles.ADMIN,
+                    ],
+                )
     else:
         if user.is_team:
             raise TeamOrganizationRoleError(
