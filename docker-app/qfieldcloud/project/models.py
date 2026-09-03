@@ -979,6 +979,28 @@ class Project(models.Model):
                                 ),
                             }
                         )
+
+                # add a warning if a pg layer has a hard-coded user or pwd in the datasource
+                if layer.provider_name == "postgres" and (
+                    "user=" in layer.datasource or "password=" in layer.datasource
+                ):
+                    problems.append(
+                        {
+                            "layer": layer_name,
+                            "level": "warning",
+                            "code": "hardcoded_pg_credentials",
+                            "description": _(
+                                _(
+                                    'Layer "{}" has hard-coded postgres credentials in the datasource.'
+                                )
+                            ).format(layer_name),
+                            "solution": _(
+                                _(
+                                    "Consider using a pg_service entry and a QFieldCloud Secret instead."
+                                )
+                            ),
+                        }
+                    )
         else:
             problems.append(
                 {
