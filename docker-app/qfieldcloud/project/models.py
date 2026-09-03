@@ -1044,6 +1044,11 @@ class Project(models.Model):
 
     @property
     def direct_collaborators(self) -> ProjectCollaboratorQueryset:
+        """Collaborators that are individual people added straight to the project.
+
+        Doesn't include members from collaborating teams, incognito collaborators
+        and the owner.
+        """
         if self.owner.is_organization:
             exclude_pks = [self.owner.organization.organization_owner_id]
         else:
@@ -1061,6 +1066,12 @@ class Project(models.Model):
 
     @property
     def total_collaborators(self) -> PersonQueryset:
+        """Every person with access to the project, whether added directly or as a
+        member of a team that collaborates on it.
+
+        Merges the direct collaborators with the members of each collaborating team,
+        drops the owner and incognito entries, and returns a deduplicated `Person` queryset.
+        """
         if self.owner.is_organization:
             exclude_pks = [self.owner.organization.organization_owner_id]
         else:
@@ -1086,6 +1097,7 @@ class Project(models.Model):
 
     @property
     def total_collaborators_count(self) -> int:
+        """Number of people returned by `total_collaborators`."""
         return self.total_collaborators.count()
 
     @property
