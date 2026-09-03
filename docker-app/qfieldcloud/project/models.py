@@ -22,6 +22,7 @@ from django.db import transaction
 from django.db.models import Case, Exists, F, OuterRef, Prefetch, Q, When
 from django.db.models import Value as V
 from django.db.models.aggregates import Count, Sum
+from django.db.models.functions import MD5
 from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
@@ -1615,8 +1616,11 @@ class QgisLayer(models.Model):
         verbose_name_plural = _("QGIS layers")
         ordering = ["qgis_project", "ordering"]
         constraints = [
+            # `qgis_layer_id` is unbounded and can be too large for a Postgres
+            # btree index row, so this indexes MD5(qgis_layer_id) instead.
             models.UniqueConstraint(
-                fields=["qgis_project", "qgis_layer_id"],
-                name="layer_qgis_project_qgis_layer_id_uniq",
+                F("qgis_project"),
+                MD5("qgis_layer_id"),
+                name="layer_qgis_project_qgis_layer_id_md5_uniq",
             )
         ]
