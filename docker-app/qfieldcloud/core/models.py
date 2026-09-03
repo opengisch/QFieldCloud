@@ -1127,9 +1127,10 @@ class ProjectCollaborator(models.Model):
         if self.project.owner.is_organization:
             organization = Organization.objects.get(pk=self.project.owner.pk)
             if self.collaborator.is_person:
-                # for organizations-owned projects, the candidate collaborator
-                # must be a member of the organization or the organization's owner
-                if not (
+                # On a private organization-owned project the collaborator must
+                # be a member of the organization or its owner.
+                # Public projects accept anyone.
+                if not self.project.is_public and not (
                     organization.members.filter(member=self.collaborator).exists()  # type: ignore
                     or self.collaborator == organization.organization_owner
                 ):
