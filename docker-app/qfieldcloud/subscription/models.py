@@ -56,6 +56,8 @@ class SubscriptionStatus(models.TextChoices):
     ACTIVE_PAST_DUE = "active_past_due", _("Active Past Due")
     # successfully cancelled
     INACTIVE_CANCELLED = "inactive_cancelled", _("Inactive Cancelled")
+    # subscription is in trial
+    ACTIVE_TRIAL = "active_trial", _("Active Trial")
 
 
 class Plan(models.Model):
@@ -645,6 +647,24 @@ class AbstractSubscription(models.Model):
             "These notes are for internal purposes only and will never be shown to the end users."
         ),
     )
+
+    trial_plan = models.ForeignKey(
+        Plan,
+        on_delete=models.PROTECT,
+        related_name="+",
+        null=True,
+        blank=True,
+    )
+
+    trial_expires_at = models.DateTimeField(null=True, blank=True)
+
+    @property
+    def is_trialing(self) -> bool:
+        return (
+            self.status == self.Status.ACTIVE_TRIAL
+            and self.trial_expires_at is not None
+            and self.trial_expires_at > timezone.now()
+        )
 
     @property
     @deprecated("Use `AbstractSubscription.active_storage_total_bytes` instead")
