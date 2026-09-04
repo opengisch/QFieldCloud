@@ -697,6 +697,9 @@ QFIELDCLOUD_ADMIN_EXACT_COUNT_LIMIT = 10000
 # Default limit for paginating data from views using QfcLimitOffsetPagination
 QFIELDCLOUD_API_DEFAULT_PAGE_LIMIT = 50
 
+# Max number of users returned by the `/api/v1/users/` list endpoint.
+USER_LIST_LIMIT = 20
+
 APPLY_DELTAS_LIMIT = 1000
 
 # The value of the "source" key in each logger entry.
@@ -824,6 +827,16 @@ QFIELDCLOUD_WORKER_TIMEOUT_S = int(os.environ["QFIELDCLOUD_WORKER_TIMEOUT_S"])
 # Interval at which the wrapper will check for new jobs to dequeue, in seconds.
 QFIELDCLOUD_WORKER_DEQUEUE_INTERVAL_S = int(
     os.environ["QFIELDCLOUD_WORKER_DEQUEUE_INTERVAL_S"]
+)
+
+# Connect timeout for the `qfieldcloud-sdk` inside the worker, in seconds. `0` or less disables it.
+QFIELDCLOUD_WORKER_SDK_CONNECT_TIMEOUT_S = float(
+    os.environ["QFIELDCLOUD_WORKER_SDK_CONNECT_TIMEOUT_S"]
+)
+
+# Read timeout for the `qfieldcloud-sdk` inside the worker, in seconds. `0` or less disables it.
+QFIELDCLOUD_WORKER_SDK_READ_TIMEOUT_S = float(
+    os.environ["QFIELDCLOUD_WORKER_SDK_READ_TIMEOUT_S"]
 )
 
 # Name of the QGIS 3 docker image used as a worker by `worker_wrapper`

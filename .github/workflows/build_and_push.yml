@@ -121,6 +121,8 @@ jobs:
         env:
           COMPOSE_SERVICE: ${{ matrix.services.compose_service }}
           DEBUG: "0"
+          QFIELDCLOUD_WORKER_REPLICAS: "1"
+          TMP_DIRECTORY: /tmp
         run: |
           {
             echo 'build_args<<EOF'

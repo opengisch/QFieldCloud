@@ -194,6 +194,12 @@ class JobRun:
             "QFIELDCLOUD_EXTRA_ENVVARS": json.dumps(sorted(extra_envvars.keys())),
             "QFIELDCLOUD_TOKEN": token.key,
             "QFIELDCLOUD_URL": settings.QFIELDCLOUD_WORKER_QFIELDCLOUD_URL,
+            "QFC_SDK_CONNECT_TIMEOUT_S": str(
+                settings.QFIELDCLOUD_WORKER_SDK_CONNECT_TIMEOUT_S
+            ),
+            "QFC_SDK_READ_TIMEOUT_S": str(
+                settings.QFIELDCLOUD_WORKER_SDK_READ_TIMEOUT_S
+            ),
             "JOB_ID": self.job_id,
             "PROJ_DOWNLOAD_DIR": TRANSFORMATION_GRIDS_PATH,
             "QT_QPA_PLATFORM": "offscreen",

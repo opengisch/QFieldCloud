@@ -22,6 +22,7 @@ from django.db import transaction
 from django.db.models import Case, Exists, F, OuterRef, Prefetch, Q, When
 from django.db.models import Value as V
 from django.db.models.aggregates import Count, Sum
+from django.db.models.functions import MD5
 from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
@@ -1044,6 +1045,11 @@ class Project(models.Model):
 
     @property
     def direct_collaborators(self) -> ProjectCollaboratorQueryset:
+        """Collaborators that are individual people added straight to the project.
+
+        Doesn't include members from collaborating teams, incognito collaborators
+        and the owner.
+        """
         if self.owner.is_organization:
             exclude_pks = [self.owner.organization.organization_owner_id]
         else:
@@ -1061,6 +1067,12 @@ class Project(models.Model):
 
     @property
     def total_collaborators(self) -> PersonQueryset:
+        """Every person with access to the project, whether added directly or as a
+        member of a team that collaborates on it.
+
+        Merges the direct collaborators with the members of each collaborating team,
+        drops the owner and incognito entries, and returns a deduplicated `Person` queryset.
+        """
         if self.owner.is_organization:
             exclude_pks = [self.owner.organization.organization_owner_id]
         else:
@@ -1086,6 +1098,7 @@ class Project(models.Model):
 
     @property
     def total_collaborators_count(self) -> int:
+        """Number of people returned by `total_collaborators`."""
         return self.total_collaborators.count()
 
     @property
@@ -1615,8 +1628,11 @@ class QgisLayer(models.Model):
         verbose_name_plural = _("QGIS layers")
         ordering = ["qgis_project", "ordering"]
         constraints = [
+            # `qgis_layer_id` is unbounded and can be too large for a Postgres
+            # btree index row, so this indexes MD5(qgis_layer_id) instead.
             models.UniqueConstraint(
-                fields=["qgis_project", "qgis_layer_id"],
-                name="layer_qgis_project_qgis_layer_id_uniq",
+                F("qgis_project"),
+                MD5("qgis_layer_id"),
+                name="layer_qgis_project_qgis_layer_id_md5_uniq",
             )
         ]

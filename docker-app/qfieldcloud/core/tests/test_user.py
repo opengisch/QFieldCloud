@@ -1,5 +1,6 @@
 import logging
 
+from django.conf import settings
 from django.db import IntegrityError
 from django.utils import timezone
 from rest_framework import status
@@ -163,6 +164,20 @@ class QfcTestCase(APITestCase):
         self.assertEqual(json[1]["username"], "user1")
         self.assertEqual(json[2]["username"], "user2")
         self.assertEqual(json[3]["username"], "user3")
+
+    def test_list_users_is_hard_limited(self):
+        """The users endpoint must never return more than `USER_LIST_LIMIT` users, so it cannot be used to enumerate the whole user base."""
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        # Create enough extra users so that the total matching `?q=user`
+        # exceeds the hard limit.
+        for i in range(settings.USER_LIST_LIMIT + 10):
+            Person.objects.create_user(username=f"listlimituser{i}", password="abc123")
+
+        response = self.client.get("/api/v1/users/?q=user")
+
+        self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(len(response.json()), settings.USER_LIST_LIMIT)
 
     def test_list_users_filter_exclude_organization(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
