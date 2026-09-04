@@ -18,7 +18,7 @@ jsonschema-specifications==2025.9.1
     # via jsonschema
 pathvalidate==3.3.1
     # via qfieldcloud-sdk
-qfieldcloud-sdk==0.16.0
+qfieldcloud-sdk==0.17.0
     # via -r docker-qgis/requirements.in
 referencing==0.37.0
     # via

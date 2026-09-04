@@ -288,6 +288,8 @@ def run_workflow(
                 feedback["error_type"] = "API_INTERNAL_SERVER_ERROR"
             else:
                 feedback["error_type"] = "API_OTHER"
+        elif isinstance(err, sdk.QfcConnectionException):
+            feedback["error_type"] = "API_CONNECTION_ERROR"
         elif isinstance(err, FileNotFoundError):
             feedback["error_type"] = "FILE_NOT_FOUND"
         elif isinstance(err, InvalidXmlFileException):
