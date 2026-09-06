@@ -667,7 +667,9 @@ class QfcTestCase(APITransactionTestCase):
         o = Organization.objects.create(username="o", organization_owner=u)
         p = Project.objects.create(name="p", owner=u, is_public=True)
 
-        set_subscription(u, max_premium_collaborators_per_private_project=0)
+        subscription = set_subscription(
+            u, max_premium_collaborators_per_private_project=1
+        )
 
         apiurl = f"/api/v1/projects/{p.pk}/"
 
@@ -693,9 +695,14 @@ class QfcTestCase(APITransactionTestCase):
         )
         assertRole("manager", "collaborator")
 
-        # If project is made private, the collaboration is invalid
+        # The project can go private while its collaborator count is within the plan limit
         p.is_public = False
         p.save()
+        assertRole("manager", "collaborator")
+
+        # Dropping the plan limit below the collaborator count invalidates the role
+        subscription.plan.max_premium_collaborators_per_private_project = 0
+        subscription.plan.save()
         assertNoRole()
 
         # Making the owner an organization is not enough as user is not member of that org
