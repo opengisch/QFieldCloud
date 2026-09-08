@@ -6,6 +6,7 @@ from rest_framework.exceptions import ValidationError
 
 from qfieldcloud.core import exceptions
 from qfieldcloud.core.models import (
+    Team,
     User,
 )
 from qfieldcloud.project.models import (
@@ -244,6 +245,41 @@ class ProjectSerializer(serializers.ModelSerializer):
             "overwrite_conflicts",
         }
         model = Project
+
+
+class ProjectDetailSerializer(ProjectSerializer):
+    """`ProjectSerializer` with the caller's teams in the project owning organization."""
+
+    teams = serializers.SerializerMethodField()
+
+    def get_teams(self, obj: Project) -> list[str]:
+        """Returns the caller's team names in the project's owning organization, without the `@organization/` prefix.
+
+        Empty when a person owns the project or the caller is in no team.
+        """
+        # A person owns the project, so it has no teams.
+        if obj.owner.is_person:
+            return []
+
+        request = self.context["request"]
+
+        teams = Team.objects.filter(
+            team_organization=obj.owner.organization,
+            members__member=request.user,
+        ).select_related("team_organization")
+
+        team_names = []
+        for team in teams:
+            team_names.append(team.teamname)
+
+        return team_names
+
+    class Meta(ProjectSerializer.Meta):
+        fields = (*ProjectSerializer.Meta.fields, "teams")  # type: ignore[assignment]
+        read_only_fields = (
+            *ProjectSerializer.Meta.read_only_fields,
+            "teams",
+        )  # type: ignore[assignment]
 
 
 class ProjectThumbnailSerializer(serializers.ModelSerializer):
