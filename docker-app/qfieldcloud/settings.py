@@ -362,6 +362,15 @@ AUTH_USER_MODEL = "core.User"
 AUTH_TOKEN_LENGTH = 100
 AUTH_TOKEN_EXPIRATION_HOURS = int(os.environ["QFIELDCLOUD_AUTH_TOKEN_EXPIRATION_HOURS"])
 
+QFIELDCLOUD_DRF_BROWSERABLE_API_RENDERER_ENABLED = parse_string_to_bool(
+    os.environ["QFIELDCLOUD_DRF_BROWSERABLE_API_RENDERER_ENABLED"]
+)
+
+# See https://www.django-rest-framework.org/api-guide/renderers/#setting-the-renderers
+DEFAULT_RENDERER_CLASSES = ["rest_framework.renderers.JSONRenderer"]
+if QFIELDCLOUD_DRF_BROWSERABLE_API_RENDERER_ENABLED:
+    DEFAULT_RENDERER_CLASSES.append("rest_framework.renderers.BrowsableAPIRenderer")
+
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
@@ -372,6 +381,7 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "EXCEPTION_HANDLER": "qfieldcloud.core.rest_utils.exception_handler",
+    "DEFAULT_RENDERER_CLASSES": DEFAULT_RENDERER_CLASSES,
 }
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
