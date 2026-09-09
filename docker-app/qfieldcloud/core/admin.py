@@ -1440,13 +1440,25 @@ class DeltaAdmin(QFieldCloudModelAdmin):
         )
 
 
-class OrganizationMemberInline(admin.TabularInline):
-    model = OrganizationMember
-    fk_name = "organization"
-    extra = 0
-
-    # These fields must be autocomplete due to performance issue in the default Django admin theme, as the foreign key dropdown renders all the options.
+class OrganizationMemberAdmin(QFieldCloudModelAdmin):
+    list_display = (
+        "organization",
+        "member",
+        "role",
+        "is_public",
+        "created_by",
+        "created_at",
+        "updated_by",
+        "updated_at",
+    )
+    list_filter = ("role", "is_public", "created_at", "updated_at")
+    search_fields = (
+        "organization__username__iexact",
+        "member__username__icontains",
+        "member__email__iexact",
+    )
     autocomplete_fields = (
+        "organization",
         "member",
         "created_by",
         "updated_by",
@@ -1457,6 +1469,42 @@ class OrganizationMemberInline(admin.TabularInline):
         "updated_by",
         "updated_at",
     )
+
+    search_parser_config = {
+        "organization": {
+            "filter": "organization__username__iexact",
+        },
+        "member": {
+            "filter": "member__username__iexact",
+        },
+    }
+
+    def save_model(self, request, obj, form, change):
+        if not change:
+            obj.created_by = request.user
+
+        obj.updated_by = request.user
+
+        super().save_model(request, obj, form, change)
+
+    def get_changeform_initial_data(self, request):
+        initial = super().get_changeform_initial_data(request)
+        organization_id = request.GET.get("organization")
+
+        if organization_id:
+            initial["organization"] = organization_id
+
+        return initial
+
+    def response_add(self, request, obj, post_url_continue=None):
+        if "_addanother" in request.POST:
+            add_url = "{}?{}".format(
+                reverse("admin:core_organizationmember_add"),
+                urlencode({"organization": obj.organization_id}),
+            )
+            return HttpResponseRedirect(add_url)
+
+        return super().response_add(request, obj, post_url_continue)
 
 
 class TeamInline(admin.TabularInline):
@@ -1478,7 +1526,6 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
     inlines = (
         UserAccountInline,
         ProjectInline,
-        OrganizationMemberInline,
         TeamInline,
         OrganizationSecretInline,
     )
@@ -1545,18 +1592,6 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
     @admin.display(description=_("Storage"))
     def storage_usage__field(self, instance) -> str:
         return format_storage_usage(instance.useraccount)
-
-    def save_formset(self, request, form, formset, change):
-        for form_obj in formset:
-            if isinstance(form_obj.instance, OrganizationMember):
-                # add created_by only if it's a newly created OrganizationMember
-                if form_obj.instance.id is None:
-                    form_obj.instance.created_by = request.user
-
-                form_obj.instance.updated_by = request.user
-
-        super().save_formset(request, form, formset, change)
-
 
 class TeamMemberInline(admin.TabularInline):
     model = TeamMember
@@ -1734,6 +1769,7 @@ qfc_admin_site.unregister([Config])
 qfc_admin_site.register(Invitation, InvitationAdmin)
 qfc_admin_site.register(Person, PersonAdmin)
 qfc_admin_site.register(Organization, OrganizationAdmin)
+qfc_admin_site.register(OrganizationMember, OrganizationMemberAdmin)
 qfc_admin_site.register(Team, TeamAdmin)
 qfc_admin_site.register(Secret, SecretAdmin)
 qfc_admin_site.register(Delta, DeltaAdmin)
