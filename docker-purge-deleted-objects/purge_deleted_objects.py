@@ -6,7 +6,7 @@ latest version is a Delete Marker) and optionally permanently deletes all versio
 of those objects to reclaim storage space.
 
 Usage:
-    python purge_deleted_objects.py [bucket] --retention-period "30 days" [options]
+    python purge_deleted_objects.py [storage_name] --retention-period "30 days" [options]
 """
 
 from __future__ import annotations
@@ -81,7 +81,9 @@ def _first_non_empty(*values: str | None) -> str | None:
     return None
 
 
-def get_storage_config_from_storages_env() -> StorageConnectionConfig | None:
+def get_storage_config_from_storages_env(
+    args: argparse.Namespace,
+) -> StorageConnectionConfig | None:
     """
     Parse STORAGES env var and extract S3-compatible config for the default storage.
     """
@@ -99,8 +101,15 @@ def get_storage_config_from_storages_env() -> StorageConnectionConfig | None:
         logger.warning("Ignoring STORAGES: expected a JSON object at top level")
         return None
 
+    # Pick selected storage, or the default storage if not specified
     default_storage_name = os.getenv("STORAGES_PROJECT_DEFAULT_STORAGE") or "default"
-    storage = storages.get(default_storage_name)
+    storage_name = args.storage_name or default_storage_name
+
+    try:
+        storage = storages[storage_name]
+    except KeyError:
+        logger.warning(f"Storage '{storage_name}' not found in STORAGES, skipping")
+        return None
 
     if not isinstance(storage, dict):
         return None
@@ -111,7 +120,7 @@ def get_storage_config_from_storages_env() -> StorageConnectionConfig | None:
     options = storage.get("OPTIONS")
     if not isinstance(options, dict):
         logger.warning(
-            f"Ignoring STORAGES entry '{default_storage_name}': OPTIONS is missing or invalid"
+            f"Ignoring STORAGES entry '{storage_name}': OPTIONS is missing or invalid"
         )
         return None
 
@@ -134,13 +143,12 @@ def resolve_storage_connection_config(
     2. AWS_* environment variables
     3. STORAGES environment var
     """
-    storages_config = get_storage_config_from_storages_env()
+    storages_config = get_storage_config_from_storages_env(args)
 
     if not storages_config:
         storages_config = StorageConnectionConfig()
 
     bucket_name = _first_non_empty(
-        args.bucket,
         os.getenv("AWS_BUCKET_NAME"),
         storages_config.bucket_name,
     )
@@ -562,9 +570,9 @@ def main() -> int:
         description="Scan and clean logically deleted objects in object storage like S3."
     )
     parser.add_argument(
-        "bucket",
+        "storage_name",
         nargs="?",
-        help="Target Object Storage bucket. Optional if provided via STORAGES.",
+        help="Target storage name, as named in STORAGES. If not provided, the default storage is used.",
     )
     parser.add_argument("--prefix", help="Filter by prefix")
     parser.add_argument(
