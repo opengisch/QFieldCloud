@@ -718,31 +718,6 @@ class UserAccountInline(admin.StackedInline):
         return obj is None
 
 
-class ProjectInline(admin.TabularInline):
-    model = Project
-    fk_name = "owner"
-    extra = 0
-    absolute_max = 5000
-
-    fields = ("owned_project", "created_by", "is_public", "overwrite_conflicts")
-    readonly_fields = ("owned_project", "created_by")
-    has_direct_delete_permission = False
-
-    # Override django.forms.formsets.DEFAULT_MAX_NUM for organizations with a large number of projects
-    # to a higher value (>1000) to prevent saving of large formsets from throwing an error
-    def get_formset(self, request, obj=None, **kwargs):
-        kwargs.setdefault("absolute_max", self.absolute_max)
-        return super().get_formset(request, obj, **kwargs)
-
-    def owned_project(self, obj):
-        return model_admin_url(obj, obj.name)
-
-    def has_add_permission(self, request, obj):
-        return False
-
-    def has_change_permission(self, request, obj):
-        return False
-
 
 class PersonAdmin(QFieldCloudModelAdmin):
     list_display = (
@@ -1525,7 +1500,6 @@ class TeamInline(admin.TabularInline):
 class OrganizationAdmin(QFieldCloudModelAdmin):
     inlines = (
         UserAccountInline,
-        ProjectInline,
         TeamInline,
         OrganizationSecretInline,
     )
@@ -1536,6 +1510,9 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
         "organization_owner",
         "default_project_role_for_members",
         "date_joined",
+        "projects_link",
+        "members_link",
+        "teams_link",
         "active_users_links",
     )
     list_display = (
@@ -1555,6 +1532,9 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
     readonly_fields = (
         "date_joined",
         "storage_usage__field",
+        "projects_link",
+        "members_link",
+        "teams_link",
         "active_users_links",
     )
 
@@ -1572,6 +1552,54 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
             "filter": "membership_roles__user__username__iexact",
         },
     }
+
+    @admin.display(description=_("Projects"))
+    def projects_link(self, instance) -> str:
+        count = instance.projects.count()
+        url = "{}?{}".format(
+            reverse("admin:project_project_changelist"),
+            urlencode({"q": f"owner:{instance.username}"}),
+        )
+
+        return format_html('<a href="{}">{} project(s)</a>', url, count)
+
+    @admin.display(description=_("Organization members"))
+    def members_link(self, instance) -> str:
+        count = instance.members.count()
+        changelist_url = "{}?{}".format(
+            reverse("admin:core_organizationmember_changelist"),
+            urlencode({"q": f"organization:{instance.username}"}),
+        )
+        add_url = "{}?{}".format(
+            reverse("admin:core_organizationmember_add"),
+            urlencode({"organization": instance.pk}),
+        )
+
+        return format_html(
+            '<a href="{}">{} member(s)</a> | <a href="{}">Add member</a>',
+            changelist_url,
+            count,
+            add_url,
+        )
+
+    @admin.display(description=_("Teams"))
+    def teams_link(self, instance) -> str:
+        count = instance.teams.count()
+        changelist_url = "{}?{}".format(
+            reverse("admin:core_team_changelist"),
+            urlencode({"q": f"organization:{instance.username}"}),
+        )
+        add_url = "{}?{}".format(
+            reverse("admin:core_team_add"),
+            urlencode({"team_organization": instance.pk}),
+        )
+
+        return format_html(
+            '<a href="{}">{} team(s)</a> | <a href="{}">Add team</a>',
+            changelist_url,
+            count,
+            add_url,
+        )
 
     @admin.display(description=_("Active members"))
     def active_users_links(self, instance) -> str:
@@ -1616,6 +1644,12 @@ class TeamAdmin(QFieldCloudModelAdmin):
 
     search_fields = ("username__icontains", "team_organization__username__iexact")
 
+    search_parser_config = {
+        "organization": {
+            "filter": "team_organization__username__iexact",
+        },
+    }
+
     list_filter = ("date_joined",)
 
     autocomplete_fields = ("team_organization",)
@@ -1625,6 +1659,25 @@ class TeamAdmin(QFieldCloudModelAdmin):
             obj.username = f"@{obj.team_organization.username}/{obj.username}"
 
         obj.save()
+
+    def get_changeform_initial_data(self, request):
+        initial = super().get_changeform_initial_data(request)
+        team_organization_id = request.GET.get("team_organization")
+
+        if team_organization_id:
+            initial["team_organization"] = team_organization_id
+
+        return initial
+
+    def response_add(self, request, obj, post_url_continue=None):
+        if "_addanother" in request.POST:
+            add_url = "{}?{}".format(
+                reverse("admin:core_team_add"),
+                urlencode({"team_organization": obj.team_organization_id}),
+            )
+            return HttpResponseRedirect(add_url)
+
+        return super().response_add(request, obj, post_url_continue)
 
     def get_form(
         self,
