@@ -1183,6 +1183,11 @@ def get_seed_xlsform_upload_to(instance: "ProjectSeed", filename: str) -> str:
     return f"projects/{instance.project.id}/seeds/xlsforms/xlsform{file_extension}"
 
 
+def get_seed_json2qgis_upload_to(instance: "ProjectSeed", filename: str) -> str:
+    file_extension = Path(filename).suffix.lower()
+    return f"projects/{instance.project.id}/seeds/json2qgis/json2qgis{file_extension}"
+
+
 class ProjectSeed(models.Model):
     SETTINGS_SCHEMA_ID = "https://app.qfield.cloud/schemas/project-seed-20251201.json"
     """Represents the seed data version used to create a project."""
@@ -1202,7 +1207,7 @@ class ProjectSeed(models.Model):
         related_name="derived_seeds",
         blank=True,
     )
-    """The project to copy from, if any. It is mutually exclusive with `xlsform_file`."""
+    """The project to copy from, if any. It is mutually exclusive with `xlsform_file` and `json2qgis_file`."""
 
     # TODO @Rakanhf: make the `extent` field not nullable once we add `Project.extent` field.
     extent = models.PolygonField(
@@ -1219,16 +1224,30 @@ class ProjectSeed(models.Model):
         null=True,
         blank=True,
     )
-    """XLSForm file used to create the project, if any. It is mutually exclusive with `clone_from_project`."""
+    """XLSForm file used to create the project, if any. It is mutually exclusive with `clone_from_project` and `json2qgis_file`."""
+
+    json2qgis_file = models.FileField(
+        upload_to=get_seed_json2qgis_upload_to,
+        # the s3 storage has 1024 bytes (not chars!) limit: https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html
+        max_length=1024,
+        null=True,
+        blank=True,
+    )
+    """JSON project definition file used to create the project, if any. It is mutually exclusive with `clone_from_project` and `xlsform_file`."""
 
     settings = models.JSONField()
     """The settings used during the project creation. There must be a `schemaId` field."""
 
     def clean(self, *args, **kwargs) -> None:
-        if self.xlsform_file and self.clone_from_project:
+        provided_sources = [
+            bool(self.xlsform_file),
+            bool(self.json2qgis_file),
+            bool(self.clone_from_project),
+        ]
+        if sum(provided_sources) > 1:
             raise ValidationError(
                 _(
-                    "Both `xlsform_file` or `clone_from_project` cannot be set at the same time."
+                    "At most one of `xlsform_file`, `json2qgis_file` or `clone_from_project` can be set at the same time."
                 )
             )
 

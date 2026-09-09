@@ -145,6 +145,7 @@ class ProjectSeedInline(admin.StackedInline):
         "extent",
         "clone_from_project",
         "xlsform_file",
+        "json2qgis_file",
         "settings__pre",
     )
 
