@@ -127,9 +127,13 @@ class UserProjectCollaboratorInline(admin.TabularInline):
 
 class ProjectSecretInline(SecretInlineBase):
     def get_query_params(self) -> dict[str, str]:
-        """Return query parameters for the 'Add Secret' button."""
         return {
             "project_id": str(self.parent_obj.pk),
+        }
+
+    def get_manage_query_params(self) -> dict[str, str]:
+        return {
+            "project__id__exact": str(self.parent_obj.pk),
         }
 
 
