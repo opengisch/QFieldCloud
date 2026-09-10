@@ -365,7 +365,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertProjectRole(p, u1, roles.MANAGER, role_origins.COLLABORATOR, True)
 
         # Dropping the plan limit below the collaborator count invalidates the role.
-        # The collaborator stays on the project but loses access.
+        # The project is locked and the collaborator stays on the project but loses access.
         subscription.plan.max_premium_collaborators_per_private_project = 0
         subscription.plan.save()
         self.assertProjectRole(p, u1, roles.MANAGER, role_origins.COLLABORATOR, False)
