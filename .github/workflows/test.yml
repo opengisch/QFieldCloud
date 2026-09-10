@@ -117,8 +117,8 @@ jobs:
             -e AWS_ACCESS_KEY_ID=rustfsadmin \
             -e AWS_SECRET_ACCESS_KEY=rustfsadmin \
             -e AWS_ENDPOINT_URL=http://172.17.0.1:8009 \
-            -v ${{ github.workspace }}/scripts:/usr/src/scripts \
-            app python /usr/src/scripts/object_storage_cleaner/test.py
+            -v ${{ github.workspace }}/docker-purge-deleted-objects:/usr/src/docker-purge-deleted-objects \
+            app python /usr/src/docker-purge-deleted-objects/test.py
 
       - name: "failure logs"
         if: failure()
