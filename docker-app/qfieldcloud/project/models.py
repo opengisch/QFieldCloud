@@ -991,7 +991,7 @@ class Project(models.Model):
                             "code": "hardcoded_pg_credentials",
                             "description": _(
                                 _(
-                                    'Layer "{}" has hard-coded postgres credentials in the datasource.'
+                                    'Layer "{}" has a hard-coded postgres credentials in the datasource.'
                                 )
                             ).format(layer_name),
                             "solution": _(
