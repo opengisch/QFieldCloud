@@ -6,7 +6,11 @@ def get_stored_value(instance: Any, field_name: str) -> Any:
 
     Returns `None` when `instance` has never been saved. Use it to compare the
     stored value against the in-memory one, for example to act only when a field is
-    actually being changed. Be cautious when using with FK fields.
+    actually being changed.
+
+    If `field_name` is a foreign key, you get the stored id back, not the related object.
+    For example compare it against `instance.owner_id`. `instance.owner` is a model object,
+    so it will not equal an id, and touching it can trigger a query.
     """
     if instance._state.adding or instance.pk is None:
         return None

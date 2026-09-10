@@ -1098,12 +1098,15 @@ class Project(models.Model):
 
     @property
     def exceeds_private_collaborator_limit(self) -> bool:
-        """Whether the project has more direct collaborators than the owner's plan allows on a private project. Always `False` when the plan sets no limit."""
-        max_premium_collaborators_per_private_project = self.owner.useraccount.current_subscription.plan.max_premium_collaborators_per_private_project
+        """Whether the project has more direct collaborators than the owner's plan allows on a private project.
+
+        Always `False` when the plan sets no limit.
+        """
+        plan = self.owner.useraccount.current_subscription.plan
+        max_collaborators = plan.max_premium_collaborators_per_private_project
         return (
-            max_premium_collaborators_per_private_project != -1
-            and max_premium_collaborators_per_private_project
-            < self.direct_collaborators.count()
+            max_collaborators != -1
+            and max_collaborators < self.direct_collaborators.count()
         )
 
     @property
