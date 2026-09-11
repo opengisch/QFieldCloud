@@ -91,6 +91,7 @@ class ProjectSeed:
     extent: list[float] | None
     clone_from_project: UUID | None
     xlsform_file: str | None
+    json2qgis_file: str | None
 
     settings: ProjectSeedSettings  # type: ignore
     _settings: ProjectSeedSettings = field(init=False, repr=False)
