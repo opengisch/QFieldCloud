@@ -36,6 +36,7 @@ def get_filename(response):
 
 
 def setup_subscription_plans():
+    Plan.objects.update(trial_plan=None)
     Plan.objects.all().delete()
     Plan.objects.bulk_create(
         [
@@ -102,10 +103,14 @@ def set_subscription(
             f'All users must have the same type "{plan.user_type.value}", but "{user.username}" has "{user.type.value}"'
         )
         subscription = user.useraccount.current_subscription
-        subscription.plan = plan
-        subscription.purchased_seats = subscription.plan.max_organization_members
+        subscription.regular_plan = plan
+        subscription.purchased_seats = (
+            subscription.regular_plan.max_organization_members
+        )
         subscription.active_since = timezone.now() - timedelta(days=1)
-        subscription.save(update_fields=["plan", "active_since", "purchased_seats"])
+        subscription.save(
+            update_fields=["regular_plan", "active_since", "purchased_seats"]
+        )
 
     # It is guaranteed that at least one user was provided.
     assert subscription is not None

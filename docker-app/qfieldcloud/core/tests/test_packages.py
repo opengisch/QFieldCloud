@@ -624,8 +624,8 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
     def test_outdated_packaged_files_are_deleted(self):
         subscription = self.user1.useraccount.current_subscription
-        subscription.plan.is_external_db_supported = True
-        subscription.plan.save()
+        subscription.regular_plan.is_external_db_supported = True
+        subscription.regular_plan.save()
 
         cur = self.conn.cursor()
         cur.execute(
