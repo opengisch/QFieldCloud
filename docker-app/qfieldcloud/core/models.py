@@ -668,9 +668,11 @@ class Organization(User):
     created_by = models.ForeignKey(
         # NOTE should be Person, but Django sometimes has troubles with Person/User (e.g. Form.full_clean()), see #514 #515
         User,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
         related_name="created_organizations",
         limit_choices_to=models.Q(type=User.Type.PERSON),
+        null=True,
+        blank=True,
     )
 
     # created at
@@ -1205,14 +1207,17 @@ class Delta(models.Model):
     last_apply_attempt_at = models.DateTimeField(null=True)
     last_apply_attempt_by = models.ForeignKey(
         User,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
         null=True,
+        blank=True,
     )
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True, db_index=True)
     created_by = models.ForeignKey(
         User,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name="uploaded_deltas",
     )
     old_geom = models.GeometryField(null=True, srid=4326, dim=4)
@@ -1328,12 +1333,19 @@ class Job(models.Model):
 
     triggered_by = models.ForeignKey(
         User,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
         related_name="triggered_jobs",
         limit_choices_to=models.Q(type=User.Type.PERSON),
+        null=True,
+        blank=True,
     )
 
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True, db_index=True)
     started_at = models.DateTimeField(blank=True, null=True, editable=False)
