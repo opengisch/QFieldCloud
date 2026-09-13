@@ -30,6 +30,7 @@ from qfieldcloud.project.models import (
     get_slim_project_or_raise,
 )
 from qfieldcloud.project.serializers import (
+    ProjectDetailSerializer,
     ProjectSeedSerializer,
     ProjectSerializer,
     ProjectThumbnailSerializer,
@@ -94,7 +95,10 @@ class ProjectViewSetPermissions(permissions.BasePermission):
 
 
 @extend_schema_view(
-    retrieve=extend_schema(description="Retrieve a project"),
+    retrieve=extend_schema(
+        description=("Retrieve a project"),
+        responses=ProjectDetailSerializer,
+    ),
     update=extend_schema(description="Update a project"),
     partial_update=extend_schema(description="Partially update a project"),
     destroy=extend_schema(description="Delete a project"),
@@ -154,6 +158,12 @@ class ProjectViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def get_serializer_class(self):
+        if self.action == "retrieve":
+            return ProjectDetailSerializer
+
+        return super().get_serializer_class()
 
     def get_queryset(self):
         projects = Project.objects.with_prefetch().for_user(self.request.user)
