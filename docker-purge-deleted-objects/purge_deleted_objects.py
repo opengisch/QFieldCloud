@@ -35,6 +35,10 @@ DELETE_BATCH_SIZE = 1000
 # AWS S3 limit for list object versions max keys up to 1000 (https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3/client/list_object_versions.html)
 LIST_OBJECT_VERSIONS_MAX_KEYS = 1000
 
+# Backend type for S3-compatible storages in QFieldCloud
+S3_BACKEND_TYPE = "qfieldcloud.filestorage.backend.QfcS3Boto3Storage"
+
+
 if TYPE_CHECKING:
     from mypy_boto3_s3.type_defs import (
         DeleteObjectsOutputTypeDef,
@@ -60,124 +64,153 @@ class LogicallyDeletedObject:
     versions: list[dict[str, Any]]
 
 
-@dataclass
+def _mask_secret(value: str | None) -> str:
+    if not value:
+        return "<not set>"
+
+    return "********"
+
+
+@dataclass(repr=False)
 class StorageConnectionConfig:
+    name: str
     bucket_name: str | None = None
     endpoint_url: str | None = None
     access_key_id: str | None = None
     secret_access_key: str | None = None
     region_name: str | None = None
 
+    def __repr__(self) -> str:
+        """Mask credentials so this config can be logged/printed safely."""
+        return (
+            f"{self.__class__.__name__}(\n"
+            f"  name={self.name!r},\n"
+            f"  bucket_name={self.bucket_name!r},\n"
+            f"  endpoint_url={self.endpoint_url!r},\n"
+            f"  region_name={self.region_name!r},\n"
+            f"  access_key_id={_mask_secret(self.access_key_id)},\n"
+            f"  secret_access_key={_mask_secret(self.secret_access_key)},\n"
+            f")"
+        )
 
-def _first_non_empty(*values: str | None) -> str | None:
-    for value in values:
-        if value is None:
-            continue
 
-        stripped = value.strip()
-        if stripped:
-            return stripped
-
-    return None
-
-
-def get_storage_config_from_storages_env(
+def get_storage_configs_from_storages_env(
     args: argparse.Namespace,
-) -> StorageConnectionConfig | None:
+) -> list[StorageConnectionConfig]:
     """
-    Parse STORAGES env var and extract S3-compatible config for the default storage.
+    Parse the STORAGES env var and extract S3-compatible configs.
+
+    If `args.storage_name` is given, only that storage is returned (and it must exist and be
+    of the `QfcS3Boto3Storage` backend). Otherwise, every storage of that backend type is
+    returned.
     """
     storages_raw = os.getenv("STORAGES")
     if not storages_raw:
-        return None
+        raise RuntimeError("STORAGES environment variable is not set")
 
     try:
         storages = json.loads(storages_raw)
     except json.JSONDecodeError as err:
-        logger.warning(f"Ignoring invalid STORAGES JSON: {err}")
-        return None
+        raise RuntimeError(f"Invalid STORAGES JSON: {err}") from err
 
     if not isinstance(storages, dict):
-        logger.warning("Ignoring STORAGES: expected a JSON object at top level")
-        return None
+        raise RuntimeError("Invalid STORAGES: expected a JSON object at top level")
 
-    # Pick selected storage, or the default storage if not specified
-    default_storage_name = os.getenv("STORAGES_PROJECT_DEFAULT_STORAGE") or "default"
-    storage_name = args.storage_name or default_storage_name
+    if args.storage_name:
+        if args.storage_name not in storages:
+            raise RuntimeError(f"Storage '{args.storage_name}' not found in STORAGES")
 
-    try:
+        storage_names = [args.storage_name]
+
+    else:
+        storage_names = list(storages.keys())
+
+    configs: list[StorageConnectionConfig] = []
+    for storage_name in storage_names:
         storage = storages[storage_name]
-    except KeyError:
-        logger.warning(f"Storage '{storage_name}' not found in STORAGES, skipping")
-        return None
 
-    if not isinstance(storage, dict):
-        return None
+        if not isinstance(storage, dict):
+            continue
 
-    if storage.get("BACKEND") != "qfieldcloud.filestorage.backend.QfcS3Boto3Storage":
-        return None
+        if storage.get("BACKEND") != S3_BACKEND_TYPE:
+            if args.storage_name:
+                raise RuntimeError(
+                    f"Storage '{storage_name}' is not of BACKEND type '{S3_BACKEND_TYPE}'"
+                )
 
-    options = storage.get("OPTIONS")
-    if not isinstance(options, dict):
-        logger.warning(
-            f"Ignoring STORAGES entry '{storage_name}': OPTIONS is missing or invalid"
+            continue
+
+        options = storage.get("OPTIONS")
+        if not isinstance(options, dict):
+            logger.warning(
+                f"Ignoring STORAGES entry '{storage_name}': OPTIONS is missing or invalid"
+            )
+            continue
+
+        configs.append(
+            StorageConnectionConfig(
+                name=storage_name,
+                bucket_name=options.get("bucket_name"),
+                endpoint_url=options.get("endpoint_url"),
+                access_key_id=options.get("access_key"),
+                secret_access_key=options.get("secret_key"),
+                region_name=options.get("region_name"),
+            )
         )
-        return None
 
-    return StorageConnectionConfig(
-        bucket_name=options.get("bucket_name"),
-        endpoint_url=options.get("endpoint_url"),
-        access_key_id=options.get("access_key"),
-        secret_access_key=options.get("secret_key"),
-        region_name=options.get("region_name"),
-    )
+    if not configs:
+        raise RuntimeError(
+            f"No storage of BACKEND type '{S3_BACKEND_TYPE}' found in STORAGES"
+        )
+
+    return configs
 
 
-def resolve_storage_connection_config(
+def resolve_storage_connection_configs(
     args: argparse.Namespace,
-) -> StorageConnectionConfig:
+) -> tuple[list[StorageConnectionConfig], str]:
     """
-    Resolve storage connection settings with this precedence:
+    Resolve storage connection settings, either from the STORAGES env var or from AWS_*
+    environment variables. These two sources are mutually exclusive.
 
-    1. Positional [bucket] CLI arg
-    2. AWS_* environment variables
-    3. STORAGES environment var
+    Returns:
+        A tuple of the resolved storage configs to purge, and a label describing their source.
     """
-    storages_config = get_storage_config_from_storages_env(args)
-
-    if not storages_config:
-        storages_config = StorageConnectionConfig()
-
-    bucket_name = _first_non_empty(
-        os.getenv("AWS_BUCKET_NAME"),
-        storages_config.bucket_name,
+    aws_env_vars = (
+        "AWS_BUCKET_NAME",
+        "AWS_ENDPOINT_URL",
+        "AWS_ACCESS_KEY_ID",
+        "AWS_SECRET_ACCESS_KEY",
+        "AWS_REGION",
     )
+    has_storages_env = bool(os.getenv("STORAGES"))
+    has_aws_env = any(os.getenv(var) for var in aws_env_vars)
 
-    endpoint_url = _first_non_empty(
-        os.getenv("AWS_ENDPOINT_URL"),
-        storages_config.endpoint_url,
-    )
+    if has_storages_env and has_aws_env:
+        raise RuntimeError(
+            "Both STORAGES and AWS_* environment variables are set. They are mutually "
+            "exclusive, unset one of them before running this script."
+        )
 
-    access_key_id = _first_non_empty(
-        os.getenv("AWS_ACCESS_KEY_ID"),
-        storages_config.access_key_id,
-    )
-    secret_access_key = _first_non_empty(
-        os.getenv("AWS_SECRET_ACCESS_KEY"),
-        storages_config.secret_access_key,
-    )
+    if has_aws_env:
+        config = StorageConnectionConfig(
+            name=os.getenv("AWS_BUCKET_NAME"),
+            bucket_name=os.getenv("AWS_BUCKET_NAME"),
+            endpoint_url=os.getenv("AWS_ENDPOINT_URL"),
+            access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+            secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+            region_name=os.getenv("AWS_REGION"),
+        )
+        return [config], "AWS_* environment variables"
 
-    region_name = _first_non_empty(
-        os.getenv("AWS_REGION"),
-        storages_config.region_name,
-    )
+    if has_storages_env:
+        return (
+            get_storage_configs_from_storages_env(args),
+            "STORAGES environment variable",
+        )
 
-    return StorageConnectionConfig(
-        bucket_name=bucket_name,
-        endpoint_url=endpoint_url,
-        access_key_id=access_key_id,
-        secret_access_key=secret_access_key,
-        region_name=region_name,
+    raise RuntimeError(
+        "No storage configuration found, set either STORAGES or AWS_* environment variables"
     )
 
 
@@ -565,6 +598,16 @@ def parse_retention_period(value: str) -> datetime:
     return datetime.now(timezone.utc) - delta
 
 
+def require_confirmation(configs: list[StorageConnectionConfig]) -> bool:
+    storage_names = ", ".join(config.name for config in configs)
+    confirmation_input = input(
+        f"Permanently delete from storage(s) '{storage_names}'? (yes/no): "
+    ).lower()
+
+    if confirmation_input != "yes":
+        sys.exit(0)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Scan and clean logically deleted objects in object storage like S3."
@@ -572,7 +615,11 @@ def main() -> int:
     parser.add_argument(
         "storage_name",
         nargs="?",
-        help="Target storage name, as named in STORAGES. If not provided, the default storage is used.",
+        help=(
+            "Target storage name, as named in STORAGES. If not provided, all STORAGES entries "
+            f"with BACKEND '{S3_BACKEND_TYPE}' are purged. "
+            "Not applicable when using AWS_* environment variables."
+        ),
     )
     parser.add_argument("--prefix", help="Filter by prefix")
     parser.add_argument(
@@ -609,33 +656,38 @@ def main() -> int:
     )
 
     try:
-        config = resolve_storage_connection_config(args)
+        configs, source = resolve_storage_connection_configs(args)
 
-        assert config.bucket_name is not None
-        bucket_name = config.bucket_name
+        logger.info(f"Using storage configuration(s) from {source}:")
+        for config in configs:
+            logger.info(f"  {config}")
 
-        # 1. Setup Connection
-        client = get_s3_client(config)
+        if not args.dry_run and not args.force:
+            require_confirmation(configs)
 
-        # 2. Build Pipeline
-        raw_iterator = iter_all_versions(client, bucket_name, args.prefix)
+        for config in configs:
+            assert config.bucket_name is not None
+            bucket_name = config.bucket_name
 
-        # Transform
-        clean_iterator = iter_logically_deleted(raw_iterator, args.retention_cutoff_ts)
+            logger.info(
+                f"Processing storage '{config.name}' (bucket '{bucket_name}')..."
+            )
 
-        # 3. Execute
-        if args.dry_run:
-            action_scan(clean_iterator)
-            return 0
+            # 1. Setup Connection
+            client = get_s3_client(config)
 
-        else:
-            if not args.force:
-                confirmation_input = input(
-                    f"Permanently delete from '{bucket_name}'? (yes/no): "
-                ).lower()
+            # 2. Build Pipeline
+            raw_iterator = iter_all_versions(client, bucket_name, args.prefix)
 
-                if confirmation_input != "yes":
-                    return 0
+            # Transform
+            clean_iterator = iter_logically_deleted(
+                raw_iterator, args.retention_cutoff_ts
+            )
+
+            # 3. Execute
+            if args.dry_run:
+                action_scan(clean_iterator)
+                continue
 
             action_permanently_delete_versions(client, bucket_name, clean_iterator)
 
