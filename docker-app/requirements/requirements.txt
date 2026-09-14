@@ -107,6 +107,8 @@ django-filter==26.1
     # via -r requirements/requirements.in
 django-invitations==2.1.0
     # via -r requirements/requirements.in
+django-ipware==7.0.1
+    # via -r requirements/requirements.in
 django-jazzmin==3.0.1
     # via -r requirements/requirements.in
 django-log-request-id==2.1.2
@@ -193,6 +195,8 @@ python-dateutil==2.9.0.post0
     # via
     #   botocore
     #   django-auditlog
+python-ipware==3.0.0
+    # via django-ipware
 pyyaml==6.0.3
     # via drf-spectacular
 referencing==0.37.0
