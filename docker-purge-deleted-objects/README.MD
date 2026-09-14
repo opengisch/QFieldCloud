@@ -30,6 +30,47 @@ pip install boto3
 pip install mypy-boto3-s3 # for type hinting
 ```
 
+## Storage Configuration
+
+The script needs to know which bucket(s) to connect to. Provide **exactly one** of the following two sources — they are mutually exclusive, and the script errors out if both, or neither, are set.
+
+### Option A: `STORAGES` environment variable
+
+Set `STORAGES` to the same JSON structure used by QFieldCloud's Django settings, e.g.:
+
+```json
+{
+  "default": {
+    "BACKEND": "qfieldcloud.filestorage.backend.QfcS3Boto3Storage",
+    "OPTIONS": {
+      "bucket_name": "qfieldcloud-local",
+      "endpoint_url": "http://172.17.0.1:8009",
+      "access_key": "...",
+      "secret_key": "...",
+      "region_name": ""
+    }
+  }
+}
+```
+
+By default, the script purges **every** entry in `STORAGES` whose `BACKEND` is `qfieldcloud.filestorage.backend.QfcS3Boto3Storage`, one after another. Pass a storage name as the positional `storage_name` argument to restrict it to a single entry (the entry must exist and be of that backend type):
+
+```bash
+python purge_deleted_objects.py my-storage-name --retention-period "30 days"
+```
+
+### Option B: `AWS_*` environment variables
+
+If `STORAGES` is not set, the script falls back to a single bucket configured via plain `boto3`-style environment variables:
+
+- `AWS_BUCKET_NAME`
+- `AWS_ENDPOINT_URL`
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+- `AWS_REGION`
+
+The positional `storage_name` argument does not apply in this mode.
+
 ## Usage
 
 Run the script directly from the command line.
@@ -37,51 +78,60 @@ Run the script directly from the command line.
 ### Basic Syntax
 
 ```bash
-python purge_deleted_objects.py <bucket_name> --retention-period "30 days" [options]
+python purge_deleted_objects.py [storage_name] --retention-period "30 days" [options]
 ```
+
+`storage_name` is optional and only used to select a single entry from `STORAGES` (see "Storage Configuration" above). If omitted, all matching `STORAGES` entries are purged.
 
 ### Options
 
 Run the script with `--help` to see all available options.
 
----
-By default the script uses the `default` S3 profile (default `boto3` behavior)
-check [Configuration and credential file settings in the AWS CLI](https://docs.aws.amazon.com/cli/v1/userguide/cli-configure-files.html)
-
 ### Examples
 
-**1. Scan a bucket to see how much space can be freed:**
+**1. Scan all configured storages to see how much space can be freed:**
 
 ```bash
-python purge_deleted_objects.py my-production-bucket --retention-period "30 days" --dry-run
+python purge_deleted_objects.py --retention-period "30 days" --dry-run
 ```
 
-**2. Scan a specific folder:**
+**2. Scan only one named storage from `STORAGES`:**
 
 ```bash
-python purge_deleted_objects.py my-production-bucket --retention-period "30 days" --dry-run --prefix "logs/2023/"
+python purge_deleted_objects.py my-production-storage --retention-period "30 days" --dry-run
 ```
 
-**3. Cleanup objects deleted more than 30 days ago (Retention Policy):**
+**3. Scan a specific folder:**
+
+```bash
+python purge_deleted_objects.py my-production-storage --retention-period "30 days" --dry-run --prefix "logs/2023/"
+```
+
+**4. Cleanup objects deleted more than 30 days ago (Retention Policy):**
 
 - `--retention-period '30 days'`: Only selects objects that were deleted **more than 30 days ago**. Objects deleted recently (within the last 30 days) are preserved to allow for restoration.
 
 ```bash
-# Clean objects deleted OLDER than 30 days
-python purge_deleted_objects.py my-bucket --retention-period '30 days'
+# Clean objects deleted OLDER than 30 days, across every eligible storage
+python purge_deleted_objects.py --retention-period '30 days'
 ```
 
-**4. Permanently delete objects:**
+**5. Permanently delete objects:**
 
 ```bash
-python purge_deleted_objects.py my-bucket --retention-period "30 days"
-# You will be prompted to confirm.
+# You will be prompted to confirm once, covering all storages to be purged.
+python purge_deleted_objects.py --retention-period "30 days"
 ```
 
-**5. Automated cleanup for RustFS (local/custom endpoint):**
+**6. Automated cleanup for RustFS (local/custom endpoint) using `AWS_*` env vars:**
 
 ```bash
-python purge_deleted_objects.py test-bucket --retention-period "30 days" --force
+export AWS_BUCKET_NAME=qfieldcloud-local
+export AWS_ACCESS_KEY_ID=rustfsadmin
+export AWS_SECRET_ACCESS_KEY=rustfsadmin
+export AWS_ENDPOINT_URL=http://localhost:8009
+
+python purge_deleted_objects.py --retention-period "30 days" --force
 ```
 
 ## Running Tests
@@ -111,8 +161,9 @@ The repository includes a test suite (`test.py`) that uses `unittest` and requir
     export AWS_ACCESS_KEY_ID=rustfsadmin
     export AWS_SECRET_ACCESS_KEY=rustfsadmin
     export AWS_ENDPOINT_URL=http://localhost:9000
-    export AWS_DEFAULT_REGION=us-east-1
     ```
+
+    (the bucket name will be generated and selected dynamically by the test suite)
 
 3.  **Run Tests**
     ```bash
