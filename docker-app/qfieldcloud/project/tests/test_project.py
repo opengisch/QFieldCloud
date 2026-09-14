@@ -667,7 +667,9 @@ class QfcTestCase(APITransactionTestCase):
         o = Organization.objects.create(username="o", organization_owner=u)
         p = Project.objects.create(name="p", owner=u, is_public=True)
 
-        set_subscription(u, max_premium_collaborators_per_private_project=0)
+        subscription = set_subscription(
+            u, max_premium_collaborators_per_private_project=1
+        )
 
         apiurl = f"/api/v1/projects/{p.pk}/"
 
@@ -693,9 +695,14 @@ class QfcTestCase(APITransactionTestCase):
         )
         assertRole("manager", "collaborator")
 
-        # If project is made private, the collaboration is invalid
+        # The project can go private while its collaborator count is within the plan limit
         p.is_public = False
         p.save()
+        assertRole("manager", "collaborator")
+
+        # Dropping the plan limit below the collaborator count invalidates the role
+        subscription.plan.max_premium_collaborators_per_private_project = 0
+        subscription.plan.save()
         assertNoRole()
 
         # Making the owner an organization is not enough as user is not member of that org
@@ -741,6 +748,38 @@ class QfcTestCase(APITransactionTestCase):
         c1.save()
 
         self.assertEqual(len(p1.direct_collaborators), 0)
+
+    def test_exceeds_private_collaborator_limit(self):
+        """Test the behavior of exceeding the private collaborator limit for a project."""
+        o1 = Organization.objects.create(username="o1", organization_owner=self.user1)
+        OrganizationMember.objects.create(organization=o1, member=self.user2)
+        OrganizationMember.objects.create(organization=o1, member=self.user3)
+        set_subscription(o1, max_premium_collaborators_per_private_project=1)
+
+        p1 = Project.objects.create(name="p1", owner=o1, is_public=False)
+        self.assertFalse(p1.exceeds_private_collaborator_limit)
+
+        ProjectCollaborator.objects.create(
+            project=p1, collaborator=self.user2, role=ProjectCollaboratorRole.READER
+        )
+        # at the limit, not over it
+        self.assertFalse(p1.exceeds_private_collaborator_limit)
+
+        ProjectCollaborator.objects.create(
+            project=p1, collaborator=self.user3, role=ProjectCollaboratorRole.READER
+        )
+        # now over the limit
+        self.assertTrue(p1.exceeds_private_collaborator_limit)
+
+    def test_exceeds_private_collaborator_limit_unlimited_plan(self):
+        """Test the behavior of exceeding the private collaborator limit for a project when the plan allows unlimited collaborators."""
+        set_subscription(self.user1, max_premium_collaborators_per_private_project=-1)
+        p1 = Project.objects.create(name="p1", owner=self.user1, is_public=False)
+        ProjectCollaborator.objects.create(
+            project=p1, collaborator=self.user2, role=ProjectCollaboratorRole.READER
+        )
+
+        self.assertFalse(p1.exceeds_private_collaborator_limit)
 
     def test_collaborators_count_no_collaborators(self):
         # baseline: owner-only project counts 0
