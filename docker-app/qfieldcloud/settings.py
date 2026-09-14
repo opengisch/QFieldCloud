@@ -610,6 +610,10 @@ AXES_LOCKOUT_PARAMETERS = [["username", "ip_address"]]
 AXES_COOLOFF_TIME = lambda _request: timedelta(minutes=30)  # noqa: E731
 # If True, a successful login will reset the number of failed logins. Default: False
 AXES_RESET_ON_SUCCESS = True
+# `django-axes` only reads `REMOTE_ADDR` unless told otherwise. Behind nginx that's always the nginx container's own IP.
+# Check `X-Forwarded-For` first, and fall back to `REMOTE_ADDR` for requests that reach the app directly.
+# See https://django-axes.readthedocs.io/en/latest/4_configuration.html#configuring-reverse-proxies
+AXES_IPWARE_META_PRECEDENCE_ORDER = ("HTTP_X_FORWARDED_FOR", "REMOTE_ADDR")
 
 # Django email configuration
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
