@@ -53,7 +53,6 @@ from invitations.admin import InvitationAdmin as InvitationAdminBase
 from invitations.utils import get_invitation_model
 from rest_framework.authtoken.models import TokenProxy
 
-from qfieldcloud.core import exceptions
 from qfieldcloud.core.models import (
     ApplyJob,
     ApplyJobDelta,
@@ -1393,8 +1392,8 @@ class DeltaAdmin(QFieldCloudModelAdmin):
 
     def apply_delta(self, request, delta):
         if not delta.project.has_the_qgis_file:
-            self.message_user(request, "Missing project file")
-            raise exceptions.NoQGISProjectError()
+            self.message_user(request, "Missing project file", level=messages.ERROR)
+            return HttpResponseRedirect(".")
 
         if not jobs.apply_deltas(
             delta.project,
@@ -1403,8 +1402,13 @@ class DeltaAdmin(QFieldCloudModelAdmin):
             delta.project.overwrite_conflicts,
             delta_ids=[str(delta.id)],
         ):
-            self.message_user(request, "No deltas to apply")
-            raise exceptions.NoDeltasToApplyError()
+            self.message_user(
+                request,
+                "No deltas to apply. The delta is likely not in PENDING status, "
+                "is already part of a running apply job, or the project owner is not allowed to create jobs.",
+                level=messages.ERROR,
+            )
+            return HttpResponseRedirect(".")
 
         self.message_user(request, "Delta application started")
 

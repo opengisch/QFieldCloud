@@ -362,6 +362,15 @@ AUTH_USER_MODEL = "core.User"
 AUTH_TOKEN_LENGTH = 100
 AUTH_TOKEN_EXPIRATION_HOURS = int(os.environ["QFIELDCLOUD_AUTH_TOKEN_EXPIRATION_HOURS"])
 
+QFIELDCLOUD_DRF_BROWSERABLE_API_RENDERER_ENABLED = parse_string_to_bool(
+    os.environ["QFIELDCLOUD_DRF_BROWSERABLE_API_RENDERER_ENABLED"]
+)
+
+# See https://www.django-rest-framework.org/api-guide/renderers/#setting-the-renderers
+DEFAULT_RENDERER_CLASSES = ["rest_framework.renderers.JSONRenderer"]
+if QFIELDCLOUD_DRF_BROWSERABLE_API_RENDERER_ENABLED:
+    DEFAULT_RENDERER_CLASSES.append("rest_framework.renderers.BrowsableAPIRenderer")
+
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
@@ -372,6 +381,7 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "EXCEPTION_HANDLER": "qfieldcloud.core.rest_utils.exception_handler",
+    "DEFAULT_RENDERER_CLASSES": DEFAULT_RENDERER_CLASSES,
 }
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
@@ -600,6 +610,10 @@ AXES_LOCKOUT_PARAMETERS = [["username", "ip_address"]]
 AXES_COOLOFF_TIME = lambda _request: timedelta(minutes=30)  # noqa: E731
 # If True, a successful login will reset the number of failed logins. Default: False
 AXES_RESET_ON_SUCCESS = True
+# `django-axes` only reads `REMOTE_ADDR` unless told otherwise. Behind nginx that's always the nginx container's own IP.
+# Check `X-Forwarded-For` first, and fall back to `REMOTE_ADDR` for requests that reach the app directly.
+# See https://django-axes.readthedocs.io/en/latest/4_configuration.html#configuring-reverse-proxies
+AXES_IPWARE_META_PRECEDENCE_ORDER = ("HTTP_X_FORWARDED_FOR", "REMOTE_ADDR")
 
 # Django email configuration
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"

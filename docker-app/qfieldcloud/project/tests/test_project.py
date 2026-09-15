@@ -667,7 +667,9 @@ class QfcTestCase(APITransactionTestCase):
         o = Organization.objects.create(username="o", organization_owner=u)
         p = Project.objects.create(name="p", owner=u, is_public=True)
 
-        set_subscription(u, max_premium_collaborators_per_private_project=0)
+        subscription = set_subscription(
+            u, max_premium_collaborators_per_private_project=1
+        )
 
         apiurl = f"/api/v1/projects/{p.pk}/"
 
@@ -693,9 +695,14 @@ class QfcTestCase(APITransactionTestCase):
         )
         assertRole("manager", "collaborator")
 
-        # If project is made private, the collaboration is invalid
+        # The project can go private while its collaborator count is within the plan limit
         p.is_public = False
         p.save()
+        assertRole("manager", "collaborator")
+
+        # Dropping the plan limit below the collaborator count invalidates the role
+        subscription.plan.max_premium_collaborators_per_private_project = 0
+        subscription.plan.save()
         assertNoRole()
 
         # Making the owner an organization is not enough as user is not member of that org
@@ -741,6 +748,38 @@ class QfcTestCase(APITransactionTestCase):
         c1.save()
 
         self.assertEqual(len(p1.direct_collaborators), 0)
+
+    def test_exceeds_private_collaborator_limit(self):
+        """Test the behavior of exceeding the private collaborator limit for a project."""
+        o1 = Organization.objects.create(username="o1", organization_owner=self.user1)
+        OrganizationMember.objects.create(organization=o1, member=self.user2)
+        OrganizationMember.objects.create(organization=o1, member=self.user3)
+        set_subscription(o1, max_premium_collaborators_per_private_project=1)
+
+        p1 = Project.objects.create(name="p1", owner=o1, is_public=False)
+        self.assertFalse(p1.exceeds_private_collaborator_limit)
+
+        ProjectCollaborator.objects.create(
+            project=p1, collaborator=self.user2, role=ProjectCollaboratorRole.READER
+        )
+        # at the limit, not over it
+        self.assertFalse(p1.exceeds_private_collaborator_limit)
+
+        ProjectCollaborator.objects.create(
+            project=p1, collaborator=self.user3, role=ProjectCollaboratorRole.READER
+        )
+        # now over the limit
+        self.assertTrue(p1.exceeds_private_collaborator_limit)
+
+    def test_exceeds_private_collaborator_limit_unlimited_plan(self):
+        """Test the behavior of exceeding the private collaborator limit for a project when the plan allows unlimited collaborators."""
+        set_subscription(self.user1, max_premium_collaborators_per_private_project=-1)
+        p1 = Project.objects.create(name="p1", owner=self.user1, is_public=False)
+        ProjectCollaborator.objects.create(
+            project=p1, collaborator=self.user2, role=ProjectCollaboratorRole.READER
+        )
+
+        self.assertFalse(p1.exceeds_private_collaborator_limit)
 
     def test_collaborators_count_no_collaborators(self):
         # baseline: owner-only project counts 0
@@ -1735,3 +1774,102 @@ class QfcTestCase(APITransactionTestCase):
                     project=project, collaborator=self.user3
                 ).exists()
             )
+
+    def test_project_teams_field(self):
+        """`GET /projects/<id>/` returns `teams`, the caller's team names in the project's owning organization."""
+        # org1 has three teams. Nobody joins gamma.
+        org1 = Organization.objects.create(
+            username="org1", organization_owner=self.user1
+        )
+        team_alpha = Team.objects.create(username="@org1/alpha", team_organization=org1)
+        team_beta = Team.objects.create(username="@org1/beta", team_organization=org1)
+        Team.objects.create(username="@org1/gamma", team_organization=org1)
+
+        # A second org with its own team, to check teams don't leak across orgs.
+        org2 = Organization.objects.create(
+            username="org2", organization_owner=self.user3
+        )
+        team_delta = Team.objects.create(username="@org2/delta", team_organization=org2)
+
+        # user2 is in team alpha and beta (org1), and in delta (org2).
+        OrganizationMember.objects.create(organization=org1, member=self.user2)
+        TeamMember.objects.create(team=team_alpha, member=self.user2)
+        TeamMember.objects.create(team=team_beta, member=self.user2)
+        OrganizationMember.objects.create(organization=org2, member=self.user2)
+        TeamMember.objects.create(team=team_delta, member=self.user2)
+
+        # user3 is an org1 admin but joins no team.
+        OrganizationMember.objects.create(
+            organization=org1, member=self.user3, role=OrganizationMember.Roles.ADMIN
+        )
+
+        # outsider has nothing to do with org1.
+        outsider = Person.objects.create_user(username="outsider", password="abc123")
+        outsider_token = AuthToken.objects.get_or_create(user=outsider)[0]
+
+        org_project = Project.objects.create(
+            name="org_project", is_public=True, owner=org1
+        )
+        person_project = Project.objects.create(
+            name="person_project", is_public=True, owner=self.user1
+        )
+        org_url = f"/api/v1/projects/{org_project.pk}/"
+
+        def get_teams(token, url):
+            self.client.credentials(HTTP_AUTHORIZATION="Token " + token.key)
+            response = self.client.get(url, follow=True)
+            self.assertTrue(status.is_success(response.status_code))
+            return response.json()["teams"]
+
+        # `teams` is the caller's teams in the owning organization unprefixed.
+        with self.subTest(
+            "Test an organization member of alpha and beta returns the correct teams"
+        ):
+            self.assertEqual(get_teams(self.token2, org_url), ["alpha", "beta"])
+
+        with self.subTest(
+            "Test an organization owner without a team returns empty teams"
+        ):
+            self.assertEqual(get_teams(self.token1, org_url), [])
+
+        with self.subTest(
+            "Test an organization admin without a team returns empty teams"
+        ):
+            self.assertEqual(get_teams(self.token3, org_url), [])
+
+        with self.subTest("Test an outsider on a public project returns empty teams"):
+            self.assertEqual(get_teams(outsider_token, org_url), [])
+
+        with self.subTest("Test a person-owned project returns empty teams"):
+            person_url = f"/api/v1/projects/{person_project.pk}/"
+            self.assertEqual(get_teams(self.token1, person_url), [])
+
+        # `teams` is not part of the list or write responses.
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        with self.subTest(
+            "Test that `teams` is not included in every project in the list response"
+        ):
+            response = self.client.get("/api/v1/projects/")
+            self.assertTrue(status.is_success(response.status_code))
+            self.assertGreaterEqual(len(response.json()), 1)
+            for project_data in response.json():
+                self.assertNotIn("teams", project_data)
+
+        with self.subTest("Test that `teams` is not included from the create response"):
+            response = self.client.post(
+                "/api/v1/projects/",
+                {
+                    "name": "created_project",
+                    "owner": "org1",
+                    "description": "desc",
+                    "is_public": False,
+                },
+            )
+            self.assertTrue(status.is_success(response.status_code))
+            self.assertNotIn("teams", response.json())
+
+        with self.subTest("Test that `teams` is not included in the update response"):
+            response = self.client.patch(org_url, {"description": "new desc"})
+            self.assertTrue(status.is_success(response.status_code))
+            self.assertNotIn("teams", response.json())

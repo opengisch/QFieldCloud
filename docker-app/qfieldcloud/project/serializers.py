@@ -1,11 +1,15 @@
 from typing import Any
 
-from drf_spectacular.utils import extend_schema_serializer
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema_field, extend_schema_serializer
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from qfieldcloud.core import exceptions
 from qfieldcloud.core.models import (
+    BasemapProvider,
+    BasemapStyle,
+    Team,
     User,
 )
 from qfieldcloud.project.models import (
@@ -246,6 +250,41 @@ class ProjectSerializer(serializers.ModelSerializer):
         model = Project
 
 
+class ProjectDetailSerializer(ProjectSerializer):
+    """`ProjectSerializer` with the caller's teams in the project owning organization."""
+
+    teams = serializers.SerializerMethodField()
+
+    def get_teams(self, obj: Project) -> list[str]:
+        """Returns the caller's team names in the project's owning organization, without the `@organization/` prefix.
+
+        Empty when a person owns the project or the caller is in no team.
+        """
+        # A person owns the project, so it has no teams.
+        if obj.owner.is_person:
+            return []
+
+        request = self.context["request"]
+
+        teams = Team.objects.filter(
+            team_organization=obj.owner.organization,
+            members__member=request.user,
+        ).select_related("team_organization")
+
+        team_names = []
+        for team in teams:
+            team_names.append(team.teamname)
+
+        return team_names
+
+    class Meta(ProjectSerializer.Meta):
+        fields = (*ProjectSerializer.Meta.fields, "teams")  # type: ignore[assignment]
+        read_only_fields = (
+            *ProjectSerializer.Meta.read_only_fields,
+            "teams",
+        )  # type: ignore[assignment]
+
+
 class ProjectThumbnailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Project
@@ -269,3 +308,91 @@ class ProjectSeedSerializer(serializers.ModelSerializer):
             return None
 
         return obj.extent.extent
+
+
+class ProjectSeedRequestSerializer(serializers.Serializer):
+    """Documentation only schema for the `seed` request object.
+
+    `ProjectSerializer.seed` is a plain `JSONField`. This serializer exists so
+    `@extend_schema` can render the real keys instead of a string.
+    """
+
+    extent = serializers.CharField(
+        required=False,
+        help_text=(
+            "Project extent in EPSG:4326 as `minX, minY, maxX, maxY`. "
+            "When `clone_from_project` is provided, this is the only allowed key."
+        ),
+    )
+    basemap_provider = serializers.ChoiceField(
+        choices=BasemapProvider.choices,
+        required=False,
+        default=BasemapProvider.NONE,
+        help_text="Basemap provider to seed the project with.",
+    )
+    basemap_style = serializers.ChoiceField(
+        choices=BasemapStyle.choices,
+        required=False,
+        default=BasemapStyle.STANDARD,
+        help_text="Basemap style. Only used when `basemap_provider` is set.",
+    )
+    basemap_url = serializers.CharField(
+        required=False,
+        help_text="XYZ tile URL. Required when `basemap_provider` is `custom`.",
+    )
+
+
+class ProjectCreateRequestSerializer(ProjectSerializer):
+    """Documentation only request schema for `POST /api/v1/projects/`."""
+
+    # Here `owner` and `seed` are overridden read-only / loosely-typed fields on `ProjectSerializer`
+    # purely to shape the generated schema, so the type mismatch is expected.
+    owner = serializers.CharField(  # type: ignore[assignment]
+        required=False,
+        help_text=(
+            "Username of the project owner. Can be the authenticated user or an "
+            "organization they are a member of. Defaults to the authenticated "
+            "user when omitted."
+        ),
+    )
+    seed = ProjectSeedRequestSerializer(  # type: ignore[assignment]
+        required=False,
+        help_text=(
+            "Seed data used to pre-populate the project. An `xlsform_file` upload "
+            "makes the request `multipart/form-data`, and `seed` then has to be a "
+            "JSON-encoded string. If `clone_from_project` is provided, only the "
+            "`extent` field is allowed."
+        ),
+    )
+    xlsform_file = extend_schema_field(OpenApiTypes.BINARY)(serializers.FileField)(
+        required=False,
+        write_only=True,
+        help_text=(
+            "The XLSForm file to use to create the project. Requires `seed` and a "
+            "`multipart/form-data` request. Ignored if `clone_from_project` is "
+            "provided."
+        ),
+    )
+
+
+@extend_schema_serializer(
+    exclude_fields=["xlsform_file"],
+)
+class ProjectCreateJSONRequestSerializer(ProjectCreateRequestSerializer):
+    """Documentation only `application/json` variant of the create request.
+
+    `xlsform_file` is dropped here: a file can only be sent in a
+    `multipart/form-data` request, so it lives only on
+    `ProjectCreateRequestSerializer`.
+    """
+
+
+@extend_schema_serializer(
+    exclude_fields=["seed", "xlsform_file", "clone_from_project"],
+)
+class ProjectUpdateRequestSerializer(ProjectCreateRequestSerializer):
+    """Documentation only request schema for project update and partial update.
+
+    Same as `ProjectCreateRequestSerializer` without the create-only fields
+    `seed`, `xlsform_file` and `clone_from_project`.
+    """

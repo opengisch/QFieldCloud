@@ -30,9 +30,13 @@ from qfieldcloud.project.models import (
     get_slim_project_or_raise,
 )
 from qfieldcloud.project.serializers import (
+    ProjectCreateJSONRequestSerializer,
+    ProjectCreateRequestSerializer,
+    ProjectDetailSerializer,
     ProjectSeedSerializer,
     ProjectSerializer,
     ProjectThumbnailSerializer,
+    ProjectUpdateRequestSerializer,
 )
 from qfieldcloud.project.utils import projectseed_utils
 from qfieldcloud.subscription.exceptions import QuotaError
@@ -94,9 +98,20 @@ class ProjectViewSetPermissions(permissions.BasePermission):
 
 
 @extend_schema_view(
-    retrieve=extend_schema(description="Retrieve a project"),
-    update=extend_schema(description="Update a project"),
-    partial_update=extend_schema(description="Partially update a project"),
+    retrieve=extend_schema(
+        description=("Retrieve a project"),
+        responses=ProjectDetailSerializer,
+    ),
+    update=extend_schema(
+        description="Update a project",
+        request=ProjectUpdateRequestSerializer,
+        responses=ProjectSerializer,
+    ),
+    partial_update=extend_schema(
+        description="Partially update a project",
+        request=ProjectUpdateRequestSerializer,
+        responses=ProjectSerializer,
+    ),
     destroy=extend_schema(description="Delete a project"),
     list=extend_schema(
         description="""List projects owned by the authenticated
@@ -105,7 +120,14 @@ class ProjectViewSetPermissions(permissions.BasePermission):
     ),
     create=extend_schema(
         description="""Create a new project owned by the specified
-        user or organization"""
+        user or organization""",
+        # Plain JSON, or multipart/form-data when uploading `xlsform_file`.
+        # In a multipart request, `seed` must be sent as a JSON-encoded string.
+        request={
+            "application/json": ProjectCreateJSONRequestSerializer,
+            "multipart/form-data": ProjectCreateRequestSerializer,
+        },
+        responses=ProjectSerializer,
     ),
     upload_thumbnail=extend_schema(
         description="Update the project thumbnail",
@@ -154,6 +176,12 @@ class ProjectViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def get_serializer_class(self):
+        if self.action == "retrieve":
+            return ProjectDetailSerializer
+
+        return super().get_serializer_class()
 
     def get_queryset(self):
         projects = Project.objects.with_prefetch().for_user(self.request.user)

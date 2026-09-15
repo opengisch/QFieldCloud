@@ -605,8 +605,10 @@ class AbstractSubscription(models.Model):
 
     created_by = models.ForeignKey(
         User,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
         related_name="+",
+        null=True,
+        blank=True,
     )
 
     created_at = models.DateTimeField(_("Created at"), auto_now_add=True)
