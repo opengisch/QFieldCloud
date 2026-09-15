@@ -88,9 +88,19 @@ class TestObjectStorageCleaner(unittest.TestCase):
         script_path = os.path.join(
             os.path.dirname(__file__), "purge_deleted_objects.py"
         )
-        cmd = [sys.executable, script_path, self.bucket_name] + args
 
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        # Set up environment for the subprocess
+        env = os.environ.copy()
+        env.pop("STORAGES", None)
+        env["AWS_BUCKET_NAME"] = self.bucket_name
+
+        cmd = [sys.executable, script_path] + args
+
+        result = subprocess.run(cmd, capture_output=True, text=True, env=env)
+
+        if result.returncode != 0:
+            print("STDOUT:", result.stdout)
+            print("STDERR:", result.stderr)
 
         self.assertEqual(result.returncode, 0)
 
