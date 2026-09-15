@@ -124,7 +124,7 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
     form = SubscriptionModelForm
 
     fields = (
-        "plan",
+        "regular_plan",
         "account",
         "status",
         "active_since",
@@ -154,7 +154,7 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
     list_filter = (
         SubscriptionPeriodFilter,
         "status",
-        "plan",
+        "regular_plan",
         ActiveUntilFilter,
     )
 
@@ -198,7 +198,7 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
         if obj is not None:
             return (
                 *self.readonly_fields,
-                "plan",
+                "regular_plan",
                 "account",
                 "plan__link",
                 "account__link",
@@ -220,10 +220,14 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
 
     @admin.display(description=_("Plan"))
     def plan__link(self, instance):
-        return model_admin_url(instance.plan, str(instance.plan))
+        return model_admin_url(instance.regular_plan, str(instance.regular_plan))
 
     def get_queryset(self, request: HttpRequest):
-        return super().get_queryset(request).select_related("account__user", "plan")
+        return (
+            super()
+            .get_queryset(request)
+            .select_related("account__user", "regular_plan")
+        )
 
     @admin.display(description=_("Subscriber email"))
     def account__user__email(self, instance):
