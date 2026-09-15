@@ -448,7 +448,9 @@ class JobRun:
             mem_limit=config.WORKER_QGIS_MEMORY_LIMIT,
             cpu_shares=config.WORKER_QGIS_CPU_SHARES,
             labels={
-                "app": f"{settings.ENVIRONMENT}_worker",
+                "qfieldcloud.role": "worker",
+                "qfieldcloud.environment": settings.ENVIRONMENT,
+                "qfieldcloud.compose_project_name": settings.COMPOSE_PROJECT_NAME,
                 "type": self.job.type,
                 "job_id": str(self.job.id),
                 "project_id": str(self.job.project_id),
@@ -758,7 +760,13 @@ def cancel_orphaned_workers() -> None:
 
     try:
         running_workers: list[Container] = client.containers.list(
-            filters={"label": f"app={settings.ENVIRONMENT}_worker"},
+            filters={
+                "label": [
+                    "qfieldcloud.role=worker",
+                    f"qfieldcloud.environment={settings.ENVIRONMENT}",
+                    f"qfieldcloud.compose_project_name={settings.COMPOSE_PROJECT_NAME}",
+                ],
+            },
         )
     except docker.errors.NotFound:
         # We don't mind empty references since they mean there is no
