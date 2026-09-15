@@ -440,6 +440,69 @@ class QFieldCloudInlineAdmin(admin.TabularInline):
         return super().get_formset(request, obj, **kwargs)
 
 
+class ActionPanelInlineBase(QFieldCloudInlineAdmin):
+    template = "admin/edit_inline/action_panel.html"
+    extra = 0
+    max_num = 0
+    can_delete = False
+    manage_url_name = ""
+    add_url_name = ""
+    manage_text = ""
+    add_text = ""
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).none()
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def get_query_params(self) -> dict[str, str]:
+        return {}
+
+    def get_manage_query_params(self) -> dict[str, str]:
+        return {}
+
+    def get_count(self) -> int:
+        return 0
+
+    def get_count_text(self) -> str:
+        return str(self.get_count())
+
+    @property
+    def bottom_html(self):
+        if not self.parent_obj:
+            return ""
+
+        return format_html(
+            """
+                <p>{count_text}</p>
+                <div style="display: flex; gap: .5rem;">
+                    <a href="{manage_url}?{manage_query_params}" class="btn btn-default form-control">
+                        <i class="fa fa-list"></i>
+                        {manage_text}
+                    </a>
+                    <a href="{add_url}?{add_query_params}" class="btn btn-default form-control">
+                        <i class="fa fa-plus-circle"></i>
+                        {add_text}
+                    </a>
+                </div>
+            """,
+            count_text=self.get_count_text(),
+            manage_url=reverse(self.manage_url_name),
+            manage_query_params=urlencode(self.get_manage_query_params()),
+            manage_text=self.manage_text,
+            add_url=reverse(self.add_url_name),
+            add_query_params=urlencode(self.get_query_params()),
+            add_text=self.add_text,
+        )
+
+
 def admin_urlname_by_obj(value, arg):
     if isinstance(value, User):
         if value.is_person:
@@ -718,32 +781,6 @@ class UserAccountInline(admin.StackedInline):
         return obj is None
 
 
-class ProjectInline(admin.TabularInline):
-    model = Project
-    fk_name = "owner"
-    extra = 0
-    absolute_max = 5000
-
-    fields = ("owned_project", "created_by", "is_public", "overwrite_conflicts")
-    readonly_fields = ("owned_project", "created_by")
-    has_direct_delete_permission = False
-
-    # Override django.forms.formsets.DEFAULT_MAX_NUM for organizations with a large number of projects
-    # to a higher value (>1000) to prevent saving of large formsets from throwing an error
-    def get_formset(self, request, obj=None, **kwargs):
-        kwargs.setdefault("absolute_max", self.absolute_max)
-        return super().get_formset(request, obj, **kwargs)
-
-    def owned_project(self, obj):
-        return model_admin_url(obj, obj.name)
-
-    def has_add_permission(self, request, obj):
-        return False
-
-    def has_change_permission(self, request, obj):
-        return False
-
-
 class PersonAdmin(QFieldCloudModelAdmin):
     list_display = (
         "username",
@@ -1000,56 +1037,35 @@ class SecretAdmin(QFieldCloudModelAdmin):
         }
 
 
-class SecretInlineBase(QFieldCloudInlineAdmin):
+class SecretInlineBase(ActionPanelInlineBase):
     model = Secret
-    fields = ("link_to_secret", "type", "assigned_to", "created_by")
-    readonly_fields = ("link_to_secret",)
-    max_num = 0
-    extra = 0
+    manage_url_name = "admin:core_secret_changelist"
+    add_url_name = "admin:core_secret_add"
+    manage_text = str(_("Manage secrets"))
+    add_text = str(_("Add secret"))
 
-    @admin.display(description=_("Name"))
-    def link_to_secret(self, obj):
-        url = reverse("admin:core_secret_change", args=[obj.pk])
-        return format_html('<a href="{}">{}</a>', url, obj.name)
+    def get_count(self) -> int:
+        query_params = self.get_manage_query_params()
+        if query_params:
+            return self.model.objects.filter(**query_params).count()
 
-    def has_add_permission(self, request, obj=None):
-        return False
+        return 0
 
-    def has_change_permission(self, request, obj=None):
-        return False
-
-    def has_delete_permission(self, request, obj=None):
-        return False
-
-    def get_query_params(self) -> dict[str, str]:
-        """Return query parameters for the 'Add Secret' button."""
-        return {}
-
-    @property
-    def bottom_html(self):
-        if self.parent_obj:
-            return format_html(
-                """
-                    <a href="{url}?{query_params}" class="btn btn-default form-control">
-                        <i class="fa fa-plus-circle"></i>
-                        {text}
-                    </a>
-                """,
-                url=reverse("admin:core_secret_add"),
-                query_params=urlencode(self.get_query_params()),
-                text="Add Secret",
-            )
-        else:
-            return ""
+    def get_count_text(self) -> str:
+        return _("{} secret(s)").format(self.get_count())
 
 
 class OrganizationSecretInline(SecretInlineBase):
     fk_name = "organization"
 
     def get_query_params(self) -> dict[str, str]:
-        """Return query parameters for the 'Add Secret' button."""
         return {
             "organization_id": str(self.parent_obj.pk),
+        }
+
+    def get_manage_query_params(self) -> dict[str, str]:
+        return {
+            "organization__id__exact": str(self.parent_obj.pk),
         }
 
 
@@ -1440,13 +1456,25 @@ class DeltaAdmin(QFieldCloudModelAdmin):
         )
 
 
-class OrganizationMemberInline(admin.TabularInline):
-    model = OrganizationMember
-    fk_name = "organization"
-    extra = 0
-
-    # These fields must be autocomplete due to performance issue in the default Django admin theme, as the foreign key dropdown renders all the options.
+class OrganizationMemberAdmin(QFieldCloudModelAdmin):
+    list_display = (
+        "organization",
+        "member",
+        "role",
+        "is_public",
+        "created_by",
+        "created_at",
+        "updated_by",
+        "updated_at",
+    )
+    list_filter = ("role", "is_public", "created_at", "updated_at")
+    search_fields = (
+        "organization__username__iexact",
+        "member__username__icontains",
+        "member__email__iexact",
+    )
     autocomplete_fields = (
+        "organization",
         "member",
         "created_by",
         "updated_by",
@@ -1458,26 +1486,92 @@ class OrganizationMemberInline(admin.TabularInline):
         "updated_at",
     )
 
+    search_parser_config = {
+        "organization": {
+            "filter": "organization__username__iexact",
+        },
+        "member": {
+            "filter": "member__username__iexact",
+        },
+    }
 
-class TeamInline(admin.TabularInline):
+    def save_model(self, request, obj, form, change):
+        if not change:
+            obj.created_by = request.user
+
+        obj.updated_by = request.user
+
+        super().save_model(request, obj, form, change)
+
+    def get_changeform_initial_data(self, request):
+        initial = super().get_changeform_initial_data(request)
+        organization_id = request.GET.get("organization")
+
+        if organization_id:
+            initial["organization"] = organization_id
+
+        return initial
+
+    def response_add(self, request, obj, post_url_continue=None):
+        if "_addanother" in request.POST:
+            add_url = "{}?{}".format(
+                reverse("admin:core_organizationmember_add"),
+                urlencode({"organization": obj.organization_id}),
+            )
+            return HttpResponseRedirect(add_url)
+
+        return super().response_add(request, obj, post_url_continue)
+
+
+class OrganizationMemberInline(ActionPanelInlineBase):
+    model = OrganizationMember
+    fk_name = "organization"
+    verbose_name = _("Organization members")
+    verbose_name_plural = _("Organization members")
+    manage_url_name = "admin:core_organizationmember_changelist"
+    add_url_name = "admin:core_organizationmember_add"
+    manage_text = str(_("Manage members"))
+    add_text = str(_("Add member"))
+
+    def get_query_params(self) -> dict[str, str]:
+        return {"organization": str(self.parent_obj.pk)}
+
+    def get_manage_query_params(self) -> dict[str, str]:
+        return {"q": f"organization:{self.parent_obj.username}"}
+
+    def get_count(self) -> int:
+        return self.parent_obj.members.count()
+
+    def get_count_text(self) -> str:
+        return _("{} member(s)").format(self.get_count())
+
+
+class TeamInline(ActionPanelInlineBase):
     model = Team
     fk_name = "team_organization"
-    extra = 0
+    verbose_name = _("Teams")
+    verbose_name_plural = _("Teams")
+    manage_url_name = "admin:core_team_changelist"
+    add_url_name = "admin:core_team_add"
+    manage_text = str(_("Manage teams"))
+    add_text = str(_("Add team"))
 
-    fields = ("username",)
-    has_direct_delete_permission = False
+    def get_query_params(self) -> dict[str, str]:
+        return {"team_organization": str(self.parent_obj.pk)}
 
-    def has_add_permission(self, request, obj):
-        return False
+    def get_manage_query_params(self) -> dict[str, str]:
+        return {"q": f"organization:{self.parent_obj.username}"}
 
-    def has_change_permission(self, request, obj):
-        return False
+    def get_count(self) -> int:
+        return self.parent_obj.teams.count()
+
+    def get_count_text(self) -> str:
+        return _("{} team(s)").format(self.get_count())
 
 
 class OrganizationAdmin(QFieldCloudModelAdmin):
     inlines = (
         UserAccountInline,
-        ProjectInline,
         OrganizationMemberInline,
         TeamInline,
         OrganizationSecretInline,
@@ -1489,6 +1583,9 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
         "organization_owner",
         "default_project_role_for_members",
         "date_joined",
+        "projects_link",
+        "members_link",
+        "teams_link",
         "active_users_links",
     )
     list_display = (
@@ -1508,6 +1605,9 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
     readonly_fields = (
         "date_joined",
         "storage_usage__field",
+        "projects_link",
+        "members_link",
+        "teams_link",
         "active_users_links",
     )
 
@@ -1525,6 +1625,54 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
             "filter": "membership_roles__user__username__iexact",
         },
     }
+
+    @admin.display(description=_("Projects"))
+    def projects_link(self, instance) -> str:
+        count = instance.projects.count()
+        url = "{}?{}".format(
+            reverse("admin:project_project_changelist"),
+            urlencode({"q": f"owner:{instance.username}"}),
+        )
+
+        return format_html('<a href="{}">{} project(s)</a>', url, count)
+
+    @admin.display(description=_("Organization members"))
+    def members_link(self, instance) -> str:
+        count = instance.members.count()
+        changelist_url = "{}?{}".format(
+            reverse("admin:core_organizationmember_changelist"),
+            urlencode({"q": f"organization:{instance.username}"}),
+        )
+        add_url = "{}?{}".format(
+            reverse("admin:core_organizationmember_add"),
+            urlencode({"organization": instance.pk}),
+        )
+
+        return format_html(
+            '<a href="{}">{} member(s)</a> | <a href="{}">Add member</a>',
+            changelist_url,
+            count,
+            add_url,
+        )
+
+    @admin.display(description=_("Teams"))
+    def teams_link(self, instance) -> str:
+        count = instance.teams.count()
+        changelist_url = "{}?{}".format(
+            reverse("admin:core_team_changelist"),
+            urlencode({"q": f"organization:{instance.username}"}),
+        )
+        add_url = "{}?{}".format(
+            reverse("admin:core_team_add"),
+            urlencode({"team_organization": instance.pk}),
+        )
+
+        return format_html(
+            '<a href="{}">{} team(s)</a> | <a href="{}">Add team</a>',
+            changelist_url,
+            count,
+            add_url,
+        )
 
     @admin.display(description=_("Active members"))
     def active_users_links(self, instance) -> str:
@@ -1545,17 +1693,6 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
     @admin.display(description=_("Storage"))
     def storage_usage__field(self, instance) -> str:
         return format_storage_usage(instance.useraccount)
-
-    def save_formset(self, request, form, formset, change):
-        for form_obj in formset:
-            if isinstance(form_obj.instance, OrganizationMember):
-                # add created_by only if it's a newly created OrganizationMember
-                if form_obj.instance.id is None:
-                    form_obj.instance.created_by = request.user
-
-                form_obj.instance.updated_by = request.user
-
-        super().save_formset(request, form, formset, change)
 
 
 class TeamMemberInline(admin.TabularInline):
@@ -1581,6 +1718,12 @@ class TeamAdmin(QFieldCloudModelAdmin):
 
     search_fields = ("username__icontains", "team_organization__username__iexact")
 
+    search_parser_config = {
+        "organization": {
+            "filter": "team_organization__username__iexact",
+        },
+    }
+
     list_filter = ("date_joined",)
 
     autocomplete_fields = ("team_organization",)
@@ -1590,6 +1733,25 @@ class TeamAdmin(QFieldCloudModelAdmin):
             obj.username = f"@{obj.team_organization.username}/{obj.username}"
 
         obj.save()
+
+    def get_changeform_initial_data(self, request):
+        initial = super().get_changeform_initial_data(request)
+        team_organization_id = request.GET.get("team_organization")
+
+        if team_organization_id:
+            initial["team_organization"] = team_organization_id
+
+        return initial
+
+    def response_add(self, request, obj, post_url_continue=None):
+        if "_addanother" in request.POST:
+            add_url = "{}?{}".format(
+                reverse("admin:core_team_add"),
+                urlencode({"team_organization": obj.team_organization_id}),
+            )
+            return HttpResponseRedirect(add_url)
+
+        return super().response_add(request, obj, post_url_continue)
 
     def get_form(
         self,
@@ -1734,6 +1896,7 @@ qfc_admin_site.unregister([Config])
 qfc_admin_site.register(Invitation, InvitationAdmin)
 qfc_admin_site.register(Person, PersonAdmin)
 qfc_admin_site.register(Organization, OrganizationAdmin)
+qfc_admin_site.register(OrganizationMember, OrganizationMemberAdmin)
 qfc_admin_site.register(Team, TeamAdmin)
 qfc_admin_site.register(Secret, SecretAdmin)
 qfc_admin_site.register(Delta, DeltaAdmin)

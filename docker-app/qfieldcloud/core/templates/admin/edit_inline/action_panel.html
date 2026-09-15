@@ -1,0 +1,9 @@
+<div class="js-inline-admin-formset inline-group" id="{{ inline_admin_formset.formset.prefix }}-group" data-inline-type="tabular" data-inline-formset="{{ inline_admin_formset.inline_formset_data }}">
+    {{ inline_admin_formset.formset.management_form }}
+    <fieldset class="module {{ inline_admin_formset.classes }}">
+        {% if inline_admin_formset.opts.verbose_name_plural %}
+            <h2>{{ inline_admin_formset.opts.verbose_name_plural|capfirst }}</h2>
+        {% endif %}
+        {{ inline_admin_formset.opts.bottom_html }}
+    </fieldset>
+</div>
