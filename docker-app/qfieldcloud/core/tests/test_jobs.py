@@ -456,6 +456,53 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         # self.assertEqual(fields[21]["name"], "comment")
         # self.assertEqual(fields[21]["type"], "String")
 
+    def test_create_project_from_json2qgis(self):
+        """A `CREATE_PROJECT` job built from a `json2qgis` seed produces the expected QGIS project."""
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.t1.key)
+
+        ProjectSeed.objects.create(
+            project=self.p1,
+            extent=Polygon.from_bbox(projectseed_utils.DEFAULT_PROJECT_EXTENT),
+            settings={
+                "schemaId": "https://app.qfield.cloud/schemas/project-seed-20251201.json",
+                "basemaps": [
+                    {
+                        "name": "OpenStreetMap (Standard)",
+                        "style": "standard",
+                        "url": "https://tile.openstreetmap.org/%7Bz%7D/%7Bx%7D/%7By%7D.png",
+                    }
+                ],
+                "xlsform": None,
+            },
+            json2qgis_file=ContentFile(
+                open(testdata_path("json2qgis/sample.json"), "rb").read(),
+                "sample.json",
+            ),
+        )
+
+        Job.objects.create(
+            project=self.p1,
+            type=Job.Type.CREATE_PROJECT,
+            created_by=self.u1,
+        )
+
+        wait_for_project_ok_status(self.p1)
+
+        self.p1.refresh_from_db()
+
+        pd = self.p1.project_details
+
+        self.assertIsNotNone(pd)
+
+        layers = list(self.p1.qgis_project.layers.all())
+        layers.sort(key=lambda layer: layer.name)
+
+        # One vector layer from `sample.json` plus the basemap from the seed.
+        self.assertEqual(len(layers), 2)
+        self.assertEqual(layers[0].name, "My test layer")
+        self.assertEqual(layers[0].geom_type, QgsGeometryType.Point)
+        self.assertEqual(layers[1].name, "OpenStreetMap (Standard)")
+
     def test_thumbnail_generation_with_wrong_extent_does_not_hang(self):
         # Test that if the thumbnail generation hangs forever (e.g. due to invalid extent), the job is cancelled after the timeout and the project is still processed successfully.
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.t1.key)

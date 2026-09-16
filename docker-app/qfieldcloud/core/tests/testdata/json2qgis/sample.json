@@ -1,0 +1,308 @@
+{
+  "relations": [
+    {
+      "relation_id": "939da598-1f7b-4ac4-9eab-a5f5060d0ce2",
+      "name": "relation_1",
+      "from_layer_id": "books",
+      "to_layer_id": "authors",
+      "strength": "association",
+      "field_pairs": [
+        {
+          "from_field": "author_id",
+          "to_field": "id"
+        }
+      ]
+    }
+  ],
+  "polymorphic_relations": [
+    {
+      "relation_id": "a1b2c3d4-e5f6-7890-abcd-ef0123456789",
+      "name": "polymorphic_relation",
+      "from_layer_id": "documents",
+      "to_layer_field": "uuid",
+      "to_layer_ids": ["birds", "mammals", "reptiles"],
+      "to_layer_expression": "@layer_id",
+      "strength": "composition",
+      "field_pairs": [
+        {
+          "from_field": "uuid",
+          "to_field": "document_uuid"
+        }
+      ]
+    }
+  ],
+  "project": {
+    "author": "Ivan Ivanov @suricactus",
+    "title": "My first JSON to QGIS project"
+  },
+  "datasets": [
+    {
+      "vector_datasets": [
+        {
+          "is_read_only": false,
+          "is_identifiable": true,
+          "is_private": false,
+          "is_searchable": true,
+          "is_removable": true,
+          "foreign_keys": [],
+          "indices": [],
+          "primary_key": "uuid",
+          "crs": "EPSG:4326",
+          "datasource_format": "gpkg",
+          "fields": [
+            {
+              "alias": "UUID",
+              "comment": "This is a new field",
+              "constraint_expression": "length(\"uuid\") = 36",
+              "constraint_expression_description": "Opa",
+              "constraint_expression_strength": "hard",
+              "default_value": "",
+              "is_not_null_strength": "soft",
+              "is_not_null": false,
+              "is_unique_strength": "hard",
+              "is_unique": true,
+              "length": 36,
+              "name": "uuid",
+              "precision": 0,
+              "set_default_value_on_update": false,
+              "type": "string",
+              "widget_config": {},
+              "widget_type": "TextEdit"
+            },
+            {
+              "alias": "Name",
+              "comment": "This is a new field",
+              "default_value": "'Unnamed'",
+              "is_not_null_strength": "hard",
+              "is_not_null": true,
+              "length": 0,
+              "name": "name",
+              "precision": 0,
+              "set_default_value_on_update": false,
+              "type": "string",
+              "widget_config": {},
+              "widget_type": "TextEdit"
+            },
+            {
+              "alias": "Elevation (m)",
+              "comment": "Elevation in meters",
+              "default_value": "0.0",
+              "is_not_null_strength": "soft",
+              "is_not_null": true,
+              "length": 0,
+              "name": "elevation",
+              "precision": 3,
+              "set_default_value_on_update": false,
+              "type": "real",
+              "widget_config": {
+                "allow_null": false,
+                "max": 10000,
+                "min": 0,
+                "precision": 3,
+                "step": 0.1,
+                "style": "Slider",
+                "suffix": " m"
+              },
+              "widget_type": "Range"
+            },
+            {
+              "alias": "Attachments",
+              "comment": "Attachments",
+              "default_value": "",
+              "is_not_null_strength": "not_set",
+              "is_not_null": true,
+              "length": 0,
+              "name": "attachment",
+              "precision": 0,
+              "set_default_value_on_update": false,
+              "type": "string",
+              "widget_config": {
+                "DocumentViewerHeight": 0,
+                "DocumentViewerWidth": 0,
+                "FileWidgetFilter": "",
+                "DocumentViewer": true,
+                "FileWidgetButton": true,
+                "StorageAuthConfigId": null,
+                "StorageMode": 0,
+                "StorageType": null,
+                "FileWidget": true,
+                "RelativeStorage": true
+              },
+              "widget_type": "ExternalResource"
+            },
+            {
+              "alias": "Variant Type",
+              "comment": "Variant type field",
+              "default_value": "'type_a'",
+              "is_not_null_strength": "hard",
+              "is_not_null": false,
+              "length": 0,
+              "name": "variant_type",
+              "precision": 0,
+              "set_default_value_on_update": false,
+              "type": "string",
+              "widget_config": {
+                "map": {
+                  "type_a": "Type A",
+                  "type_b": "Type B",
+                  "type_c": "Type C"
+                }
+              },
+              "widget_type": "ValueMap"
+            },
+            {
+              "alias": "Created At",
+              "comment": "Unique identifier",
+              "default_value": "now()",
+              "is_not_null_strength": "hard",
+              "is_not_null": false,
+              "length": 0,
+              "name": "created_at",
+              "precision": 0,
+              "set_default_value_on_update": false,
+              "type": "datetime",
+              "widget_config": {
+                "calendarPopup": true,
+                "displayFormat": "yyyy-MM-dd HH:mm:ss"
+              },
+              "widget_type": "DateTime"
+            },
+            {
+              "alias": "Updated At",
+              "comment": "Updated at field",
+              "default_value": "now()",
+              "is_not_null_strength": "hard",
+              "is_not_null": false,
+              "length": 0,
+              "name": "updated_at",
+              "precision": 0,
+              "set_default_value_on_update": true,
+              "type": "datetime",
+              "widget_config": {
+                "calendarPopup": true,
+                "displayFormat": "yyyy-MM-dd HH:mm:ss"
+              },
+              "widget_type": "DateTime"
+            }
+          ],
+          "form_config": [
+            {
+              "column_count": 3,
+              "item_id": "main_tab",
+              "label": "Main",
+              "type": "tab",
+              "children": [
+                {
+                  "item_id": "caffdaed-fbec-4bf1-a21e-ba84360184e9",
+                  "field_name": "uuid",
+                  "type": "field"
+                },
+                {
+                  "background_color": "",
+                  "column_count": 2,
+                  "item_id": "basic_info_group",
+                  "is_collapsed": false,
+                  "label": "Basic Info",
+                  "type": "group_box",
+                  "visibility_expression": "",
+                  "children": [
+                    {
+                      "item_id": "61c6b488-9726-4f1b-b6a7-ca3b7c61293b",
+                      "field_name": "name",
+                      "type": "field"
+                    },
+                    {
+                      "item_id": "79002a29-036a-4b1c-baef-49ab49f88a7c",
+                      "field_name": "elevation",
+                      "type": "field"
+                    },
+                    {
+                      "item_id": "c9c7aadc-ff12-4cb0-92a7-f13e0705705a",
+                      "field_name": "variant_type",
+                      "type": "field"
+                    },
+                    {
+                      "item_id": "c5855c64-ef0d-4330-af90-a357a1848016",
+                      "field_name": "created_at",
+                      "type": "field"
+                    },
+                    {
+                      "item_id": "45416464-85cd-43f1-bfa9-b96c15cc76a0",
+                      "field_name": "updated_at",
+                      "type": "field"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "item_id": "attachment_tab",
+              "label": "Attachment",
+              "type": "tab",
+              "children": [
+                {
+                  "item_id": "5b93e54f-0f40-4524-aee2-78c6810d7d8a",
+                  "field_name": "attachment",
+                  "type": "field"
+                }
+              ]
+            }
+          ],
+          "geometry_type": "Point",
+          "layer_id": "d942d84e-bcbf-430b-bf5d-9b39caeabf71",
+          "name": "My test layer",
+          "layer_type": "vector"
+        }
+      ],
+      "raster_datasets": []
+    }
+  ],
+  "legend_tree": {
+    "item_id": "legend_root",
+    "is_checked": true,
+    "name": "",
+    "legend_item_type": "group",
+    "children": [
+      {
+        "item_id": "my_group_parent",
+        "is_checked": true,
+        "name": "My group parent",
+        "legend_item_type": "group",
+        "children": [
+          {
+            "item_id": "my_group_child",
+            "is_checked": true,
+            "name": "My group child",
+            "legend_item_type": "group",
+            "children": [
+              {
+                "item_id": "my_child",
+                "is_checked": true,
+                "layer_id": "d942d84e-bcbf-430b-bf5d-9b39caeabf71",
+                "name": "My test layer",
+                "legend_item_type": "layer"
+              },
+              {
+                "item_id": "my_group_child_two",
+                "is_checked": false,
+                "is_mutually_exclusive": true,
+                "name": "My test subgroup",
+                "legend_item_type": "group",
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "item_id": "my_second_parent",
+        "is_checked": true,
+        "is_mutually_exclusive": true,
+        "name": "My second parent",
+        "legend_item_type": "group",
+        "children": []
+      }
+    ]
+  },
+  "version": "2025-11-22"
+}
