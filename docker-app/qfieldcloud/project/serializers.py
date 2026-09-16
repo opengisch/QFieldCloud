@@ -43,7 +43,12 @@ class ProjectSerializer(serializers.ModelSerializer):
     xlsform_file = serializers.FileField(
         required=False,
         write_only=True,
-        help_text="The XLSForm file to use to create the project. Ignored if `clone_from_project` is provided.",
+        help_text="The XLSForm file to use to create the project. Ignored if `clone_from_project` is provided. Mutually exclusive with `json2qgis_file`.",
+    )
+    json2qgis_file = serializers.FileField(
+        required=False,
+        write_only=True,
+        help_text="The JSON project definition file to use to create the project. Ignored if `clone_from_project` is provided. Mutually exclusive with `xlsform_file`.",
     )
     clone_from_project = serializers.UUIDField(
         required=False,
@@ -129,6 +134,7 @@ class ProjectSerializer(serializers.ModelSerializer):
         source_project = data.get("clone_from_project")
         seed = data.get("seed")
         xlsform_file = data.get("xlsform_file")
+        json2qgis_file = data.get("json2qgis_file")
 
         if source_project:
             if source_project.is_shared_datasets_project:
@@ -152,11 +158,23 @@ class ProjectSerializer(serializers.ModelSerializer):
             ):
                 raise QuotaError("Insufficient storage quota.")
         else:
+            if xlsform_file and json2qgis_file:
+                raise exceptions.MultipleProjectSeedSourcesError()
+
             if xlsform_file and not seed:
                 raise ValidationError(
                     {
                         "xlsform_file": [
                             "Cannot upload an XLSForm file without seed data."
+                        ]
+                    }
+                )
+
+            if json2qgis_file and not seed:
+                raise ValidationError(
+                    {
+                        "json2qgis_file": [
+                            "Cannot upload a json2qgis file without seed data."
                         ]
                     }
                 )
@@ -179,6 +197,7 @@ class ProjectSerializer(serializers.ModelSerializer):
         # remove non-model fields before saving
         validated_data.pop("seed", None)
         validated_data.pop("xlsform_file", None)
+        validated_data.pop("json2qgis_file", None)
         validated_data.pop("clone_from_project", None)
         return super().create(validated_data)
 
@@ -219,6 +238,7 @@ class ProjectSerializer(serializers.ModelSerializer):
             "file_storage_bytes",
             "seed",
             "xlsform_file",
+            "json2qgis_file",
             "clone_from_project",
             "the_qgis_file_name",
         )
@@ -370,29 +390,43 @@ class ProjectCreateRequestSerializer(ProjectSerializer):
         help_text=(
             "The XLSForm file to use to create the project. Requires `seed` and a "
             "`multipart/form-data` request. Ignored if `clone_from_project` is "
-            "provided."
+            "provided. Mutually exclusive with the JSON2QGIS file."
+        ),
+    )
+
+    json2qgis_file = extend_schema_field(OpenApiTypes.BINARY)(serializers.FileField)(
+        required=False,
+        write_only=True,
+        help_text=(
+            "The JSON2QGIS file to use to create the project. Requires `seed` and a "
+            "`multipart/form-data` request. Ignored if `clone_from_project` is "
+            "provided. Mutually exclusive with the XLSForm file."
         ),
     )
 
 
 @extend_schema_serializer(
-    exclude_fields=["xlsform_file"],
+    exclude_fields=["xlsform_file", "json2qgis_file"],
 )
 class ProjectCreateJSONRequestSerializer(ProjectCreateRequestSerializer):
     """Documentation only `application/json` variant of the create request.
 
-    `xlsform_file` is dropped here: a file can only be sent in a
-    `multipart/form-data` request, so it lives only on
-    `ProjectCreateRequestSerializer`.
+    `xlsform_file` and `json2qgis_file` are dropped here: a file can only be sent in a
+    `multipart/form-data` request, so it lives only on `ProjectCreateRequestSerializer`.
     """
 
 
 @extend_schema_serializer(
-    exclude_fields=["seed", "xlsform_file", "clone_from_project"],
+    exclude_fields=[
+        "seed",
+        "xlsform_file",
+        "json2qgis_file",
+        "clone_from_project",
+    ],
 )
 class ProjectUpdateRequestSerializer(ProjectCreateRequestSerializer):
     """Documentation only request schema for project update and partial update.
 
     Same as `ProjectCreateRequestSerializer` without the create-only fields
-    `seed`, `xlsform_file` and `clone_from_project`.
+    `seed`, `xlsform_file`, `json2qgis_file` and `clone_from_project`.
     """
