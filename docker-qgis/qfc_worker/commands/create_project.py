@@ -1,5 +1,6 @@
 import argparse
 import enum
+import json
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -7,6 +8,7 @@ from typing import TypedDict, cast
 from uuid import UUID
 
 from convert2qgis.errors import Convert2QgisBaseError
+from convert2qgis.json2qgis.json2qgis import ProjectCreator
 from convert2qgis.xlsform2qgis.type_defs import ConverterSettings
 from convert2qgis.xlsform2qgis.xlsform2qgis import (
     convert_xlsform_to_qgis_project,
@@ -195,10 +197,66 @@ def _create_project_from_xlsform(
     return full_filename
 
 
+def get_project_seed_json2qgis(
+    project_id: str, project_seed: ProjectSeed, destination_dir: str
+) -> Path | None:
+    if not project_seed.json2qgis_file:
+        logger.info("No JSON2QGIS file configured for this project seed.")
+
+        return None
+
+    client = sdk.Client()
+    json2qgis_path = client.get_project_seed_json2qgis(project_id, destination_dir)
+
+    logger.info(f"Downloaded JSON2QGIS file to '{json2qgis_path}'.")
+
+    return json2qgis_path
+
+
+def _create_project_from_json2qgis(
+    json2qgis_filename: Path | str, project_seed: ProjectSeed, tmp_project_dir: str
+) -> Path | None:
+    assert project_seed.json2qgis_file is not None
+
+    json2qgis_filename = Path(tmp_project_dir).joinpath("files", json2qgis_filename)
+
+    logger.info(f"Checking provided JSON2QGIS file '{json2qgis_filename}'...")
+
+    if not Path(json2qgis_filename).exists():
+        logger.error(
+            f"The provided JSON2QGIS file '{json2qgis_filename}' does not exist, aborting."
+        )
+
+        return None
+
+    output_dir = Path(tmp_project_dir).joinpath("files")
+
+    try:
+        with open(json2qgis_filename) as fh:
+            project_definition = json.load(fh)
+
+        project = ProjectCreator(project_definition).build(output_dir)
+    except Convert2QgisBaseError as err:
+        logger.error(
+            "Failed to convert JSON2QGIS file to QGIS project: %s", humanize_error(err)
+        )
+
+        raise UnableToContinueException(
+            reason="Unable to continue project creation, this job will be cancelled and have failed status!",
+        ) from err
+
+    full_filename = Path(output_dir).joinpath(project.fileName())
+
+    return full_filename
+
+
 def prepare_project_files(
-    project_seed: ProjectSeed, tmp_project_dir: str, xlsform_filename: str
+    project_seed: ProjectSeed,
+    tmp_project_dir: str,
+    xlsform_filename: str,
+    json2qgis_filename: str,
 ) -> str:
-    """Prepare QGIS project files from seed (clone, XLSForm, or empty).
+    """Prepare QGIS project files from seed (clone, XLSForm, JSON2QGIS, or empty).
 
     Returns the path to the QGIS project file on disk.
     """
@@ -234,6 +292,21 @@ def prepare_project_files(
         if project_filename is None:
             logger.info(
                 "Failed to create project from XLSForm. Creating empty QGIS project..."
+            )
+        else:
+            project_filename = Path(project_filename)
+    elif project_seed.json2qgis_file:
+        logger.info(
+            f'Creating QGIS project from JSON2QGIS file from "{json2qgis_filename}"...'
+        )
+
+        project_filename = _create_project_from_json2qgis(
+            json2qgis_filename, project_seed, tmp_project_dir
+        )
+
+        if project_filename is None:
+            logger.info(
+                "Failed to create project from JSON2QGIS file. Creating empty QGIS project..."
             )
         else:
             project_filename = Path(project_filename)
@@ -420,6 +493,17 @@ class CreateProjectCommand(QfcBaseCommand):
                     return_names=["xlsform_filename"],
                 ),
                 Step(
+                    id="get_project_seed_json2qgis",
+                    name="Get Project Seed JSON2QGIS",
+                    arguments={
+                        "project_id": project_id,
+                        "project_seed": StepOutput("get_project_seed", "project_seed"),
+                        "destination_dir": WorkDirPath(),
+                    },
+                    method=get_project_seed_json2qgis,
+                    return_names=["json2qgis_filename"],
+                ),
+                Step(
                     id="prepare_project_files",
                     name="Prepare project files",
                     arguments={
@@ -427,6 +511,9 @@ class CreateProjectCommand(QfcBaseCommand):
                         "tmp_project_dir": WorkDirPath(),
                         "xlsform_filename": StepOutput(
                             "get_project_seed_xlsform", "xlsform_filename"
+                        ),
+                        "json2qgis_filename": StepOutput(
+                            "get_project_seed_json2qgis", "json2qgis_filename"
                         ),
                     },
                     method=prepare_project_files,
