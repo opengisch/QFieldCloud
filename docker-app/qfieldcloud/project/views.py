@@ -32,11 +32,11 @@ from qfieldcloud.project.models import (
 from qfieldcloud.project.serializers import (
     ProjectCreateJSONRequestSerializer,
     ProjectCreateRequestSerializer,
-    ProjectDetailSerializer,
     ProjectSeedSerializer,
     ProjectSerializer,
     ProjectThumbnailSerializer,
     ProjectUpdateRequestSerializer,
+    PublicProjectSerializer,
 )
 from qfieldcloud.project.utils import projectseed_utils
 from qfieldcloud.subscription.exceptions import QuotaError
@@ -100,7 +100,7 @@ class ProjectViewSetPermissions(permissions.BasePermission):
 @extend_schema_view(
     retrieve=extend_schema(
         description=("Retrieve a project"),
-        responses=ProjectDetailSerializer,
+        responses=ProjectSerializer,
     ),
     update=extend_schema(
         description="Update a project",
@@ -177,14 +177,12 @@ class ProjectViewSet(viewsets.ModelViewSet):
         serializer.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    def get_serializer_class(self):
-        if self.action == "retrieve":
-            return ProjectDetailSerializer
-
-        return super().get_serializer_class()
-
     def get_queryset(self):
-        projects = Project.objects.with_prefetch().for_user(self.request.user)
+        projects = (
+            Project.objects.with_prefetch()
+            .with_user_teams(self.request.user)
+            .for_user(self.request.user)
+        )
 
         if self.action == "list":
             # In the list endpoint, by default we filter out public projects.
@@ -335,7 +333,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
 @extend_schema_view(get=extend_schema(description="List all public projects"))
 class PublicProjectsListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
-    serializer_class = ProjectSerializer
+    serializer_class = PublicProjectSerializer
     pagination_class = pagination.QfcLimitOffsetPagination()
     filter_backends = [QfcOrderingFilter]
     ordering_fields = ["owner__username::alias=owner", "name", "created_at"]

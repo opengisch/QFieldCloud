@@ -38,6 +38,7 @@ from qfieldcloud.core.models import (
     Person,
     PersonQueryset,
     Secret,
+    Team,
     TeamMember,
     User,
 )
@@ -164,6 +165,19 @@ class ProjectQueryset(models.QuerySet):
                         jobs__status__in=Job.UNFINISHED_STATUS,
                     ),
                 ),
+            )
+        )
+
+    def with_user_teams(self, user: "User") -> "ProjectQueryset":
+        """Prefetches `user`'s teams in the project's owning organization, as `owner.organization.user_teams`.
+
+        Avoids one query per project when a serializer lists a caller's teams.
+        """
+        return self.select_related("owner__organization").prefetch_related(
+            Prefetch(
+                "owner__organization__teams",
+                queryset=Team.objects.filter(members__member=user),
+                to_attr="user_teams",
             )
         )
 

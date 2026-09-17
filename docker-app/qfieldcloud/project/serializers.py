@@ -20,6 +20,16 @@ from qfieldcloud.project.models import (
 from qfieldcloud.subscription.exceptions import QuotaError
 
 
+def without_fields(fields: tuple[str, ...], *excluded: str) -> tuple[str, ...]:
+    """Returns `fields` without `excluded`."""
+    remaining = []
+    for name in fields:
+        if name not in excluded:
+            remaining.append(name)
+
+    return tuple(remaining)
+
+
 @extend_schema_serializer(deprecate_fields=["is_shared_datasets_project"])
 class ProjectSerializer(serializers.ModelSerializer):
     owner = serializers.StringRelatedField()
@@ -35,6 +45,7 @@ class ProjectSerializer(serializers.ModelSerializer):
     private = serializers.BooleanField(allow_null=True, default=None)
     shared_datasets_project_id = serializers.SerializerMethodField(read_only=True)
     needs_repackaging = serializers.SerializerMethodField()
+    teams = serializers.SerializerMethodField()
     seed = serializers.JSONField(
         required=False,
         write_only=True,
@@ -190,6 +201,36 @@ class ProjectSerializer(serializers.ModelSerializer):
 
         return False
 
+    def get_teams(self, obj: Project) -> list[str]:
+        """Returns the user's team names in the project's owning organization, without the `@organization/` prefix.
+
+        Empty when a person owns the project, or the user is not in a team.
+
+        Reads `owner.organization.user_teams` when `ProjectQueryset.with_user_teams` was used.
+        Otherwise runs a per-object query, e.g. for a freshly created or updated
+        instance returned straight from `serializer.save()`.
+        """
+        # A person owns the project, so it has no teams.
+        if obj.owner.is_person:
+            return []
+
+        organization = obj.owner.organization
+        user_teams = getattr(organization, "user_teams", None)
+
+        if user_teams is None:
+            request = self.context["request"]
+            user_teams = Team.objects.filter(
+                team_organization=organization,
+                members__member=request.user,
+            )
+            organization.user_teams = user_teams
+
+        team_names = []
+        for team in user_teams:
+            team_names.append(team.teamname)
+
+        return team_names
+
     class Meta:
         fields = (
             "id",
@@ -221,6 +262,7 @@ class ProjectSerializer(serializers.ModelSerializer):
             "xlsform_file",
             "clone_from_project",
             "the_qgis_file_name",
+            "teams",
         )
         read_only_fields = (
             "private",
@@ -238,6 +280,7 @@ class ProjectSerializer(serializers.ModelSerializer):
             "is_shared_datasets_project",
             "file_storage_bytes",
             "the_qgis_file_name",
+            "teams",
         )
         clonable_fields = {
             "description",
@@ -250,39 +293,11 @@ class ProjectSerializer(serializers.ModelSerializer):
         model = Project
 
 
-class ProjectDetailSerializer(ProjectSerializer):
-    """`ProjectSerializer` with the caller's teams in the project owning organization."""
-
-    teams = serializers.SerializerMethodField()
-
-    def get_teams(self, obj: Project) -> list[str]:
-        """Returns the caller's team names in the project's owning organization, without the `@organization/` prefix.
-
-        Empty when a person owns the project or the caller is in no team.
-        """
-        # A person owns the project, so it has no teams.
-        if obj.owner.is_person:
-            return []
-
-        request = self.context["request"]
-
-        teams = Team.objects.filter(
-            team_organization=obj.owner.organization,
-            members__member=request.user,
-        ).select_related("team_organization")
-
-        team_names = []
-        for team in teams:
-            team_names.append(team.teamname)
-
-        return team_names
+class PublicProjectSerializer(ProjectSerializer):
+    """`ProjectSerializer` without `teams`, which requires user organization membership data that the public projects listing doesn't fetch."""
 
     class Meta(ProjectSerializer.Meta):
-        fields = (*ProjectSerializer.Meta.fields, "teams")  # type: ignore[assignment]
-        read_only_fields = (
-            *ProjectSerializer.Meta.read_only_fields,
-            "teams",
-        )  # type: ignore[assignment]
+        fields = without_fields(ProjectSerializer.Meta.fields, "teams")  # type: ignore[assignment]
 
 
 class ProjectThumbnailSerializer(serializers.ModelSerializer):
