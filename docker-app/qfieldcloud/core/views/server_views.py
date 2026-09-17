@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from drf_spectacular.utils import extend_schema, extend_schema_view
@@ -22,6 +23,7 @@ class ServerInfoView(views.APIView):
     def get(self, request: Request) -> Response:
         results = self.serializer_class(
             {
+                "version": settings.SENTRY_RELEASE,
                 "whitelabel": get_whitelabel_settings(),
                 "auth_providers": get_auth_providers(request),
                 "signup_url": get_signup_url(request),
