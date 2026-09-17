@@ -1776,7 +1776,7 @@ class QfcTestCase(APITransactionTestCase):
             )
 
     def test_project_teams_field(self):
-        """`GET /projects/<id>/` returns `teams`, the caller's team names in the project's owning organization."""
+        """`teams`, the user's team names in the project's owning organization, is returned on every `ProjectSerializer` response."""
         # org1 has three teams. Nobody joins gamma.
         org1 = Organization.objects.create(
             username="org1", organization_owner=self.user1
@@ -1844,19 +1844,24 @@ class QfcTestCase(APITransactionTestCase):
             person_url = f"/api/v1/projects/{person_project.pk}/"
             self.assertEqual(get_teams(self.token1, person_url), [])
 
-        # `teams` is not part of the list or write responses.
+        with self.subTest(
+            "Test that `teams` is included with the correct value in the list response"
+        ):
+            self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token2.key)
+            response = self.client.get("/api/v1/projects/", {"include_public": "1"})
+            self.assertTrue(status.is_success(response.status_code))
+            projects_by_name = {}
+            for project_data in response.json():
+                projects_by_name[project_data["name"]] = project_data
+
+            self.assertEqual(
+                projects_by_name["org_project"]["teams"], ["alpha", "beta"]
+            )
+            self.assertEqual(projects_by_name["person_project"]["teams"], [])
+
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
-        with self.subTest(
-            "Test that `teams` is not included in every project in the list response"
-        ):
-            response = self.client.get("/api/v1/projects/")
-            self.assertTrue(status.is_success(response.status_code))
-            self.assertGreaterEqual(len(response.json()), 1)
-            for project_data in response.json():
-                self.assertNotIn("teams", project_data)
-
-        with self.subTest("Test that `teams` is not included from the create response"):
+        with self.subTest("Test that `teams` is included in the create response"):
             response = self.client.post(
                 "/api/v1/projects/",
                 {
@@ -1867,9 +1872,19 @@ class QfcTestCase(APITransactionTestCase):
                 },
             )
             self.assertTrue(status.is_success(response.status_code))
-            self.assertNotIn("teams", response.json())
+            self.assertEqual(response.json()["teams"], [])
 
-        with self.subTest("Test that `teams` is not included in the update response"):
+        with self.subTest("Test that `teams` is included in the update response"):
             response = self.client.patch(org_url, {"description": "new desc"})
             self.assertTrue(status.is_success(response.status_code))
-            self.assertNotIn("teams", response.json())
+            self.assertEqual(response.json()["teams"], [])
+
+        with self.subTest(
+            "Test that `teams` is not included in the public projects listing"
+        ):
+            self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token2.key)
+            response = self.client.get("/api/v1/projects/public/")
+            self.assertTrue(status.is_success(response.status_code))
+            self.assertGreaterEqual(len(response.json()), 1)
+            for project_data in response.json():
+                self.assertNotIn("teams", project_data)
