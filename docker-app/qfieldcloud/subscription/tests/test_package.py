@@ -48,7 +48,7 @@ class QfcTestCase(APITransactionTestCase):
         PackageType.get_storage_package_type.cache_clear()
 
         subscription = self.a1.current_subscription
-        subscription.plan = self.plan_premium
+        subscription.regular_plan = self.plan_premium
         subscription.save()
 
     def assertStorage(
@@ -128,7 +128,7 @@ class QfcTestCase(APITransactionTestCase):
 
     def test_storage_on_default_plan(self):
         subscription = self.a1.current_subscription
-        subscription.plan = self.plan_default
+        subscription.regular_plan = self.plan_default
         subscription.save()
 
         self.assertStorage(
@@ -147,7 +147,7 @@ class QfcTestCase(APITransactionTestCase):
 
     def test_default_plan_raises_when_adding_active_storage(self):
         subscription = self.a1.current_subscription
-        subscription.plan = self.plan_default
+        subscription.regular_plan = self.plan_default
         subscription.save()
 
         with self.assertRaises(NotPremiumPlanException):
@@ -171,7 +171,7 @@ class QfcTestCase(APITransactionTestCase):
 
     def test_default_plan_ignores_active_package(self):
         subscription = self.a1.current_subscription
-        subscription.plan = self.plan_default
+        subscription.regular_plan = self.plan_default
         subscription.save()
 
         Package.objects.create(
@@ -725,12 +725,12 @@ class QfcTestCase(APITransactionTestCase):
 
         u10mb = Person.objects.create(username="u10mb")
         u10mb_subscription = u10mb.useraccount.current_subscription
-        u10mb_subscription.plan = plan_10mb
+        u10mb_subscription.regular_plan = plan_10mb
         u10mb_subscription.save()
 
         u20mb = Person.objects.create(username="u20mb")
         u20mb_subscription = u20mb.useraccount.current_subscription
-        u20mb_subscription.plan = plan_20mb
+        u20mb_subscription.regular_plan = plan_20mb
         u20mb_subscription.save()
 
         p1 = Project.objects.create(name="p1", owner=u20mb)
