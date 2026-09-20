@@ -14,7 +14,7 @@ class QfcTestCase(APITransactionTestCase):
         super().setUp()
 
     def test_server_info_default_settings(self):
-        """Test that the endpoint returns the correct default whitelabel settings"""
+        """Test that the endpoint returns the correct default whitelabel settings."""
         response = self.client.get("/api/v1/server/info/")
         data = response.json()
 
@@ -53,7 +53,7 @@ class QfcTestCase(APITransactionTestCase):
         }
     )
     def test_server_info_custom_whitelabel_settings(self):
-        """Test that the endpoint correctly reflects custom WHITELABEL settings from settings.py"""
+        """Test that the endpoint correctly reflects custom WHITELABEL settings from settings.py."""
         response = self.client.get("/api/v1/server/info/")
         data = response.json()
 
@@ -64,8 +64,8 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(system_info["site_title"], "My Custom Title")
 
     def test_server_info_signup_url_open(self):
-        """
-        Test that signup_url is an absolute URL to the signup page when signup is open.
+        """Test that signup_url is an absolute URL to the signup page when signup is open.
+
         By default, the adapter is open to signup.
         """
         response = self.client.get("/api/v1/server/info/")
@@ -81,7 +81,7 @@ class QfcTestCase(APITransactionTestCase):
         ACCOUNT_ADAPTER="qfieldcloud.core.adapters.AccountAdapterSignUpClosed"
     )
     def test_server_info_signup_url_closed(self):
-        """Test that signup_url is null when signup is closed"""
+        """Test that signup_url is null when signup is closed."""
         response = self.client.get("/api/v1/server/info/")
         data = response.json()
 

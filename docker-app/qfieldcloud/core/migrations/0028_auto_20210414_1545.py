@@ -8,7 +8,7 @@ class Migration(migrations.Migration):
         ("core", "0027_auto_20210408_0138"),
     ]
 
-    def set_is_public(apps, schema_editor):
+    def set_is_public(apps, schema_editor):  # noqa: N805
         Project = apps.get_model("core", "Project")
 
         for project in Project.objects.all():

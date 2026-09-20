@@ -19,8 +19,7 @@ logger = logging.getLogger(__name__)
 def grant_creator_organization_project_admin_access(
     sender, instance, created, **kwargs
 ):
-    """Whenever an organization-owned project is created by someone without
-    project-admin access, give them explicit `ADMIN` collaborator role.
+    """Whenever an organization-owned project is created by someone without project-admin access, give them explicit `ADMIN` collaborator role.
 
     Organization owners and `ADMIN` organization members already get project-admin access
     via `projects_with_roles_vw` and don't need to be added as collaborator.

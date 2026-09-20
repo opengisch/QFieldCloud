@@ -54,9 +54,7 @@ class AccountAdapter(DefaultAccountAdapter, BaseInvitationsAdapter):
         return response
 
     def new_user(self, request):
-        """
-        Instantiates a new User instance.
-        """
+        """Instantiates a new User instance."""
         user = Person()
         return user
 
@@ -105,7 +103,6 @@ class AccountAdapter(DefaultAccountAdapter, BaseInvitationsAdapter):
         - Let generate_unique_username() normalize the username and ensure its
           uniqueness.
         """
-
         from allauth.account.utils import user_email, user_username
 
         email = user_email(user)
@@ -134,8 +131,8 @@ class AccountAdapter(DefaultAccountAdapter, BaseInvitationsAdapter):
         email_confirmation: EmailConfirmationHMAC,
         signup: bool,
     ) -> None:
-        """
-        Overrides allauth's default method for sending a confirmation email.
+        """Overrides allauth's default method for sending a confirmation email.
+
         Adds the email provided by the future user in the session.
         """
         if request and email_confirmation:
@@ -175,8 +172,8 @@ class AccountAdapterSignUpClosed(AccountAdapter):
     """
 
     def is_open_for_signup(self, request: HttpRequest) -> bool:
-        """
-        Allow signup only if the user has a valid invitation.
+        """Allow signup only if the user has a valid invitation.
+
         This keeps signups closed to the general public while allowing invited users to register.
         """
         if hasattr(request, "session"):
@@ -230,7 +227,6 @@ class SocialAccountAdapter(DefaultSocialAccountAdapter):
         the styling information for that provider from the
         QFIELDCLOUD_SSO_PROVIDER_STYLES settings.
         """
-
         providers = super().list_providers(request)
 
         for provider in providers:
@@ -287,12 +283,12 @@ class SocialAccountAdapter(DefaultSocialAccountAdapter):
         self, sociallogin: SocialLogin
     ) -> tuple[AbstractUser, str] | None:
         """Authenticate user and find User matching by email.
+
         This hook happens the first time an email is submitted for 3rd party authentication.
 
         Only matches Person type users with a verified email address,
         since Organization cannot login using a 3rd party IDP.
         """
-
         emails = sociallogin.email_addresses
         if not emails:
             return None

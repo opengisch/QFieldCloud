@@ -595,13 +595,11 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(json[1]["user_role_origin"], "public")
 
     def test_public_project_uses_public_collaborator_role(self):
-        """A public project's `public_collaborator_role` determines the role
-        granted to non-collaborators, and only while the project stays public.
+        """A public project's `public_collaborator_role` determines the role granted to non-collaborators, and only while the project stays public.
 
         Both projects are owned by user2 and queried as user1 below, so the
         asserted roles always come from the `public` origin, not ownership.
         """
-
         # Default `public_collaborator_role` is `reader`
         project1 = Project.objects.create(
             name="project1", is_public=True, owner=self.user2
@@ -644,9 +642,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(get_user_role(project2), "reporter")
 
     def test_public_collaborator_role_rejects_privileged_roles(self):
-        """`public_collaborator_role` must not allow granting `admin` and `manager`
-        to everyone, since that role is handed out to any user once a project is public.
-        """
+        """Test that `public_collaborator_role` must not allow granting `admin` and `manager` to everyone, since that role is handed out to any user once a project is public."""
         for role in (ProjectCollaboratorRole.ADMIN, ProjectCollaboratorRole.MANAGER):
             with self.subTest(role=role):
                 with self.assertRaises(ValidationError):
@@ -658,8 +654,7 @@ class QfcTestCase(APITransactionTestCase):
                     )
 
     def test_private_project_memberships(self):
-        """Tests for QF-1553 - limit collaboration on private projects"""
-
+        """Tests for QF-1553 - limit collaboration on private projects."""
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
         # Create a project with a collaborator
@@ -675,11 +670,11 @@ class QfcTestCase(APITransactionTestCase):
 
         self.client.raise_request_exception = True
 
-        def assertNoRole():
+        def assertNoRole():  # noqa: N802
             response = self.client.get(apiurl, follow=True)
             self.assertEqual(response.status_code, 403)
 
-        def assertRole(role, origin):
+        def assertRole(role, origin):  # noqa: N802
             response = self.client.get(apiurl, follow=True)
             self.assertEqual(response.status_code, 200)
             json = response.json()
@@ -1212,7 +1207,6 @@ class QfcTestCase(APITransactionTestCase):
 
     def test_restricted_data_last_updated_at_on_file_upload(self):
         """Test that restricted_data_last_updated_at is updated when restricted files are uploaded."""
-
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
         # Create a project
@@ -1270,7 +1264,6 @@ class QfcTestCase(APITransactionTestCase):
 
     def test_restricted_data_last_updated_at_on_file_delete(self):
         """Test that restricted_data_last_updated_at is updated when restricted files are deleted."""
-
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
         # Create a project

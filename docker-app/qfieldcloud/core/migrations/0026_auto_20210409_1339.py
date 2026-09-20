@@ -4,20 +4,20 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-    def generate_user_account(apps, schema_editor):
+    def generate_user_account(apps, schema_editor):  # noqa: N805
         User = apps.get_model("core", "User")
         UserAccount = apps.get_model("core", "UserAccount")
 
         for user in User.objects.filter(useraccount=None):
             UserAccount.objects.create(user=user)
 
-    def transfer_is_geodb_enabled_forwards(apps, schema_editor):
+    def transfer_is_geodb_enabled_forwards(apps, schema_editor):  # noqa: N805
         User = apps.get_model("core", "User")
 
         for user in User.objects.all():
             user.useraccount.is_geodb_enabled = user.is_geodb_enabled
 
-    def transfer_is_geodb_enabled_backwards(apps, schema_editor):
+    def transfer_is_geodb_enabled_backwards(apps, schema_editor):  # noqa: N805
         User = apps.get_model("core", "User")
 
         for user in User.objects.all():

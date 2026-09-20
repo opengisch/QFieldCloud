@@ -5,9 +5,7 @@ from qfieldcloud.core.models import Person
 
 
 class Command(SuperUserCommand):
-    """
-    We overwrite the django createsuperuser command because it uses the wrong User model
-    """
+    """We overwrite the django createsuperuser command because it uses the wrong User model."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

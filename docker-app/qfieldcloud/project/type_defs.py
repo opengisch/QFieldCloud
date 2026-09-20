@@ -4,8 +4,7 @@ from typing import TypedDict
 
 
 class QgisProjectDetails(TypedDict, total=False):
-    """
-    The most recent data structure to be expected as a result from `qfc_worker.commands.process_projectfile` job.
+    """The most recent data structure to be expected as a result from `qfc_worker.commands.process_projectfile` job.
 
     Must be kept in sync with `docker-qgis/qfc_worker/commands/process_projectfile.py`, which produces this data structure.
 

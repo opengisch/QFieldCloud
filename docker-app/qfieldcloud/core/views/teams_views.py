@@ -36,9 +36,7 @@ class TeamMemberDeleteViewPermissions(permissions.BasePermission):
 
 
 class TeamMemberPermission(permissions.BasePermission):
-    """
-    Permission class to handle CRUD operations for team members.
-    """
+    """Permission class to handle CRUD operations for team members."""
 
     def has_permission(self, request: Request, view: APIView) -> bool:
         organization_name = view.kwargs.get("organization_name")
@@ -70,9 +68,7 @@ class TeamMemberPermission(permissions.BasePermission):
 
 
 class TeamPermission(permissions.BasePermission):
-    """
-    Permission class to handle CRUD operations for teams.
-    """
+    """Permission class to handle CRUD operations for teams."""
 
     def has_permission(self, request: Request, view: APIView) -> bool:
         organization_name = view.kwargs.get("organization_name")
@@ -100,9 +96,7 @@ class TeamPermission(permissions.BasePermission):
     delete=extend_schema(description="Delete a team"),
 )
 class GetUpdateDestroyTeamDetailView(generics.RetrieveUpdateDestroyAPIView):
-    """
-    Handles GET, PUT, and DELETE for teams under a specific organization.
-    """
+    """Handles GET, PUT, and DELETE for teams under a specific organization."""
 
     permission_classes = [permissions.IsAuthenticated, TeamPermission]
     serializer_class = TeamSerializer
@@ -119,9 +113,7 @@ class GetUpdateDestroyTeamDetailView(generics.RetrieveUpdateDestroyAPIView):
         )
 
     def perform_update(self, serializer: TeamSerializer) -> None:
-        """
-        Handle team name updates with validation.
-        """
+        """Handle team name updates with validation."""
         organization_name = self.kwargs.get("organization_name")
 
         serializer.is_valid(raise_exception=True)
@@ -146,9 +138,7 @@ class GetUpdateDestroyTeamDetailView(generics.RetrieveUpdateDestroyAPIView):
     post=extend_schema(description="Create a new team under an organization"),
 )
 class TeamListCreateView(generics.ListCreateAPIView):
-    """
-    Handles GET (list all teams) and POST (create a new team) under an organization.
-    """
+    """Handles GET (list all teams) and POST (create a new team) under an organization."""
 
     permission_classes = [permissions.IsAuthenticated, TeamPermission]
     serializer_class = TeamSerializer
@@ -175,9 +165,7 @@ class TeamListCreateView(generics.ListCreateAPIView):
     delete=extend_schema(description="Delete a team member"),
 )
 class DestroyTeamMemberView(generics.DestroyAPIView):
-    """
-    View to handle adding and listing team members. --> organizations/<str:organization_name>/team/<str:team_name>/members/"
-    """
+    """View to handle adding and listing team members."""
 
     permission_classes = [permissions.IsAuthenticated, TeamMemberPermission]
     serializer_class = TeamMemberSerializer

@@ -5,7 +5,7 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-    def add_created_by(apps, schema_editor):
+    def add_created_by(apps, schema_editor):  # noqa: N805
         Delta = apps.get_model("core", "Delta")
 
         for delta in Delta.objects.all():

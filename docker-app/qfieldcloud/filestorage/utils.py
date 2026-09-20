@@ -31,9 +31,7 @@ filename_validator = RegexValidator(
 
 
 def validate_filename(filename: str) -> None:
-    """
-    Check if the filename is valid.
-    """
+    """Check if the filename is valid."""
     if not len(filename):
         raise ValidationError("Filename must not be empty!")
 
@@ -135,7 +133,7 @@ def calc_etag(file: ContentFile, part_size: int = 8 * 1024 * 1024) -> str:
         the calculated ETag value
     """
     if file.size <= part_size:
-        BLOCKSIZE = 65536
+        BLOCKSIZE = 65536  # noqa: N806
         hasher = hashlib.md5()
 
         buf = file.read(BLOCKSIZE)
@@ -177,7 +175,7 @@ def parse_range_header(
     """Parses a range HTTP Header string.
 
     Arguments:
-        range: string value of a HTTP range header to parse.
+        input_range: string value of a HTTP range header to parse.
         file_size: size of the file to get range for, in bytes.
 
     Returns:
@@ -222,7 +220,7 @@ def get_range(request: HttpRequest, total_size: int) -> RangeForFile | None:
 
     Arguments:
         request: the HTTP request to get the range from.
-        file: the file to get the range for.
+        total_size: the total size of the requested file in bytes.
     """
     range_header = request.headers.get("Range", "")
 

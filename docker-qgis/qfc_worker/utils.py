@@ -129,17 +129,16 @@ qgis_project_readonly_flags = (
 
 
 def start_app() -> str:
-    """
-    Will start a QgsApplication and call all initialization code like
-    registering the providers and other infrastructure. It will not load
-    any plugins.
+    """Will start a `QgsApplication` and call all initialization code like registering the providers and other infrastructure.
+
+    It will not load any plugins.
 
     You can always get the reference to a running app by calling `QgsApplication.instance()`.
 
     The initialization will only happen once, so it is safe to call this method repeatedly.
 
-        Returns
-        -------
+    Returns:
+    -------
         str: QGIS app version that was started.
     """
     global QGISAPP
@@ -173,7 +172,7 @@ def start_app() -> str:
 
         # make sure the app is closed, otherwise the container exists with non-zero
         @atexit.register
-        def exitQgis():
+        def exitQgis():  # noqa: N802
             stop_app()
 
         logging.info("QGIS app started!")
@@ -185,9 +184,7 @@ def start_app() -> str:
 
 
 def stop_app():
-    """
-    Cleans up and exits QGIS
-    """
+    """Cleans up and exits QGIS."""
     global QGISAPP
 
     # note that if this function is called from @atexit.register, the globals are cleaned up
@@ -284,7 +281,9 @@ def reproject_extent(
     """Reprojects `extent` from `source_crs` to `target_crs`.
 
     Args:
-        target_crs: defaults to WGS84 (EPSG:4326) when not provided.
+        extent: a `QgsRectangle` to be reprojected
+        source_crs: The CRS that the `extent` coordinates are currently in.
+        target_crs: The CRS that the `extent` coordinated should be converted to. Defaults to WGS84 (EPSG:4326) when not provided.
 
     Returns:
         the reprojected extent.
@@ -409,7 +408,7 @@ def open_qgis_project_temporarily(
 
         return on_project_read
 
-    details = cast(OpenQgisProjectTemporarilyDetailsInner, {})
+    details = cast("OpenQgisProjectTemporarilyDetailsInner", {})
     tmp_project = QgsProject()
     tmp_layer_tree = tmp_project.layerTreeRoot()
 
@@ -427,7 +426,7 @@ def open_qgis_project_temporarily(
     tmp_project.read(qgis_filename, qgis_project_readonly_flags)
 
     details = cast(
-        OpenQgisProjectTemporarilyDetails,
+        "OpenQgisProjectTemporarilyDetails",
         {
             **details,
             "project": tmp_project,
@@ -498,8 +497,10 @@ def strip_feature_count_from_project_xml(the_qgis_file_name: str) -> None:
 def download_project(
     project_id: str, destination: Path | None = None, skip_attachments: bool = True
 ) -> Path:
-    """Download the files in the project "working" directory from the S3
-    Storage into a temporary directory. Returns the directory path"""
+    """Download the files in the project "working" directory from the Object storage.
+
+    Storage into a temporary directory. Returns the directory path
+    """
     logging.info("Preparing a temporary directory for project files…")
 
     if not destination:
@@ -587,7 +588,6 @@ def upload_project(project_id: str, project_dir: Path) -> None:
 
 def upload_project_thumbnail(project_id: UUID, thumbnail_filename: Path | None) -> None:
     """Upload the generated thumbnail to QFieldCloud via the SDK."""
-
     if thumbnail_filename is None:
         logging.warning("No thumbnail was generated, skipping upload.")
         return
@@ -618,7 +618,7 @@ def list_local_files(project_id: str, project_dir: Path):
 
 
 def is_localhost(hostname: str, port: int | None = None) -> bool:
-    """returns True if the hostname points to the localhost, otherwise False."""
+    """Returns True if the hostname points to the localhost, otherwise False."""
     if port is None:
         port = 22  # no port specified, lets just use the ssh port
 
@@ -669,7 +669,7 @@ def get_layer_filename(layer: QgsMapLayer) -> str | None:
 
 
 def extract_project_details(project: QgsProject) -> dict[str, str]:
-    """Extract project details"""
+    """Extract project details."""
     map_settings = QgsMapSettings()
     details = {}
 
@@ -928,7 +928,7 @@ def get_file_size(filename: str) -> int:
 
 
 def get_file_md5sum(filename: str) -> str:
-    BLOCKSIZE = 65536
+    BLOCKSIZE = 65536  # noqa: N806
     hasher = hashlib.md5()
 
     with open(filename, "rb") as f:
@@ -1143,7 +1143,6 @@ def save_project(
     project: QgsProject, ref_extent: QgsReferencedRectangle | None
 ) -> None:
     """Saves the project with `theMapCanvas`, and if an extent is provided, sets the extent of the map canvas."""
-
     assert project.fileName()
 
     extent = QgsRectangle()

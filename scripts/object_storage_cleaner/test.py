@@ -145,9 +145,7 @@ class TestObjectStorageCleaner(unittest.TestCase):
         return all_versions
 
     def test_no_logically_deleted_files(self):
-        """
-        test that no logically deleted objects are found if there are no deleted files.
-        """
+        """Test that no logically deleted objects are found if there are no deleted files."""
         # 1. Upload a file
         key = f"{self.unique_prefix}file1.txt"
         self.create_file(key)
@@ -186,9 +184,7 @@ class TestObjectStorageCleaner(unittest.TestCase):
         self.assertEqual(len(versions), 1)
 
     def test_restored_files_ignored(self):
-        """
-        test that a file is not found if it is restored after being deleted.
-        """
+        """Test that a file is not found if it is restored after being deleted."""
         # 1. Upload file (v1)
         key = f"{self.unique_prefix}file_restored.txt"
         self.create_file(key, "v1")
@@ -233,8 +229,8 @@ class TestObjectStorageCleaner(unittest.TestCase):
         self.assertEqual(len(versions), 3)
 
     def test_retention_period_filter(self):
-        """
-        Test that a file is NOT found if the retention period covers it (recent deletion).
+        """Test that a file is NOT found if the retention period covers it (recent deletion).
+
         And that a file IS found if the retention period has passed (old deletion).
         """
         key = f"{self.unique_prefix}file_date_test.txt"
@@ -310,9 +306,7 @@ class TestObjectStorageCleaner(unittest.TestCase):
         self.assertEqual(len(versions), 0)
 
     def test_stray_delete_marker(self):
-        """
-        test that a key exists only as a Delete Marker is identified and deleted.
-        """
+        """Test that a key exists only as a Delete Marker is identified and deleted."""
         key = f"{self.unique_prefix}stray_marker"
 
         # 1. Create a file
@@ -330,7 +324,7 @@ class TestObjectStorageCleaner(unittest.TestCase):
             if v.get("IsDeleteMarker", False):
                 continue
 
-            v = cast(ObjectVersionTypeDef, v)
+            v = cast("ObjectVersionTypeDef", v)
             data_version = v
 
             break
@@ -378,9 +372,7 @@ class TestObjectStorageCleaner(unittest.TestCase):
         self.assertEqual(len(versions), 0)
 
     def test_permanently_deleted(self):
-        """
-        test that a file is found if it is deleted and then permanently deleted.
-        """
+        """Test that a file is found if it is deleted and then permanently deleted."""
         # 1. Upload file
         key = f"{self.unique_prefix}file_deleted.txt"
         self.create_file(key, "a" * 100)
@@ -420,9 +412,7 @@ class TestObjectStorageCleaner(unittest.TestCase):
         self.assertEqual(len(versions), 0)
 
     def test_permanently_delete_complex_version_history(self):
-        """
-        test that all versions (history) are permanently deleted when the key is deleted.
-        """
+        """Test that all versions (history) are permanently deleted when the key is deleted."""
         key = f"{self.unique_prefix}complex_history.txt"
 
         # 1. v1: Create
@@ -466,9 +456,7 @@ class TestObjectStorageCleaner(unittest.TestCase):
         self.assertEqual(len(versions), 0)
 
     def test_permanently_delete_versions_large_data_complex_version_history(self):
-        """
-        test that all versions (history) are permanently deleted when the key is deleted with a large amount of data in an unordered way.
-        """
+        """Test that all versions (history) are permanently deleted when the key is deleted with a large amount of data in an unordered way."""
         # Create key1
         key1 = f"{self.unique_prefix}_SHOULD_BE_DELETED"
         self.create_file(key1, "a" * 100)
@@ -559,9 +547,7 @@ class TestObjectStorageCleaner(unittest.TestCase):
         self.assertEqual(len(versions), 200)
 
     def test_permanently_delete_versions_high_frequency_updates(self):
-        """
-        test that a key with high frequency updates is identified and deleted.
-        """
+        """Test that a key with high frequency updates is identified and deleted."""
         key = f"{self.unique_prefix}fast_updates.txt"
 
         # Create 20 versions as fast as possible
@@ -603,19 +589,17 @@ class TestObjectStorageCleaner(unittest.TestCase):
         self.assertEqual(len(versions), 0)
 
     def test_selective_retention_with_multiple_keys(self):
-        """
-        test that different keys are identified and deleted. With the same prefix but different keys.
-        """
-        keyA = f"{self.unique_prefix}keyA.txt"
-        keyB = f"{self.unique_prefix}keyB.txt"
+        """Test that different keys are identified and deleted. With the same prefix but different keys."""
+        key_a = f"{self.unique_prefix}key_a.txt"
+        key_b = f"{self.unique_prefix}key_b.txt"
 
-        self.create_file(keyA, "A" * 100)
-        self.delete_file(keyA)
+        self.create_file(key_a, "A" * 100)
+        self.delete_file(key_a)
 
         time.sleep(5)
 
-        self.create_file(keyB, "B" * 100)
-        self.delete_file(keyB)
+        self.create_file(key_b, "B" * 100)
+        self.delete_file(key_b)
 
         # 1. Run with dry-run
         result = self.run_script(
@@ -646,26 +630,24 @@ class TestObjectStorageCleaner(unittest.TestCase):
         versions = self.list_versions(self.unique_prefix)
         self.assertEqual(len(versions), 2)
 
-        # 4. Verify that KeyB is not deleted
+        # 4. Verify that key_b is not deleted
         for version in versions:
             assert "Key" in version
 
-            self.assertEqual(version["Key"], keyB)
+            self.assertEqual(version["Key"], key_b)
 
     def test_selective_retention_with_multiple_keys_and_different_prefixes(self):
-        """
-        test that different keys with different prefixes are not identified and deleted.
-        """
-        prefixA = f"{self.unique_prefix}A/"
-        prefixB = f"{self.unique_prefix}B/"
-        keyA = f"{prefixA}keyA.txt"
-        keyB = f"{prefixB}keyB.txt"
+        """Test that different keys with different prefixes are not identified and deleted."""
+        prefix_a = f"{self.unique_prefix}A/"
+        prefix_b = f"{self.unique_prefix}B/"
+        key_a = f"{prefix_a}key_a.txt"
+        key_b = f"{prefix_b}key_b.txt"
 
-        self.create_file(keyA, "A" * 100)
-        self.delete_file(keyA)
+        self.create_file(key_a, "A" * 100)
+        self.delete_file(key_a)
 
-        self.create_file(keyB, "B" * 100)
-        self.delete_file(keyB)
+        self.create_file(key_b, "B" * 100)
+        self.delete_file(key_b)
 
         time.sleep(2)
 
@@ -674,7 +656,7 @@ class TestObjectStorageCleaner(unittest.TestCase):
             [
                 "--dry-run",
                 "--prefix",
-                prefixA,
+                prefix_a,
                 "--retention-period",
                 "2 second",
             ]
@@ -688,24 +670,24 @@ class TestObjectStorageCleaner(unittest.TestCase):
             [
                 "--force",
                 "--prefix",
-                prefixA,
+                prefix_a,
                 "--retention-period",
                 "2 second",
             ]
         )
 
-        # 3. Verify that KeyB still exists
-        versions = self.list_versions(prefixB)
+        # 3. Verify that key_b still exists
+        versions = self.list_versions(prefix_b)
         self.assertEqual(len(versions), 2)
 
-        # 4. Verify that KeyB is not deleted
+        # 4. Verify that key_b is not deleted
         for version in versions:
             assert "Key" in version
 
-            self.assertEqual(version["Key"], keyB)
+            self.assertEqual(version["Key"], key_b)
 
-        # 5. Verify that KeyA is deleted
-        versions = self.list_versions(prefixA)
+        # 5. Verify that key_a is deleted
+        versions = self.list_versions(prefix_a)
         self.assertEqual(len(versions), 0)
 
     def test_parse_retention_period_valid_inputs(self):

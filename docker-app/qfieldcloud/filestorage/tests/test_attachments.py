@@ -39,9 +39,8 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             attachments_file_storage="webdav",
         )
 
-    def assertFileOnStorage(self, file: File, file_storage_name: str) -> None:
-        """
-        Checks if a file and all its versions exist on the specified storage.
+    def assertFileOnStorage(self, file: File, file_storage_name: str) -> None:  # noqa: N802
+        """Checks if a file and all its versions exist on the specified storage.
 
         Args:
             file: The File instance to check.

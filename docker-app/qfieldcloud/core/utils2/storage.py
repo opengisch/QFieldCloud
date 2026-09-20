@@ -57,9 +57,7 @@ def calculate_checksums(
 
 
 def format_storage_usage(useraccount: qfieldcloud.core.models.UserAccount) -> str:
-    """
-    Returns a string with the storage usage in a human readable format
-    """
+    """Returns a string with the storage usage in a human readable format."""
     active_storage_total = filesizeformat10(
         useraccount.current_subscription.active_storage_total_bytes
     )

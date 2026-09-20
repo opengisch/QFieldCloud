@@ -14,14 +14,16 @@ User = get_user_model()
 def redirect_to_referer_or_view(
     request: HttpRequest, view_name: str, *view_args, **view_kwargs
 ) -> HttpResponseRedirect:
-    """
-    Redirects a request to a referer provided by a client.
+    """Redirects a request to a referer provided by a client.
+
     If no referer provided or the referer is not safe,
     this will create a redirection to a default view.
 
     Args:
         request: incoming client request.
         view_name: name of the view to redirect to.
+        *view_args: view arguments
+        **view_kwargs: view arguments
 
     Returns:
         client redirect http response.
@@ -36,9 +38,7 @@ def redirect_to_referer_or_view(
 
 
 def resend_confirmation_email(request: HttpRequest) -> HttpResponse:
-    """
-    Resends a confirmation email to a new unverified user.
-    """
+    """Resends a confirmation email to a new unverified user."""
     if request.method != "POST":
         return redirect_to_referer_or_view(request, "account_login")
 

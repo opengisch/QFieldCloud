@@ -9,9 +9,7 @@ register = template.Library()
 
 @register.filter(is_safe=True)
 def filesizeformat10(bytes_) -> str:
-    """
-    Format the value like a 'human-readable' file size (i.e. 13 KB, 4.1 MB,
-    102 bytes, etc.).
+    """Format the value like a 'human-readable' file size (i.e. 13 KB, 4.1 MB, 102 bytes, etc.).
 
     Unlike Django's `filesizeformat` which uses powers of 2 (e.g. 1024KB==1MB), `filesizeformat10` uses powers of 10 (e.g. 1000KB==1MB)
     """
@@ -24,11 +22,11 @@ def filesizeformat10(bytes_) -> str:
     def filesize_number_format(value):
         return formats.number_format(round(value, 1), 1)
 
-    KB = 10**3
-    MB = 10**6
-    GB = 10**9
-    TB = 10**12
-    PB = 10**15
+    KB = 10**3  # noqa: N806
+    MB = 10**6  # noqa: N806
+    GB = 10**9  # noqa: N806
+    TB = 10**12  # noqa: N806
+    PB = 10**15  # noqa: N806
 
     negative = bytes_ < 0
     if negative:
@@ -48,7 +46,7 @@ def filesizeformat10(bytes_) -> str:
         value = _("%s PB") % filesize_number_format(bytes_ / PB)
 
     if negative:
-        value = "-%s" % value
+        value = "-{}".format(value)
 
     return avoid_wrapping(value)
 
@@ -56,6 +54,7 @@ def filesizeformat10(bytes_) -> str:
 @register.filter()
 def smooth_timedelta(timedeltaobj):
     """Convert a datetime.timedelta object into Days, Hours, Minutes, Seconds.
+
     Inspired by: https://stackoverflow.com/a/46928226/1226137
     """
     secs = timedeltaobj.total_seconds()

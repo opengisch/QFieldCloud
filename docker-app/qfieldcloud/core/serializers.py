@@ -390,7 +390,7 @@ class JobMixin:
         return internal_data
 
     def get_lastest_not_finished_job(self) -> Job | None:
-        ModelClass: Job = self.Meta.model
+        ModelClass: Job = self.Meta.model  # noqa: N806
         last_active_job = (
             ModelClass.objects.unfinished()
             .filter(
