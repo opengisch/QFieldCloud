@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.core.cache import cache
 from django.templatetags.static import static
 from django.test import override_settings
@@ -17,6 +18,9 @@ class QfcTestCase(APITransactionTestCase):
         """Test that the endpoint returns the correct default whitelabel settings."""
         response = self.client.get("/api/v1/server/info/")
         data = response.json()
+
+        self.assertIn("version", data)
+        self.assertEqual(data["version"], settings.SENTRY_RELEASE)
 
         self.assertTrue("whitelabel" in data)
 
