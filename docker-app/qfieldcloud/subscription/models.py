@@ -859,7 +859,7 @@ class AbstractSubscription(models.Model):
         quantity: int,
         active_since: datetime | None = None,
     ):
-        if not self.plan.is_premium:
+        if not self.regular_plan.is_premium:
             raise NotPremiumPlanException(
                 "Only premium accounts can have additional packages!"
             )

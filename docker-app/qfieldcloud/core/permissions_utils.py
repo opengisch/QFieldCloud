@@ -875,7 +875,8 @@ def can_cancel_subscription_at_period_end(
     if subscription.active_until is not None:
         return False
 
-    if not subscription.plan.is_cancellable:
+    # NOTE for a trial this stops its conversion, so the plan to be billed decides
+    if not subscription.regular_plan.is_cancellable:
         return False
 
     if subscription.account.user.is_person:
@@ -896,7 +897,8 @@ def can_cancel_subscription_immediately(
     Organization can be downgraded only by owners, need to be deleted.
     In any case cancellation is only possible if the plan allows it.
     """
-    if not subscription.regular_plan.is_cancellable:
+    # NOTE the active plan decides, so a trial cannot be cancelled right away
+    if not subscription.plan.is_cancellable:
         return False
 
     if subscription.account.user.is_person:

@@ -6,6 +6,11 @@ from django.utils import timezone
 from rest_framework.test import APITransactionTestCase
 
 from qfieldcloud.core.models import Organization, Person
+from qfieldcloud.core.permissions_utils import (
+    can_abort_subscription_cancellation,
+    can_cancel_subscription_at_period_end,
+    can_cancel_subscription_immediately,
+)
 from qfieldcloud.core.tests.utils import setup_subscription_plans
 from qfieldcloud.subscription.models import (
     CurrentSubscription,
@@ -49,9 +54,11 @@ class TrialSubscriptionTestCase(APITransactionTestCase):
         setup_subscription_plans()
 
         # Regular plan is larger than its trial plan
-        self.trial_plan = self._create_plan("pro_trial", is_trial=True, storage_mb=1000)
+        self.trial_plan = self._create_plan(
+            "pro_trial", is_trial=True, storage_mb=1000, is_cancellable=False
+        )
         self.regular_plan = self._create_plan(
-            "pro", storage_mb=5000, trial_plan=self.trial_plan
+            "pro", storage_mb=5000, trial_plan=self.trial_plan, is_cancellable=True
         )
 
         self.subscription = Person.objects.create(
@@ -104,6 +111,28 @@ class TrialSubscriptionTestCase(APITransactionTestCase):
 
         self.subscription.refresh_from_db()
         self.assertEqual(self.subscription.plan, self.trial_plan)
+
+    def test_trial_can_stop_its_conversion_but_not_be_cancelled_right_away(self):
+        user = self.subscription.account.user
+
+        self.assertTrue(can_cancel_subscription_at_period_end(user, self.subscription))
+        self.assertFalse(can_cancel_subscription_immediately(user, self.subscription))
+
+        self._expire_trial()
+
+        self.assertTrue(can_cancel_subscription_immediately(user, self.subscription))
+
+    def test_trial_cancellation_can_be_aborted(self):
+        user = self.subscription.account.user
+
+        self.assertFalse(can_abort_subscription_cancellation(user, self.subscription))
+
+        # a cancellation at the end of the trial has been requested
+        self.subscription.active_until = self.subscription.trial_expires_at
+        self.subscription.save(update_fields=["active_until"])
+
+        self.assertTrue(can_abort_subscription_cancellation(user, self.subscription))
+        self.assertFalse(can_cancel_subscription_at_period_end(user, self.subscription))
 
     def test_start_trial_creates_a_single_trial_subscription(self):
         account = self.subscription.account
