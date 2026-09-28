@@ -27,42 +27,6 @@ class Migration(migrations.Migration):
                 to="subscription.plan",
             ),
         ),
-        migrations.AlterField(
-            model_name="plan",
-            name="initial_subscription_status",
-            field=models.CharField(
-                choices=[
-                    ("inactive_draft", "Inactive Draft"),
-                    ("inactive_draft_expired", "Inactive Draft Expired"),
-                    ("inactive_requested_create", "Inactive Requested Create"),
-                    ("inactive_awaits_payment", "Inactive Awaits Payment"),
-                    ("active_paid", "Active Paid"),
-                    ("active_past_due", "Active Past Due"),
-                    ("inactive_cancelled", "Inactive Cancelled"),
-                    ("active_trial", "Active Trial"),
-                ],
-                default="inactive_draft",
-                max_length=100,
-            ),
-        ),
-        migrations.AlterField(
-            model_name="subscription",
-            name="status",
-            field=models.CharField(
-                choices=[
-                    ("inactive_draft", "Inactive Draft"),
-                    ("inactive_draft_expired", "Inactive Draft Expired"),
-                    ("inactive_requested_create", "Inactive Requested Create"),
-                    ("inactive_awaits_payment", "Inactive Awaits Payment"),
-                    ("active_paid", "Active Paid"),
-                    ("active_past_due", "Active Past Due"),
-                    ("inactive_cancelled", "Inactive Cancelled"),
-                    ("active_trial", "Active Trial"),
-                ],
-                default="inactive_draft",
-                max_length=100,
-            ),
-        ),
         # force recreate due to new field added
         django_migrate_sql.operations.ReverseAlterSQL(
             name="current_subscriptions_vw",

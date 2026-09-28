@@ -56,8 +56,6 @@ class SubscriptionStatus(models.TextChoices):
     ACTIVE_PAST_DUE = "active_past_due", _("Active Past Due")
     # successfully cancelled
     INACTIVE_CANCELLED = "inactive_cancelled", _("Inactive Cancelled")
-    # subscription is in trial
-    ACTIVE_TRIAL = "active_trial", _("Active Trial")
 
 
 class Plan(models.Model):
@@ -536,7 +534,7 @@ class SubscriptionQuerySet(models.QuerySet):
                 Subscription.Status.ACTIVE_PAST_DUE,
             )
         )
-        is_trial_condition = Q(status=Subscription.Status.ACTIVE_TRIAL) & Q(
+        is_trial_condition = Q(trial_plan_id__isnull=False) & Q(
             trial_expires_at__gt=V("now")
         )
         return self.annotate(
@@ -668,14 +666,14 @@ class AbstractSubscription(models.Model):
     @property
     def is_trialing(self) -> bool:
         return (
-            self.status == self.Status.ACTIVE_TRIAL
+            self.trial_plan_id is not None
             and self.trial_expires_at is not None
             and self.trial_expires_at > timezone.now()
         )
 
     @property
     def plan(self) -> Plan:
-        if self.is_trialing and self.trial_plan_id is not None:
+        if self.is_trialing:
             return self.trial_plan
 
         return self.regular_plan
@@ -1107,8 +1105,9 @@ class AbstractSubscription(models.Model):
                     f'Starting a trial requires the plan "{regular_plan.code}" to have a `trial_plan`.'
                 )
 
-            # the trial is granted right away, the payment method is collected later
-            status = cls.Status.ACTIVE_TRIAL
+            # the trial is granted right away, independently of `status`, which still
+            # tracks the actual Stripe/payment lifecycle of `regular_plan`
+            status = regular_plan.initial_subscription_status
             trial_plan = regular_plan.trial_plan
             trial_expires_at = active_since + timedelta(days=config.TRIAL_PERIOD_DAYS)
 

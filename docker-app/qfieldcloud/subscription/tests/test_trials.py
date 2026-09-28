@@ -60,8 +60,8 @@ class TrialSubscriptionTestCase(APITransactionTestCase):
         self.subscription.regular_plan = self.regular_plan
         self.subscription.trial_plan = self.trial_plan
         self.subscription.trial_expires_at = timezone.now() + timedelta(days=5)
-        self.subscription.status = Subscription.Status.ACTIVE_TRIAL
         self.subscription.active_since = timezone.now() - timedelta(days=1)
+        self.subscription.status = self.regular_plan.initial_subscription_status
         self.subscription.save()
 
     def test_active_trial_grants_access_until_it_expires(self):
@@ -69,7 +69,7 @@ class TrialSubscriptionTestCase(APITransactionTestCase):
 
         self._expire_trial()
 
-        # Still ACTIVE_TRIAL and in-period, but access stops once expired.
+        # Still within `active_since`/`active_until`, but access stops once `trial_expires_at` passes.
         self.assertFalse(Subscription.objects.get(pk=self.subscription.pk).is_active)
 
     def test_trial_uses_trial_plan_limits_until_it_expires(self):
@@ -116,7 +116,9 @@ class TrialSubscriptionTestCase(APITransactionTestCase):
         self.assertEqual(account.current_subscription, subscription)
         self.assertEqual(subscription.regular_plan, self.regular_plan)
         self.assertEqual(subscription.trial_plan, self.trial_plan)
-        self.assertEqual(subscription.status, Subscription.Status.ACTIVE_TRIAL)
+        self.assertEqual(
+            subscription.status, self.regular_plan.initial_subscription_status
+        )
         self.assertEqual(
             subscription.trial_expires_at,
             subscription.active_since + timedelta(days=config.TRIAL_PERIOD_DAYS),
