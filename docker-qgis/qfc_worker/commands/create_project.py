@@ -235,7 +235,8 @@ def _create_project_from_json2qgis(
         with open(json2qgis_filename) as fh:
             project_definition = json.load(fh)
 
-        project = ProjectCreator(project_definition).build(output_dir)
+        creator = ProjectCreator(project_definition)
+        project = creator.build(output_dir)
     except Convert2QgisBaseError as err:
         logger.error(
             "Failed to convert JSON2QGIS file to QGIS project: %s", humanize_error(err)
