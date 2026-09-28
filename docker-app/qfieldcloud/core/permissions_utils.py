@@ -911,6 +911,21 @@ def can_cancel_subscription_immediately(
     )
 
 
+def can_end_trial_immediately(user: QfcUser, subscription: Subscription) -> bool:
+    """Cannot end a trial early if it is not currently trialing, or the user does not own the account."""
+    if not subscription.is_trialing:
+        return False
+
+    if subscription.account.user.is_person:
+        return user_eq(user, subscription.account.user)
+
+    return user_has_organization_role_origins(
+        user,
+        subscription.account.user,
+        [OrganizationQueryset.RoleOrigins.ORGANIZATIONOWNER],
+    )
+
+
 def can_abort_subscription_cancellation(
     user: QfcUser, subscription: Subscription
 ) -> bool:
