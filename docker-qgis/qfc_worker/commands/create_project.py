@@ -283,6 +283,14 @@ def prepare_project_files(
 
         return str(project_filename)
 
+    if project_seed.settings.xlsform and project_seed.json2qgis_file:
+        raise UnableToContinueException(
+            reason=(
+                "Project seed has both an XLSForm and a JSON2QGIS file configured. "
+                "This should never happen, aborting."
+            ),
+        )
+
     if project_seed.settings.xlsform:
         logger.info(f'Creating QGIS project from XLSForm from "{xlsform_filename}"...')
 
