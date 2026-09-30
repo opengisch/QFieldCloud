@@ -311,6 +311,32 @@ class QfcTestCase(APITransactionTestCase):
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(len(response.data), 0)
 
+    def test_list_projects_excluding_project_type(self):
+        # Create a `regular`` project for user1
+        Project.objects.create(name="project1", owner=self.user1)
+
+        # Create a `shared_datasets` project for user1
+        Project.objects.create(name=SHARED_DATASETS_PROJECT_NAME, owner=self.user1)
+
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        # `shared_datasets` is listed by default
+        response = self.client.get("/api/v1/projects/")
+        self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(len(response.data), 2)
+
+        # `exclude_project_type` removes it
+        response = self.client.get(
+            "/api/v1/projects/?exclude_project_type=shared_datasets"
+        )
+        self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["name"], "project1")
+
+        # `exclude_project_type` with an unknown project type is rejected
+        response = self.client.get("/api/v1/projects/?exclude_project_type=bogus")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
     def test_list_collaborators_of_project(self):
         # Create a project of user1
         self.project1 = Project.objects.create(
