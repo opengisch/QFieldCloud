@@ -13,11 +13,11 @@ attrs==26.1.0
     #   referencing
 beautifulsoup4==4.15.0
     # via django-bootstrap4
-boto3==1.43.86
+boto3==1.43.106
     # via -r requirements/requirements.in
-boto3-stubs==1.43.86
+boto3-stubs==1.43.106
     # via -r requirements/requirements.in
-botocore==1.43.86
+botocore==1.43.106
     # via
     #   boto3
     #   s3transfer
@@ -169,7 +169,7 @@ jsonschema==4.26.0
     # via drf-spectacular
 jsonschema-specifications==2025.9.1
     # via jsonschema
-mypy-boto3-s3==1.43.66
+mypy-boto3-s3==1.43.106
     # via -r requirements/requirements.in
 oauthlib==4.0.0
     # via django-allauth
