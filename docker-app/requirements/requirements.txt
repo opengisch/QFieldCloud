@@ -189,7 +189,7 @@ pyjwt[crypto]==2.15.1
     # via django-allauth
 pymemcache==4.0.0
     # via -r requirements/requirements.in
-pyproj==3.7.2
+pyproj==3.8.0
     # via -r requirements/requirements.in
 python-dateutil==2.9.0.post0
     # via
