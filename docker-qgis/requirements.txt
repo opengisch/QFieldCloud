@@ -43,7 +43,7 @@ typing-extensions==4.16.0
     # via
     #   -r docker-qgis/requirements.in
     #   referencing
-urllib3==2.7.0
+urllib3==2.8.0
     # via
     #   qfieldcloud-sdk
     #   requests
