@@ -185,7 +185,7 @@ psycopg2==2.9.12
     # via -r requirements/requirements.in
 pycparser==3.0
     # via cffi
-pyjwt[crypto]==2.13.0
+pyjwt[crypto]==2.15.1
     # via django-allauth
 pymemcache==4.0.0
     # via -r requirements/requirements.in
@@ -242,7 +242,7 @@ typing-extensions==4.16.0
     #   djangorestframework-stubs
 uritemplate==4.2.0
     # via drf-spectacular
-urllib3==2.7.0
+urllib3==2.8.0
     # via
     #   botocore
     #   requests
