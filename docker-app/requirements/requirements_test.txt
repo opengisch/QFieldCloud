@@ -13,9 +13,9 @@ certifi==2026.7.22
 charset-normalizer==3.5.1
     # via requests
 coverage==7.15.4
-    # via -r requirements/requirements_test.in
+    # via -r requirements_test.in
 geopandas==1.1.4
-    # via -r requirements/requirements_test.in
+    # via -r requirements_test.in
 h11==0.16.0
     # via wsproto
 idna==3.19
@@ -23,7 +23,7 @@ idna==3.19
     #   requests
     #   trio
 imageio==2.37.4
-    # via -r requirements/requirements_test.in
+    # via -r requirements_test.in
 numpy==2.5.2
     # via
     #   geopandas
@@ -54,9 +54,9 @@ python-dateutil==2.9.0.post0
 requests==2.34.2
     # via requests-mock
 requests-mock==1.12.1
-    # via -r requirements/requirements_test.in
+    # via -r requirements_test.in
 selenium==4.47.0
-    # via -r requirements/requirements_test.in
+    # via -r requirements_test.in
 shapely==2.1.2
     # via geopandas
 six==1.17.0
@@ -73,7 +73,7 @@ trio-websocket==0.12.2
     # via selenium
 typing-extensions==4.16.0
     # via selenium
-urllib3[socks]==2.7.0
+urllib3[socks]==2.8.0
     # via
     #   requests
     #   selenium
