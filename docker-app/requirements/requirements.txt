@@ -185,7 +185,7 @@ psycopg2==2.9.12
     # via -r requirements/requirements.in
 pycparser==3.0
     # via cffi
-pyjwt[crypto]==2.13.0
+pyjwt[crypto]==2.15.1
     # via django-allauth
 pymemcache==4.0.0
     # via -r requirements/requirements.in
