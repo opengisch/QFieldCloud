@@ -73,7 +73,7 @@ django==5.2.17
     #   djangorestframework
     #   drf-spectacular
     #   jsonfield
-django-allauth[socialaccount]==65.19.2
+django-allauth[socialaccount]==65.19.7
     # via -r requirements/requirements.in
 django-auditlog==3.4.1
     # via -r requirements/requirements.in
@@ -171,7 +171,7 @@ jsonschema-specifications==2025.9.1
     # via jsonschema
 mypy-boto3-s3==1.43.66
     # via -r requirements/requirements.in
-oauthlib==3.3.1
+oauthlib==4.0.0
     # via django-allauth
 packaging==26.3
     # via django-notifications-hq
