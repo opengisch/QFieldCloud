@@ -24,6 +24,11 @@ class ProjectFilterSet(django_filters.FilterSet):
         choices=IncludePublicChoices.choices,
         method="filter_include_public",
     )
+    exclude_project_type = django_filters.ChoiceFilter(
+        label="Exclude projects of this type",
+        choices=Project.ProjectType.choices,
+        method="filter_exclude_project_type",
+    )
 
     def filter_include_public(
         self, queryset: models.QuerySet[Project], name: str, value: str
@@ -32,6 +37,11 @@ class ProjectFilterSet(django_filters.FilterSet):
             queryset = queryset.exclude(user_role_origin=ProjectRoleOrigins.PUBLIC)
 
         return queryset
+
+    def filter_exclude_project_type(
+        self, queryset: models.QuerySet[Project], name: str, value: str
+    ) -> models.QuerySet[Project]:
+        return queryset.exclude(project_type=value)
 
     def filter_queryset(
         self, queryset: models.QuerySet[Project]
@@ -48,4 +58,4 @@ class ProjectFilterSet(django_filters.FilterSet):
 
     class Meta:
         model = Project
-        fields = ["name", "owner", "include_public"]
+        fields = ["name", "owner", "include_public", "exclude_project_type"]
