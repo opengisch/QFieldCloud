@@ -65,6 +65,10 @@ def _project_for_owner_qs(user: QfcUser, project: Project, skip_invalid: bool):
     )
 
 
+def _project_for_owner(user: QfcUser, project: Project, skip_invalid: bool):
+    return _project_for_owner_qs(user, project, skip_invalid).first()
+
+
 def _organization_of_owner(user: QfcUser, organization: Organization):
     return (
         Organization.objects.of_user(user)
@@ -79,11 +83,9 @@ def user_has_project_roles(
     roles: list[ProjectCollaboratorRole],
     skip_invalid: bool = False,
 ):
-    return (
-        _project_for_owner_qs(user, project, skip_invalid)
-        .filter(user_role__in=roles)
-        .exists()
-    )
+    project = _project_for_owner(user, project, skip_invalid)
+
+    return project.user_role in roles
 
 
 def check_user_has_project_roles(
