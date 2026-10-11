@@ -174,6 +174,7 @@ MIDDLEWARE = [
     "allauth.account.middleware.AccountMiddleware",
     "qfieldcloud.core.middleware.qgis_auth.QGISAuthenticationMiddleware",
     "qfieldcloud.core.middleware.client_type.ClientTypeMiddleware",
+    "qfieldcloud.core.middleware.current_request.CurrentRequestMiddleware",
 ]
 
 CRON_CLASSES = [

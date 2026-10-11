@@ -3,6 +3,7 @@ from typing import Literal
 from django.utils.translation import gettext as _
 
 from qfieldcloud.authentication.models import AuthToken
+from qfieldcloud.core.middleware.current_request import cache_for_request
 from qfieldcloud.core.models import (
     Delta,
     Job,
@@ -65,6 +66,7 @@ def _project_for_owner_qs(user: QfcUser, project: Project, skip_invalid: bool):
     )
 
 
+@cache_for_request(lambda u, p, _s, **kwargs: (((u.username, p.id)), kwargs))
 def _project_for_owner(user: QfcUser, project: Project, skip_invalid: bool):
     return _project_for_owner_qs(user, project, skip_invalid).first()
 
