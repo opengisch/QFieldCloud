@@ -57,6 +57,7 @@ if DEBUG:
     ]
 
 ENVIRONMENT = os.environ["ENVIRONMENT"]
+COMPOSE_PROJECT_NAME = os.environ["COMPOSE_PROJECT_NAME"]
 
 # 'DJANGO_ALLOWED_HOSTS' should be a single string of hosts with a space between each.
 # For example: 'DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 [::1]'
