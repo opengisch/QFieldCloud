@@ -220,7 +220,7 @@ class NotCloneableProjectError(QFieldCloudError):
     status_code = status.HTTP_400_BAD_REQUEST
 
 
-class MultipleProjectSeedSourcesError(QFieldCloudException):
+class MultipleProjectSeedSourcesError(QFieldCloudError):
     """Raised when a project is created with both an XLSForm file and a JSON2QGIS file."""
 
     code = "multiple_project_seed_sources"
@@ -228,7 +228,7 @@ class MultipleProjectSeedSourcesError(QFieldCloudException):
     status_code = status.HTTP_400_BAD_REQUEST
 
 
-class OperationNotAllowedForTemplateProjectError(QFieldCloudException):
+class OperationNotAllowedForTemplateProjectError(QFieldCloudError):
     """Raised when attempting to package or apply deltas on a template project.
 
     Template projects can only be cloned or have files uploaded to them.

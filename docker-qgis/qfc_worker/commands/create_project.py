@@ -253,7 +253,7 @@ def _create_project_from_json2qgis(
             "Failed to convert JSON2QGIS file to QGIS project: %s", humanize_error(err)
         )
 
-        raise UnableToContinueException(
+        raise UnableToContinueError(
             reason="Unable to continue project creation, this job will be cancelled and have failed status!",
         ) from err
 
@@ -295,7 +295,7 @@ def prepare_project_files(
         return str(project_filename)
 
     if project_seed.settings.xlsform and project_seed.json2qgis_file:
-        raise UnableToContinueException(
+        raise UnableToContinueError(
             reason=(
                 "Project seed has both an XLSForm and a JSON2QGIS file configured. "
                 "This should never happen, aborting."
