@@ -3,3 +3,5 @@ requests-mock==1.*
 selenium==4.*
 coverage==7.15.4
 geopandas==1.*
+# NOTE keep in sync with the `convert2qgis` version in `docker-qgis/requirements_internal.txt`
+convert2qgis @ https://github.com/opengisch/convert2qgis/archive/a5da14f40173a3da6f52202bfc431c73c9e14881.tar.gz

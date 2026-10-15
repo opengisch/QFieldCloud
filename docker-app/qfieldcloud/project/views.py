@@ -87,6 +87,8 @@ class ProjectViewSetPermissions(permissions.BasePermission):
             return permissions_utils.can_retrieve_project(user, project)
         elif view.action == "seed_xlsform":
             return permissions_utils.can_retrieve_project(user, project)
+        elif view.action == "seed_json2qgis":
+            return permissions_utils.can_retrieve_project(user, project)
         elif view.action == "destroy":
             return permissions_utils.can_delete_project(user, project)
         elif view.action in ["update", "partial_update"]:
@@ -147,6 +149,13 @@ class ProjectViewSetPermissions(permissions.BasePermission):
             404: None,
         },
     ),
+    seed_json2qgis=extend_schema(
+        description="Retrieve the seed JSON2QGIS file of the project or 404 if no such file exists.",
+        responses={
+            (200, "application/octet-stream"): OpenApiTypes.BINARY,
+            404: None,
+        },
+    ),
 )
 class ProjectViewSet(viewsets.ModelViewSet):
     serializer_class = ProjectSerializer
@@ -202,7 +211,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
             if force_exclude_public:
                 projects = projects.exclude(user_role_origin=ProjectRoleOrigins.PUBLIC)
 
-        if self.action in ("seed", "seed_xlsform"):
+        if self.action in ("seed", "seed_xlsform", "seed_json2qgis"):
             projects = projects.select_related("seed")
 
         projects = projects.order_by("-is_featured", "owner__username", "name")
@@ -243,6 +252,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
             )
         elif seed_data:
             xlsform_file = serializer.validated_data.get("xlsform_file", None)
+            json2qgis_file = serializer.validated_data.get("json2qgis_file", None)
 
             basemaps, extent, xlsform_config = projectseed_utils.build_seed_data(
                 basemap_provider=seed_data.get("basemap_provider", "none"),
@@ -261,6 +271,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 },
                 extent=extent,
                 xlsform_file=xlsform_file,
+                json2qgis_file=json2qgis_file,
             )
 
             Job.objects.create(
@@ -328,6 +339,26 @@ class ProjectViewSet(viewsets.ModelViewSet):
             content_type="application/octet-stream",
             headers={
                 "Content-Disposition": f'attachment; filename="xlsform{extension}"',
+            },
+        )
+
+    @action(detail=True, methods=["get"], url_path="seed/json2qgis")
+    def seed_json2qgis(
+        self, request: Request, projectid: UUID
+    ) -> StreamingHttpResponse:
+        project = Project.objects.select_related("seed").get(id=projectid)
+
+        if not project.seed.json2qgis_file:
+            raise Http404("Project has no json2qgis file.")
+
+        json2qgis_file = project.seed.json2qgis_file
+        extension = Path(json2qgis_file.name).suffix.lower()
+
+        return StreamingHttpResponse(
+            json2qgis_file,
+            content_type="application/octet-stream",
+            headers={
+                "Content-Disposition": f'attachment; filename="json2qgis{extension}"',
             },
         )
 
