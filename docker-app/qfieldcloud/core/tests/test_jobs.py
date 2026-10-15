@@ -1,5 +1,6 @@
 import io
 import logging
+from importlib.resources import files
 
 from django.contrib.gis.geos import Polygon
 from django.core.files.base import ContentFile
@@ -475,7 +476,9 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
                 "xlsform": None,
             },
             json2qgis_file=ContentFile(
-                open(testdata_path("json2qgis/sample.json"), "rb").read(),
+                (
+                    files("convert2qgis") / "samples" / "json2qgis" / "sample.json"
+                ).read_bytes(),
                 "sample.json",
             ),
         )
