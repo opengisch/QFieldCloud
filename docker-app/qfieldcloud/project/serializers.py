@@ -200,6 +200,7 @@ class ProjectSerializer(serializers.ModelSerializer):
             # remove "private" field one day
             "private",
             "is_public",
+            "public_collaborator_role",
             "created_at",
             "updated_at",
             "data_last_packaged_at",
@@ -242,6 +243,7 @@ class ProjectSerializer(serializers.ModelSerializer):
         clonable_fields = {
             "description",
             "is_public",
+            "public_collaborator_role",
             "is_featured",
             "is_attachment_download_on_demand",
             "has_restricted_projectfiles",
