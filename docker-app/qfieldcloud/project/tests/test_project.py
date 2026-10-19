@@ -170,6 +170,143 @@ class QfcTestCase(APITransactionTestCase):
         self.assertNotIn("seed", response.data)
         self.assertNotIn("xlsform_file", response.data)
 
+    def test_create_project_with_json2qgis(self):
+        """Project creation validates the seed/json2qgis/xlsform combination."""
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        seed = json.dumps(
+            {
+                "basemap_provider": "osm",
+                "basemap_style": "standard",
+                "extent": "22,41,29,45.67",
+            }
+        )
+
+        with self.subTest(
+            "Test seed with json2qgis creates the project and attaches the file"
+        ):
+            # The create endpoint only checks that `json2qgis_file` is present and
+            # it doesn't validate the file's schema, so a fake blob is enough here.
+            json2qgis_content = b'{"fake": "json2qgis content"}'
+            response = self.client.post(
+                "/api/v1/projects/",
+                {
+                    "name": "seed_json2qgis_project",
+                    "owner": "user1",
+                    "is_public": False,
+                    "seed": seed,
+                    "json2qgis_file": SimpleUploadedFile(
+                        "project.json",
+                        json2qgis_content,
+                        content_type="application/json",
+                    ),
+                },
+                format="multipart",
+            )
+            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+            project = Project.objects.get(name="seed_json2qgis_project")
+            self.assertEqual(
+                Job.objects.filter(
+                    project=project, type=Job.Type.CREATE_PROJECT
+                ).count(),
+                1,
+            )
+
+            seed_obj = ProjectSeed.objects.get(project=project)
+            self.assertEqual(seed_obj.json2qgis_file.read(), json2qgis_content)
+            self.assertFalse(seed_obj.xlsform_file)
+            self.assertIsNone(seed_obj.settings["xlsform"])
+
+            self.assertNotIn("seed", response.data)
+            self.assertNotIn("json2qgis_file", response.data)
+
+        with self.subTest(
+            "Test the API rejects xlsform and json2qgis together, creates no project"
+        ):
+            response = self.client.post(
+                "/api/v1/projects/",
+                {
+                    "name": "seed_both_files",
+                    "owner": "user1",
+                    "is_public": False,
+                    "seed": seed,
+                    "xlsform_file": SimpleUploadedFile("survey.xlsx", b"xls"),
+                    "json2qgis_file": SimpleUploadedFile("project.json", b"{}"),
+                },
+                format="multipart",
+            )
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(response.data["code"], "multiple_project_seed_sources")
+            self.assertEqual(Project.objects.filter(name="seed_both_files").count(), 0)
+
+        with self.subTest("Test the API rejects json2qgis without a seed"):
+            response = self.client.post(
+                "/api/v1/projects/",
+                {
+                    "name": "json2qgis_no_seed",
+                    "owner": "user1",
+                    "is_public": False,
+                    "json2qgis_file": SimpleUploadedFile("project.json", b"{}"),
+                },
+                format="multipart",
+            )
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(
+                Project.objects.filter(name="json2qgis_no_seed").count(), 0
+            )
+
+    def test_projectseed_clean_rejects_multiple_sources(self):
+        project = Project.objects.create(
+            name="multi_source_seed", owner=self.user1, is_public=False
+        )
+
+        with self.assertRaises(ValidationError):
+            ProjectSeed.objects.create(
+                project=project,
+                extent=Polygon.from_bbox(projectseed_utils.DEFAULT_PROJECT_EXTENT),
+                settings={"schemaId": ProjectSeed.SETTINGS_SCHEMA_ID},
+                xlsform_file=ContentFile(b"xls", "survey.xlsx"),
+                json2qgis_file=ContentFile(b"{}", "project.json"),
+            )
+
+    def test_seed_json2qgis_download(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        with self.subTest(
+            "Test download returns the file content with the correct content-disposition filename"
+        ):
+            project = Project.objects.create(
+                name="json2qgis_download", owner=self.user1, is_public=False
+            )
+            ProjectSeed.objects.create(
+                project=project,
+                extent=Polygon.from_bbox(projectseed_utils.DEFAULT_PROJECT_EXTENT),
+                settings={"schemaId": ProjectSeed.SETTINGS_SCHEMA_ID},
+                json2qgis_file=ContentFile(b'{"a": 1}', "project.json"),
+            )
+
+            response = self.client.get(f"/api/v1/projects/{project.id}/seed/json2qgis/")
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(
+                response["Content-Disposition"],
+                'attachment; filename="json2qgis.json"',
+            )
+            self.assertEqual(b"".join(response.streaming_content), b'{"a": 1}')
+
+        with self.subTest("Test download 404s when the seed has no json2qgis file"):
+            project = Project.objects.create(
+                name="json2qgis_absent", owner=self.user1, is_public=False
+            )
+            ProjectSeed.objects.create(
+                project=project,
+                extent=Polygon.from_bbox(projectseed_utils.DEFAULT_PROJECT_EXTENT),
+                settings={"schemaId": ProjectSeed.SETTINGS_SCHEMA_ID},
+            )
+
+            response = self.client.get(f"/api/v1/projects/{project.id}/seed/json2qgis/")
+            self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
     def test_create_project_with_seed_no_xlsform(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
