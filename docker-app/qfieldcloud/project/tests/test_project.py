@@ -679,6 +679,108 @@ class QfcTestCase(APITransactionTestCase):
                         public_collaborator_role=role,
                     )
 
+    def test_public_collaborator_role_via_api(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        with self.subTest("Test the API defaults `public_collaborator_role` to reader"):
+            response = self.client.post(
+                "/api/v1/projects/",
+                {
+                    "name": "project_default_role",
+                    "owner": "user1",
+                    "is_public": True,
+                },
+                format="json",
+            )
+
+            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+            self.assertEqual(response.json()["public_collaborator_role"], "reader")
+
+        with self.subTest("Test the API creates a project with the given role"):
+            response = self.client.post(
+                "/api/v1/projects/",
+                {
+                    "name": "project_editor_role",
+                    "owner": "user1",
+                    "is_public": True,
+                    "public_collaborator_role": "editor",
+                },
+                format="json",
+            )
+
+            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+            self.assertEqual(response.json()["public_collaborator_role"], "editor")
+            self.assertEqual(
+                Project.objects.get(
+                    name="project_editor_role"
+                ).public_collaborator_role,
+                ProjectCollaboratorRole.EDITOR,
+            )
+
+        project = Project.objects.get(name="project_editor_role")
+
+        with self.subTest("Test the API updates the role of an existing project"):
+            response = self.client.patch(
+                f"/api/v1/projects/{project.pk}/",
+                {"public_collaborator_role": "reporter"},
+                format="json",
+            )
+
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(response.json()["public_collaborator_role"], "reporter")
+
+            project.refresh_from_db()
+            self.assertEqual(
+                project.public_collaborator_role, ProjectCollaboratorRole.REPORTER
+            )
+
+        with self.subTest("Test the API rejects `admin` role"):
+            response = self.client.patch(
+                f"/api/v1/projects/{project.pk}/",
+                {"public_collaborator_role": "admin"},
+                format="json",
+            )
+
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        with self.subTest("Test the API rejects `manager` role"):
+            response = self.client.patch(
+                f"/api/v1/projects/{project.pk}/",
+                {"public_collaborator_role": "manager"},
+                format="json",
+            )
+
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        with self.subTest("Test the API rejects an unknown role"):
+            response = self.client.patch(
+                f"/api/v1/projects/{project.pk}/",
+                {"public_collaborator_role": "superuser"},
+                format="json",
+            )
+
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        project.refresh_from_db()
+        self.assertEqual(
+            project.public_collaborator_role, ProjectCollaboratorRole.REPORTER
+        )
+
+        with self.subTest("Test a non-admin user cannot change the role"):
+            self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token2.key)
+            response = self.client.patch(
+                f"/api/v1/projects/{project.pk}/",
+                {"public_collaborator_role": "reader"},
+                format="json",
+            )
+
+            self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+            project.refresh_from_db()
+            self.assertEqual(
+                project.public_collaborator_role, ProjectCollaboratorRole.REPORTER
+            )
+
     def test_private_project_memberships(self):
         """Tests for QF-1553 - limit collaboration on private projects."""
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
@@ -1516,6 +1618,9 @@ class QfcTestCase(APITransactionTestCase):
     def test_clone_project(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
         project = self._create_clonable_project()
+        # A non-default role, so the clone can only match it by copying it
+        project.public_collaborator_role = ProjectCollaboratorRole.REPORTER
+        project.save()
 
         response = self.client.post(
             "/api/v1/projects/",
@@ -1533,6 +1638,9 @@ class QfcTestCase(APITransactionTestCase):
         clone_seed = ProjectSeed.objects.get(project=cloned_project)
         self.assertEqual(cloned_project.owner, self.user1)
         self.assertEqual(cloned_project.is_public, project.is_public)
+        self.assertEqual(
+            cloned_project.public_collaborator_role, ProjectCollaboratorRole.REPORTER
+        )
         self.assertEqual(
             cloned_project.overwrite_conflicts, project.overwrite_conflicts
         )
