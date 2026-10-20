@@ -124,6 +124,8 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
         "regular_plan",
         "account",
         "status",
+        "trial_plan",
+        "trial_expires_at",
         "active_since",
         "additional_storage_quantity",
         "active_until",
@@ -160,6 +162,8 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
         "created_at",
         "updated_at",
         "requested_cancel_at",
+        "trial_plan",
+        "trial_expires_at",
     )
 
     autocomplete_fields = ("account",)
@@ -223,7 +227,7 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
         return (
             super()
             .get_queryset(request)
-            .select_related("account__user", "regular_plan")
+            .select_related("account__user", "regular_plan", "trial_plan")
         )
 
     @admin.display(description=_("Subscriber email"))

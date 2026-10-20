@@ -27,7 +27,6 @@ services:
     build:
       context: ./docker-app
       target: build
-      network: host
     profiles:
       - donotstart
     volumes:

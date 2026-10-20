@@ -170,6 +170,143 @@ class QfcTestCase(APITransactionTestCase):
         self.assertNotIn("seed", response.data)
         self.assertNotIn("xlsform_file", response.data)
 
+    def test_create_project_with_json2qgis(self):
+        """Project creation validates the seed/json2qgis/xlsform combination."""
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        seed = json.dumps(
+            {
+                "basemap_provider": "osm",
+                "basemap_style": "standard",
+                "extent": "22,41,29,45.67",
+            }
+        )
+
+        with self.subTest(
+            "Test seed with json2qgis creates the project and attaches the file"
+        ):
+            # The create endpoint only checks that `json2qgis_file` is present and
+            # it doesn't validate the file's schema, so a fake blob is enough here.
+            json2qgis_content = b'{"fake": "json2qgis content"}'
+            response = self.client.post(
+                "/api/v1/projects/",
+                {
+                    "name": "seed_json2qgis_project",
+                    "owner": "user1",
+                    "is_public": False,
+                    "seed": seed,
+                    "json2qgis_file": SimpleUploadedFile(
+                        "project.json",
+                        json2qgis_content,
+                        content_type="application/json",
+                    ),
+                },
+                format="multipart",
+            )
+            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+            project = Project.objects.get(name="seed_json2qgis_project")
+            self.assertEqual(
+                Job.objects.filter(
+                    project=project, type=Job.Type.CREATE_PROJECT
+                ).count(),
+                1,
+            )
+
+            seed_obj = ProjectSeed.objects.get(project=project)
+            self.assertEqual(seed_obj.json2qgis_file.read(), json2qgis_content)
+            self.assertFalse(seed_obj.xlsform_file)
+            self.assertIsNone(seed_obj.settings["xlsform"])
+
+            self.assertNotIn("seed", response.data)
+            self.assertNotIn("json2qgis_file", response.data)
+
+        with self.subTest(
+            "Test the API rejects xlsform and json2qgis together, creates no project"
+        ):
+            response = self.client.post(
+                "/api/v1/projects/",
+                {
+                    "name": "seed_both_files",
+                    "owner": "user1",
+                    "is_public": False,
+                    "seed": seed,
+                    "xlsform_file": SimpleUploadedFile("survey.xlsx", b"xls"),
+                    "json2qgis_file": SimpleUploadedFile("project.json", b"{}"),
+                },
+                format="multipart",
+            )
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(response.data["code"], "multiple_project_seed_sources")
+            self.assertEqual(Project.objects.filter(name="seed_both_files").count(), 0)
+
+        with self.subTest("Test the API rejects json2qgis without a seed"):
+            response = self.client.post(
+                "/api/v1/projects/",
+                {
+                    "name": "json2qgis_no_seed",
+                    "owner": "user1",
+                    "is_public": False,
+                    "json2qgis_file": SimpleUploadedFile("project.json", b"{}"),
+                },
+                format="multipart",
+            )
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(
+                Project.objects.filter(name="json2qgis_no_seed").count(), 0
+            )
+
+    def test_projectseed_clean_rejects_multiple_sources(self):
+        project = Project.objects.create(
+            name="multi_source_seed", owner=self.user1, is_public=False
+        )
+
+        with self.assertRaises(ValidationError):
+            ProjectSeed.objects.create(
+                project=project,
+                extent=Polygon.from_bbox(projectseed_utils.DEFAULT_PROJECT_EXTENT),
+                settings={"schemaId": ProjectSeed.SETTINGS_SCHEMA_ID},
+                xlsform_file=ContentFile(b"xls", "survey.xlsx"),
+                json2qgis_file=ContentFile(b"{}", "project.json"),
+            )
+
+    def test_seed_json2qgis_download(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        with self.subTest(
+            "Test download returns the file content with the correct content-disposition filename"
+        ):
+            project = Project.objects.create(
+                name="json2qgis_download", owner=self.user1, is_public=False
+            )
+            ProjectSeed.objects.create(
+                project=project,
+                extent=Polygon.from_bbox(projectseed_utils.DEFAULT_PROJECT_EXTENT),
+                settings={"schemaId": ProjectSeed.SETTINGS_SCHEMA_ID},
+                json2qgis_file=ContentFile(b'{"a": 1}', "project.json"),
+            )
+
+            response = self.client.get(f"/api/v1/projects/{project.id}/seed/json2qgis/")
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(
+                response["Content-Disposition"],
+                'attachment; filename="json2qgis.json"',
+            )
+            self.assertEqual(b"".join(response.streaming_content), b'{"a": 1}')
+
+        with self.subTest("Test download 404s when the seed has no json2qgis file"):
+            project = Project.objects.create(
+                name="json2qgis_absent", owner=self.user1, is_public=False
+            )
+            ProjectSeed.objects.create(
+                project=project,
+                extent=Polygon.from_bbox(projectseed_utils.DEFAULT_PROJECT_EXTENT),
+                settings={"schemaId": ProjectSeed.SETTINGS_SCHEMA_ID},
+            )
+
+            response = self.client.get(f"/api/v1/projects/{project.id}/seed/json2qgis/")
+            self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
     def test_create_project_with_seed_no_xlsform(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
@@ -310,6 +447,32 @@ class QfcTestCase(APITransactionTestCase):
         response = self.client.get("/api/v1/projects/?include-public=true")
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(len(response.data), 0)
+
+    def test_list_projects_excluding_project_type(self):
+        # Create a `regular` project for user1
+        Project.objects.create(name="project1", owner=self.user1)
+
+        # Create a `shared_datasets` project for user1
+        Project.objects.create(name=SHARED_DATASETS_PROJECT_NAME, owner=self.user1)
+
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        # `shared_datasets` is listed by default
+        response = self.client.get("/api/v1/projects/")
+        self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(len(response.data), 2)
+
+        # `exclude_project_type` removes it
+        response = self.client.get(
+            "/api/v1/projects/?exclude_project_type=shared_datasets"
+        )
+        self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["name"], "project1")
+
+        # `exclude_project_type` with an unknown project type is rejected
+        response = self.client.get("/api/v1/projects/?exclude_project_type=bogus")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_list_collaborators_of_project(self):
         # Create a project of user1
@@ -652,6 +815,108 @@ class QfcTestCase(APITransactionTestCase):
                         owner=self.user1,
                         public_collaborator_role=role,
                     )
+
+    def test_public_collaborator_role_via_api(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        with self.subTest("Test the API defaults `public_collaborator_role` to reader"):
+            response = self.client.post(
+                "/api/v1/projects/",
+                {
+                    "name": "project_default_role",
+                    "owner": "user1",
+                    "is_public": True,
+                },
+                format="json",
+            )
+
+            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+            self.assertEqual(response.json()["public_collaborator_role"], "reader")
+
+        with self.subTest("Test the API creates a project with the given role"):
+            response = self.client.post(
+                "/api/v1/projects/",
+                {
+                    "name": "project_editor_role",
+                    "owner": "user1",
+                    "is_public": True,
+                    "public_collaborator_role": "editor",
+                },
+                format="json",
+            )
+
+            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+            self.assertEqual(response.json()["public_collaborator_role"], "editor")
+            self.assertEqual(
+                Project.objects.get(
+                    name="project_editor_role"
+                ).public_collaborator_role,
+                ProjectCollaboratorRole.EDITOR,
+            )
+
+        project = Project.objects.get(name="project_editor_role")
+
+        with self.subTest("Test the API updates the role of an existing project"):
+            response = self.client.patch(
+                f"/api/v1/projects/{project.pk}/",
+                {"public_collaborator_role": "reporter"},
+                format="json",
+            )
+
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(response.json()["public_collaborator_role"], "reporter")
+
+            project.refresh_from_db()
+            self.assertEqual(
+                project.public_collaborator_role, ProjectCollaboratorRole.REPORTER
+            )
+
+        with self.subTest("Test the API rejects `admin` role"):
+            response = self.client.patch(
+                f"/api/v1/projects/{project.pk}/",
+                {"public_collaborator_role": "admin"},
+                format="json",
+            )
+
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        with self.subTest("Test the API rejects `manager` role"):
+            response = self.client.patch(
+                f"/api/v1/projects/{project.pk}/",
+                {"public_collaborator_role": "manager"},
+                format="json",
+            )
+
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        with self.subTest("Test the API rejects an unknown role"):
+            response = self.client.patch(
+                f"/api/v1/projects/{project.pk}/",
+                {"public_collaborator_role": "superuser"},
+                format="json",
+            )
+
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        project.refresh_from_db()
+        self.assertEqual(
+            project.public_collaborator_role, ProjectCollaboratorRole.REPORTER
+        )
+
+        with self.subTest("Test a non-admin user cannot change the role"):
+            self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token2.key)
+            response = self.client.patch(
+                f"/api/v1/projects/{project.pk}/",
+                {"public_collaborator_role": "reader"},
+                format="json",
+            )
+
+            self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+            project.refresh_from_db()
+            self.assertEqual(
+                project.public_collaborator_role, ProjectCollaboratorRole.REPORTER
+            )
 
     def test_private_project_memberships(self):
         """Tests for QF-1553 - limit collaboration on private projects."""
@@ -1490,6 +1755,9 @@ class QfcTestCase(APITransactionTestCase):
     def test_clone_project(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
         project = self._create_clonable_project()
+        # A non-default role, so the clone can only match it by copying it
+        project.public_collaborator_role = ProjectCollaboratorRole.REPORTER
+        project.save()
 
         response = self.client.post(
             "/api/v1/projects/",
@@ -1507,6 +1775,9 @@ class QfcTestCase(APITransactionTestCase):
         clone_seed = ProjectSeed.objects.get(project=cloned_project)
         self.assertEqual(cloned_project.owner, self.user1)
         self.assertEqual(cloned_project.is_public, project.is_public)
+        self.assertEqual(
+            cloned_project.public_collaborator_role, ProjectCollaboratorRole.REPORTER
+        )
         self.assertEqual(
             cloned_project.overwrite_conflicts, project.overwrite_conflicts
         )

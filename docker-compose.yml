@@ -10,7 +10,6 @@ services:
     build:
       context: ./docker-app
       target: webserver_runtime
-      network: host
     restart: unless-stopped
     command: >
       gunicorn
@@ -156,7 +155,6 @@ services:
   qgis3:
     build:
       context: ./docker-qgis
-      network: host
       args:
         DEBUG_BUILD: ${DEBUG}
         UBUNTU_VERSION: noble
@@ -170,7 +168,6 @@ services:
   qgis4:
     build:
       context: ./docker-qgis
-      network: host
       args:
         DEBUG_BUILD: ${DEBUG}
         UBUNTU_VERSION: resolute
@@ -185,7 +182,6 @@ services:
     <<: *default-django
     build:
       context: ./docker-app
-      network: host
       target: worker_wrapper_runtime
     command: python manage.py dequeue
     user: root # TODO change me to least privileged docker-capable user on the host (/!\ docker users!=hosts users, use UID rather than username)

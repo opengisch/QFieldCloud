@@ -12,6 +12,8 @@ certifi==2026.7.22
     #   selenium
 charset-normalizer==3.5.1
     # via requests
+convert2qgis @ https://github.com/opengisch/convert2qgis/archive/bc85533c8e840cdfa6fa802e1f4bce7a4942773e.tar.gz
+    # via -r requirements/requirements_test.in
 coverage==7.15.4
     # via -r requirements/requirements_test.in
 geopandas==1.1.4
@@ -73,7 +75,7 @@ trio-websocket==0.12.2
     # via selenium
 typing-extensions==4.16.0
     # via selenium
-urllib3[socks]==2.7.0
+urllib3[socks]==2.8.0
     # via
     #   requests
     #   selenium
