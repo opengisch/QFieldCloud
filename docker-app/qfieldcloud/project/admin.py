@@ -376,6 +376,7 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         "status",
         "status_code",
         "the_qgis_file",
+        "qgis_version",
         "overwrite_conflicts",
         "has_restricted_projectfiles",
         "file_storage_bytes",
@@ -411,6 +412,7 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         "locked_at",
         "file_storage_migrated_at",
         "the_qgis_file",
+        "qgis_version",
     )
     inlines = (
         ProjectSeedInline,
