@@ -968,6 +968,9 @@ SPECTACULAR_SETTINGS = {
     "PREPROCESSING_HOOKS": [
         "qfieldcloud.core.utils2.spectacular_utils.expose_spectacular_endpoints"
     ],
+    # redoc's `@latest` (v3) is now an ES module, see https://github.com/tfranzel/drf-spectacular/issues/1543
+    # Pin to a specific v2.x version for the moment.
+    "REDOC_DIST": "https://cdn.jsdelivr.net/npm/redoc@2.5.4",
 }
 
 JAZZMIN_SETTINGS = {
