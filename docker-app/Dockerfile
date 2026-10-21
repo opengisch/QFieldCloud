@@ -5,7 +5,7 @@
 # pull a builder image, the same as the base
 FROM python:3.14-slim-trixie AS build
 
-COPY --from=ghcr.io/astral-sh/uv:0.11.32 /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:0.13.4 /uv /uvx /bin/
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -35,7 +35,7 @@ RUN ls -Q /usr/local/lib/python3.14/site-packages/botocore/data | grep -xv "endp
 # pull official base image
 FROM python:3.14-slim-trixie AS base
 
-COPY --from=ghcr.io/astral-sh/uv:0.11.32 /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:0.13.4 /uv /uvx /bin/
 
 # set work directory
 WORKDIR /usr/src/app

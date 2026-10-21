@@ -14,7 +14,7 @@ ARG QGIS_VERSION=1:3.44.14+40noble
 # Start from a basic Ubuntu image
 FROM ubuntu:${UBUNTU_VERSION}
 
-COPY --from=ghcr.io/astral-sh/uv:0.11.32 /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:0.13.4 /uv /uvx /bin/
 
 # Redeclare within the stage, otherwise the variables will not be available in the `RUN` commands.
 ARG UBUNTU_VERSION
