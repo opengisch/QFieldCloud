@@ -187,8 +187,7 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
             return (
                 "plan__link",
                 "account__link",
-                "promotion__link",
-                *self.fields[3:],
+                *self.fields[2:],
             )
 
         return self.fields
@@ -203,7 +202,6 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
                 "account",
                 "plan__link",
                 "account__link",
-                "promotion__link",
             )
 
         return self.readonly_fields
