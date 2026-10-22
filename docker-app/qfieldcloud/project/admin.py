@@ -1,6 +1,7 @@
 from typing import Any
 
 from django import forms
+from django.conf import settings
 from django.contrib import admin
 from django.contrib.admin.utils import display_for_value
 from django.core.exceptions import ValidationError
@@ -111,6 +112,7 @@ class ProjectCollaboratorInline(TabularInline):
     tab = True
 
     extra = 0
+    per_page = settings.QFIELDCLOUD_ADMIN_INLINE_PER_PAGE
 
     readonly_fields = (
         "created_by",
