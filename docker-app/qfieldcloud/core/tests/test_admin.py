@@ -3,6 +3,7 @@ import logging
 from bs4 import BeautifulSoup
 from django.conf import settings
 from django.test.testcases import TransactionTestCase
+from django.urls import reverse
 from django.urls.resolvers import URLPattern, URLResolver
 
 from qfieldcloud.core.models import (
@@ -16,6 +17,9 @@ from qfieldcloud.core.tests.utils import setup_subscription_plans
 from qfieldcloud.project.models import Project
 
 logging.disable(logging.CRITICAL)
+
+# matches the changelist column sort links regardless of the admin theme, since the `th` classes differ between themes
+SORT_LINK_SELECTOR = 'thead th a[href^="?o="]'
 
 
 def list_urls(url_items, prefixes=None):
@@ -97,7 +101,7 @@ class QfcTestCase(TransactionTestCase):
                 # check all different sort columns
                 soup = BeautifulSoup(resp.content, "html.parser")
 
-                for anchor in soup.select("th.sortable a"):
+                for anchor in soup.select(SORT_LINK_SELECTOR):
                     sort_url = f"{url}{anchor.get('href')}"
 
                     # TODO make tests pass for these sortable URLs
@@ -110,3 +114,20 @@ class QfcTestCase(TransactionTestCase):
                         200,
                         f'Failed to sort "{sort_url}", got HTTP {resp.status_code}.',
                     )
+
+    def test_team_changelist_exposes_sortable_column_links(self):
+        """Guards `test_admin_opens` against silently skipping its sort checks.
+
+        `test_admin_opens` finds the column sort links with `SORT_LINK_SELECTOR` and opens each one.
+        If the admin theme renders the column headers differently, the selector finds no links,
+        so no sorting gets checked, yet `test_admin_opens` still passes.
+        """
+        self.client.force_login(self.superuser)
+
+        resp = self.client.get(reverse("admin:core_team_changelist"), {"o": ""})
+        soup = BeautifulSoup(resp.content, "html.parser")
+        sort_links = soup.select(SORT_LINK_SELECTOR)
+
+        self.assertEqual(len(sort_links), 2)
+        self.assertEqual(sort_links[0]["href"], "?o=1")
+        self.assertEqual(sort_links[1]["href"], "?o=2")
