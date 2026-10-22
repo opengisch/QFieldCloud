@@ -109,6 +109,7 @@ class ProjectCollaboratorInline(TabularInline):
     model = ProjectCollaborator
 
     extra = 0
+    per_page = 10
 
     readonly_fields = (
         "created_by",
