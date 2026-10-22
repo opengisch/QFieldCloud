@@ -782,7 +782,13 @@ class ProjectInline(TabularInline):
     absolute_max = 5000
     per_page = 10
 
-    fields = ("owned_project", "created_by", "is_public", "overwrite_conflicts")
+    fields = (
+        "owned_project",
+        "created_by",
+        "is_public",
+        "public_collaborator_role",
+        "overwrite_conflicts",
+    )
     readonly_fields = ("owned_project", "created_by")
     has_direct_delete_permission = False
 
