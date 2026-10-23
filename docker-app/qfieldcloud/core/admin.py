@@ -818,7 +818,6 @@ class PersonAdmin(QFieldCloudModelAdmin):
         # "storage_usage__field",
     )
     list_filter = (
-        "type",
         "date_joined",
         "is_active",
         "is_staff",
