@@ -85,6 +85,29 @@ from qfieldcloud.project.models import Project
 from qfieldcloud.subscription.models import get_subscription_model
 
 
+def get_admin_environment(request: HttpRequest) -> list[str]:
+    """Returns the label and color of the admin environment banner, used by `UNFOLD["ENVIRONMENT"]`.
+
+    The label is `settings.ENVIRONMENT`. Production is red, so editing live data stands out, all other environments are blue.
+    """
+    color = "info"
+    if settings.ENVIRONMENT == "production":
+        color = "danger"
+
+    return [settings.ENVIRONMENT.capitalize(), color]
+
+
+def get_admin_environment_title_prefix(request: HttpRequest) -> str:
+    """Returns the browser tab title prefix of the admin, used by `UNFOLD["ENVIRONMENT_TITLE_PREFIX"]`.
+
+    Production gets no prefix, so all other environments stand out in the browser tabs.
+    """
+    if settings.ENVIRONMENT == "production":
+        return ""
+
+    return f"{settings.ENVIRONMENT.capitalize()} |"
+
+
 class QfcAdminSite(UnfoldAdminSite):
     site_header = _("QFieldCloud Admin")
     site_title = _("QFieldCloud Admin")
