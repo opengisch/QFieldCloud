@@ -3,8 +3,8 @@ from qfieldcloud.core.models import Person
 
 
 class Command(BaseCommand):
-    """
-    Creates a normal or super user using the CLI.
+    """Creates a normal or super user using the CLI.
+
     Unlike the Django's createsuperuser command, here we can pass the password as an argument.
     This is a utility function that is expected to be used only for testing purposes.
     """
@@ -39,5 +39,5 @@ class Command(BaseCommand):
 
         # Catch any other unknown error and print it
         except Exception as err:  # noqa: BLE001
-            print("ERROR: Unable to create user\n%s\n" % err)
+            print("ERROR: Unable to create user\n{}\n".format(err))
             exit(1)

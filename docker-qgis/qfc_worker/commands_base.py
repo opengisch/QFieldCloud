@@ -68,10 +68,7 @@ class QfcBaseCommand(metaclass=QfcBaseCommandRegistry):
         self.handle(*args, **cmd_options)
 
     def handle(self, *args: Any, **options: Any) -> None:
-        """
-        The actual logic of the command. Subclasses could reimplement this method,
-        but always provide feedback.json path as output.
-        """
+        """The actual logic of the command. Subclasses could reimplement this method, but always provide feedback.json path as output."""
         workflow = self.get_workflow(*args, **options)
 
         run_workflow(
@@ -80,16 +77,11 @@ class QfcBaseCommand(metaclass=QfcBaseCommandRegistry):
         )
 
     def add_arguments(self, parser: argparse.ArgumentParser) -> None:
-        """
-        Entry point for subclassed commands to add custom arguments.
-        """
+        """Entry point for subclassed commands to add custom arguments."""
         pass
 
     def get_workflow(self, /, **kwargs) -> Workflow:
-        """
-        The actual logic of the command. Subclasses must implement
-        this method.
-        """
+        """The actual logic of the command. Subclasses must implement this method."""
         raise NotImplementedError(
             "subclasses of QfcBaseCommand must provide a `get_workflow()` method"
         )

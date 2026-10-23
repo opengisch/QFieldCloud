@@ -24,22 +24,19 @@ class AuthTokenClientTypeFilter(admin.SimpleListFilter):
     def lookups(
         self, request: HttpRequest, model_admin: admin.ModelAdmin
     ) -> list[tuple[str, StrOrPromise]]:
-        """
-        Returns a list of tuples. The first element in each
-        tuple is the coded value for the option that will
+        """Returns a list of tuples for choices.
+
+        The first element in each tuple is the coded value for the option that will
         appear in the URL query. The second element is the
         human-readable name for the option that will appear
         in the right sidebar.
+
         Here it is just the several available `AuthToken.ClientType`.
         """
         return AuthToken.ClientType.choices
 
     def queryset(self, request: HttpRequest, queryset: QuerySet) -> QuerySet:
-        """
-        Returns the filtered queryset based on the value
-        provided in the query string and retrievable via
-        `self.value()`.
-        """
+        """Returns the filtered queryset based on the value  provided in the query string and retrievable via `self.value()`."""
         value = self.value()
 
         if value is None:
@@ -76,10 +73,7 @@ class AuthTokenAdmin(QFieldCloudModelAdmin):
     search_fields = ("user__username__iexact", "client_type", "key__startswith")
 
     def expire_selected_tokens(self, request: HttpRequest, queryset: QuerySet) -> None:
-        """
-        Sets a set of tokens to expired by updating the `expires_at` date to now.
-        Expires only valid tokens.
-        """
+        """Sets a set of tokens to expired by updating the `expires_at` date to now. Expires only valid tokens."""
         now = timezone.now()
         queryset.filter(Q(expires_at__gt=now)).update(expires_at=now)
 

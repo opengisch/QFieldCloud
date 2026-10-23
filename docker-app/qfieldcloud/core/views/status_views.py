@@ -4,6 +4,7 @@ from enum import Enum
 from typing import TypedDict
 
 from constance import config
+from django.conf import settings
 from django.core.files.storage import storages
 from django.db import connections
 from django.http import HttpRequest
@@ -23,6 +24,7 @@ class StatusValue(str, Enum):
 
 
 class StatusDict(TypedDict):
+    version: str
     database: StatusValue
     storage: StatusValue
     status_page_url: str | None
@@ -42,6 +44,7 @@ class APIStatusView(views.APIView):
     @method_decorator(cache_page(60))
     def get(self, _request: HttpRequest) -> Response:
         results: StatusDict = {
+            "version": settings.SENTRY_RELEASE,
             "database": self._check_db(),
             "storage": self._check_storages(),
             "status_page_url": None,

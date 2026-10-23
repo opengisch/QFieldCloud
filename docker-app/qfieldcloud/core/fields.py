@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-from collections.abc import Callable
-from typing import Any, Protocol, cast
+from typing import TYPE_CHECKING, Any, Protocol, cast
 
 from django.core.files.storage import storages
 from django.db import models
 from django.db.models.fields.files import FieldFile, ImageField, ImageFieldFile
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class FileStorageNameModelProtocol(Protocol):
@@ -13,7 +15,7 @@ class FileStorageNameModelProtocol(Protocol):
 
 
 class FileStorageNameModelProtocolMetaclass(type(models.Model), type(Protocol)):  # type: ignore
-    """Required to prevent metaclass error: Metaclass conflict: the metaclass of a derived class must be a (non-strict) subclass of the metaclasses of all its bases"""
+    """Required to prevent metaclass error: Metaclass conflict: the metaclass of a derived class must be a (non-strict) subclass of the metaclasses of all its bases."""
 
 
 class ModelWithDynamicStorage(
@@ -36,14 +38,14 @@ class DynamicStorageFieldFile(FieldFile):
 
     Read more: https://docs.djangoproject.com/en/5.1/ref/models/fields/#filefield-and-fieldfile
 
-    See also:
+    See Also:
         - DynamicStorageFileField
     """
 
     def __init__(
         self, instance: models.Model, field: DynamicStorageFileField, name: str
     ):
-        instance = cast(ModelWithDynamicStorage, instance)
+        instance = cast("ModelWithDynamicStorage", instance)
 
         super().__init__(instance, field, name)
 
@@ -66,14 +68,14 @@ class DynamicStorageFileField(models.FileField):
 
     Read more: https://docs.djangoproject.com/en/5.1/ref/models/fields/#filefield-and-fieldfile
 
-    See also:
+    See Also:
         - DynamicStorageFieldFile
     """
 
     attr_class = DynamicStorageFieldFile
 
     def pre_save(self, model_instance: models.Model, add: bool) -> Any:
-        model_instance = cast(ModelWithDynamicStorage, model_instance)
+        model_instance = cast("ModelWithDynamicStorage", model_instance)
 
         storage_name = model_instance._get_file_storage_name()
 

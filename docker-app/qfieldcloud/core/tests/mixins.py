@@ -13,10 +13,7 @@ from qfieldcloud.project.models import Project
 
 
 class QfcFilesTestCaseMixin:
-    """
-    Generic Test case class that is able to perform file operations.
-    E.g. upload, download, delete, list.
-    """
+    """Generic Test case class that is able to perform file operations. E.g. upload, download, delete, list."""
 
     def _get_token_for_user(self, user: User) -> AuthToken:
         # We pass the client_type to prevent get_or_create() from failing with
@@ -42,7 +39,6 @@ class QfcFilesTestCaseMixin:
         Returns:
             Response answered by the API.
         """
-
         token = self._get_token_for_user(user)
         self.client.credentials(HTTP_AUTHORIZATION="Token " + token.key)
 
@@ -66,17 +62,16 @@ class QfcFilesTestCaseMixin:
     def _upload_files(
         self, user: User, project: Project, files: list[tuple[str, IO | str | Path]]
     ) -> list[HttpResponse | Response]:
-        """
-        Uploads several files to the API.
+        """Uploads several files to the API.
+
         Note that the `files` argument is a list of tuple:
             - first element is the remote filename
             - second element is the file content
         """
-
         responses = []
         for remote_filename, content in files:
             if isinstance(content, (str, Path)):
-                file = open(testdata_path(content), "r")
+                file = open(testdata_path(content))
             else:
                 file = content
 

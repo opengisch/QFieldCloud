@@ -1,3 +1,5 @@
+import contextlib
+
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 from django.utils.translation import gettext as _
@@ -10,7 +12,7 @@ User = get_user_model()
 
 
 class LoginSerializer(serializers.Serializer):
-    """Based on https://github.com/Tivix/django-rest-auth/blob/rest_auth/serializers.py#L19"""
+    """Based on https://github.com/Tivix/django-rest-auth/blob/rest_auth/serializers.py#L19."""
 
     username = serializers.CharField(required=False, allow_blank=True)
     email = serializers.EmailField(required=False, allow_blank=True)
@@ -91,10 +93,8 @@ class LoginSerializer(serializers.Serializer):
         else:
             # Authentication without using allauth
             if email:
-                try:
+                with contextlib.suppress(User.DoesNotExist):
                     username = User.objects.get(email__iexact=email).get_username()
-                except User.DoesNotExist:
-                    pass
 
             if username:
                 user = self._validate_username_email(username, "", password)
@@ -129,9 +129,7 @@ class TokenSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    """
-    User model w/o password
-    """
+    """User model w/o password."""
 
     class Meta:
         model = User

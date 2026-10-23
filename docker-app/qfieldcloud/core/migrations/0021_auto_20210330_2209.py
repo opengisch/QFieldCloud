@@ -5,7 +5,7 @@ from django.db.models.aggregates import Count
 
 
 class Migration(migrations.Migration):
-    def forwards_func(apps, schema_editor):
+    def forwards_func(apps, schema_editor):  # noqa: N805
         ProjectCollaborator = apps.get_model("core", "ProjectCollaborator")
 
         duplicated_collaborators_data = (

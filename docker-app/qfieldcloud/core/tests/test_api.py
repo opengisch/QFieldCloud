@@ -29,7 +29,7 @@ class QfcTestCase(APITransactionTestCase):
         Project.objects.bulk_create(projects)
 
     def test_api_pagination_limitoffset(self):
-        """Test LimitOffset pagination custom implementation"""
+        """Test LimitOffset pagination custom implementation."""
         # Authenticate client
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token.key)
 
@@ -72,7 +72,7 @@ class QfcTestCase(APITransactionTestCase):
         )
 
     def test_api_headers_count(self):
-        """Test LimitOffset pagination custom 'X-Total-Count' headers implementation"""
+        """Test LimitOffset pagination custom 'X-Total-Count' headers implementation."""
         # Authenticate client
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token.key)
 
@@ -88,7 +88,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertNotIn("X-Total-Count", response.headers)
 
     def test_api_pagination_controls(self):
-        """Test opt-in pagination controls"""
+        """Test opt-in pagination controls."""
         # Authenticate client
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token.key)
 
@@ -114,7 +114,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertNotIn("X-Total-Count", response.headers)
 
     def test_api_pagination_traversals(self):
-        """Test opt-in pagination traversals"""
+        """Test opt-in pagination traversals."""
         # Authenticate client
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token.key)
 

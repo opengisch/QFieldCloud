@@ -97,10 +97,7 @@ class SubscriptionModelForm(forms.ModelForm):
             active_storage_field.initial = subscription.active_storage_package_quantity
 
     def save(self, commit=True):
-        """
-        Adds an extra field, 'aditional_storage_quantity' allowing, from the `SubscriptionAdmin` view, to increase
-        the plan's storage capacity.
-        """
+        """Adds an extra field, 'aditional_storage_quantity' allowing, from the `SubscriptionAdmin` view, to increase the plan's storage capacity."""
         additional_storage_quantity = self.cleaned_data.get(
             "additional_storage_quantity", None
         )
@@ -124,9 +121,11 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
     form = SubscriptionModelForm
 
     fields = (
-        "plan",
+        "regular_plan",
         "account",
         "status",
+        "trial_plan",
+        "trial_expires_at",
         "active_since",
         "additional_storage_quantity",
         "active_until",
@@ -154,7 +153,7 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
     list_filter = (
         SubscriptionPeriodFilter,
         "status",
-        "plan",
+        "regular_plan",
         ActiveUntilFilter,
     )
 
@@ -163,6 +162,8 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
         "created_at",
         "updated_at",
         "requested_cancel_at",
+        "trial_plan",
+        "trial_expires_at",
     )
 
     autocomplete_fields = ("account",)
@@ -186,8 +187,7 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
             return (
                 "plan__link",
                 "account__link",
-                "promotion__link",
-                *self.fields[3:],
+                *self.fields[2:],
             )
 
         return self.fields
@@ -198,11 +198,10 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
         if obj is not None:
             return (
                 *self.readonly_fields,
-                "plan",
+                "regular_plan",
                 "account",
                 "plan__link",
                 "account__link",
-                "promotion__link",
             )
 
         return self.readonly_fields
@@ -220,10 +219,14 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
 
     @admin.display(description=_("Plan"))
     def plan__link(self, instance):
-        return model_admin_url(instance.plan, str(instance.plan))
+        return model_admin_url(instance.regular_plan, str(instance.regular_plan))
 
     def get_queryset(self, request: HttpRequest):
-        return super().get_queryset(request).select_related("account__user", "plan")
+        return (
+            super()
+            .get_queryset(request)
+            .select_related("account__user", "regular_plan", "trial_plan")
+        )
 
     @admin.display(description=_("Subscriber email"))
     def account__user__email(self, instance):

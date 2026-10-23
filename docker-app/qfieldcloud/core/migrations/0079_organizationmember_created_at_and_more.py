@@ -7,7 +7,7 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-    def add_created_by_and_updated_by(apps, schema_editor):
+    def add_created_by_and_updated_by(apps, schema_editor):  # noqa: N805
         OrganizationMember = apps.get_model("core", "OrganizationMember")
 
         for member in OrganizationMember.objects.all():

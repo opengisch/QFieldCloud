@@ -17,10 +17,10 @@ from qgis.PyQt.QtGui import QImage, QPainter
 
 from qfc_worker.commands_base import QfcBaseCommand
 from qfc_worker.exceptions import (
-    FailedThumbnailGenerationException,
-    InvalidFileExtensionException,
-    InvalidXmlFileException,
-    ProjectFileNotFoundException,
+    FailedThumbnailGenerationError,
+    InvalidFileExtensionError,
+    InvalidXmlFileError,
+    ProjectFileNotFoundError,
 )
 from qfc_worker.utils import (
     download_project,
@@ -52,7 +52,7 @@ def _check_valid_project_file(the_qgis_file_name: Path) -> None:
     logger.info("Check QGIS project file validity…")
 
     if not the_qgis_file_name.exists():
-        raise ProjectFileNotFoundException(the_qgis_file_name=the_qgis_file_name)
+        raise ProjectFileNotFoundError(the_qgis_file_name=the_qgis_file_name)
 
     if the_qgis_file_name.suffix == ".qgs":
         with open(the_qgis_file_name, "rb") as fh:
@@ -61,12 +61,12 @@ def _check_valid_project_file(the_qgis_file_name: Path) -> None:
                     continue
             except ElementTree.ParseError as error:
                 error_msg = str(error)
-                raise InvalidXmlFileException(
+                raise InvalidXmlFileError(
                     xml_error=get_qgis_xml_error_context(error_msg, fh) or error_msg,
                     the_qgis_file_name=the_qgis_file_name,
                 )
     elif the_qgis_file_name.suffix != ".qgz":
-        raise InvalidFileExtensionException(
+        raise InvalidFileExtensionError(
             the_qgis_file_name=the_qgis_file_name,
             extension=the_qgis_file_name.suffix,
         )
@@ -75,8 +75,7 @@ def _check_valid_project_file(the_qgis_file_name: Path) -> None:
 
 
 class ProjectDetails(TypedDict):
-    """
-    The data structure built by `_extract_project_details` and returned as the `process_projectfile` job's `project_details` output.
+    """The data structure built by `_extract_project_details` and returned as the `process_projectfile` job's `project_details` output.
 
     Must be kept in sync with `QgisProjectDetails` in `qfieldcloud/project/type_defs.py`, which consumes this data structure.
 
@@ -127,11 +126,11 @@ def _get_area_of_interest(project: QgsProject) -> QgsRectangle | None:
 
 
 def _extract_project_details(project: QgsProject) -> ProjectDetails:
-    """Extract project details"""
+    """Extract project details."""
     logger.info("Extract project details…")
     logger.info("Reading QGIS project file…")
 
-    details: ProjectDetails = cast(ProjectDetails, {})
+    details: ProjectDetails = cast("ProjectDetails", {})
     tmp_project_details = open_qgis_project_temporarily(project.fileName())
     tmp_project = tmp_project_details["project"]
 
@@ -187,7 +186,7 @@ def _generate_thumbnail(
     thumbnail_filename: Path,
     thumbnail_timeout_s: int = THUMBNAIL_TIMEOUT_S,
 ) -> Path | None:
-    """Create a thumbnail for the project
+    """Create a thumbnail for the project.
 
     As from https://docs.qgis.org/3.16/en/docs/pyqgis_developer_cookbook/composer.html#simple-rendering
     """
@@ -246,7 +245,7 @@ def _generate_thumbnail(
 
     if is_thumbnail_generated:
         if not img.save(str(thumbnail_filename)):
-            raise FailedThumbnailGenerationException(
+            raise FailedThumbnailGenerationError(
                 reason=f"Failed to save thumbnail to {thumbnail_filename}."
             )
 

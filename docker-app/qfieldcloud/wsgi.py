@@ -1,5 +1,4 @@
-"""
-WSGI config for qfieldcloud project.
+"""WSGI config for qfieldcloud project.
 
 It exposes the WSGI callable as a module-level variable named ``application``.
 

@@ -1,5 +1,4 @@
-"""
-Object Storage Logically Deleted Object Cleaner
+"""Object Storage Logically Deleted Object Cleaner.
 
 This script scans an object storage bucket for "logically deleted" objects (objects where the
 latest version is a Delete Marker) and optionally permanently deletes all versions
@@ -16,13 +15,11 @@ import logging
 import re
 import signal
 import sys
-from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any, Literal
 
 import boto3
-from botocore.client import BaseClient
 from botocore.exceptions import ClientError
 
 logger = logging.getLogger(__name__)
@@ -34,6 +31,9 @@ DELETE_BATCH_SIZE = 1000
 LIST_OBJECT_VERSIONS_MAX_KEYS = 1000
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator
+
+    from botocore.client import BaseClient
     from mypy_boto3_s3.type_defs import (
         DeleteObjectsOutputTypeDef,
         ListObjectVersionsOutputTypeDef,
@@ -78,8 +78,7 @@ def format_bytes(num_bytes: int) -> str:
 def iter_all_versions(
     s3_client: BaseClient, bucket: str, prefix: str | None = None
 ) -> Iterator[ObjectVersionOrDeleteMarker]:
-    """
-    Iterate over all object versions and delete markers from object storage, paginated.
+    """Iterate over all object versions and delete markers from object storage, paginated.
 
     Object storage's `list_object_versions` returns `Versions` and `DeleteMarkers` as separate
     lists within each page. This function merges and sorts them by Key locally
@@ -130,9 +129,7 @@ def analyze_key_history(
     versions: list[ObjectVersionOrDeleteMarker],
     retention_cutoff_ts: datetime | None,
 ) -> LogicallyDeletedObject | None:
-    """
-    Analyze a list of versions for a single key to see if it's logically deleted
-    and return a LogicallyDeletedObject if it is, otherwise None.
+    """Analyze a list of versions for a single key to see if it's logically deleted and return a LogicallyDeletedObject if it is, otherwise None.
 
     Args:
         key: The key of the object.
@@ -179,8 +176,7 @@ def analyze_key_history(
 def delete_versions_batch(
     s3_client: BaseClient, bucket: str, versions: list[ObjectVersionOrDeleteMarker]
 ) -> None:
-    """
-    Delete a batch of versions, up to 1000 versions per batch.
+    """Delete a batch of versions, up to 1000 versions per batch.
 
     Args:
         s3_client: The configured S3 client.
@@ -233,8 +229,7 @@ def iter_logically_deleted(
     version_iterator: Iterator[ObjectVersionOrDeleteMarker],
     retention_cutoff_ts: datetime | None = None,
 ) -> Iterator[LogicallyDeletedObject]:
-    """
-    Consumes an iterator of all object versions and yields ONLY the objects that are logically deleted.
+    """Consumes an iterator of all object versions and yields ONLY the objects that are logically deleted.
 
     This function relies on the input iterator being pre-sorted by `key`. It groups all versions
     belonging to the same key into a list, and then passes that complete history to
@@ -285,8 +280,7 @@ def iter_logically_deleted(
 
 
 def action_scan(objects_iterator: Iterable[LogicallyDeletedObject]) -> None:
-    """
-    Consume an iterator of logically deleted objects and log the details.
+    """Consume an iterator of logically deleted objects and log the details.
 
     Args:
         objects_iterator: The iterator of logically deleted objects.
@@ -321,8 +315,7 @@ def action_permanently_delete_versions(
     bucket: str,
     objects_iterator: Iterable[LogicallyDeletedObject],
 ) -> None:
-    """
-    Consume an iterator of logically deleted objects and delete the versions in batches.
+    """Consume an iterator of logically deleted objects and delete the versions in batches.
 
     Args:
         s3_client: The configured S3 client.
@@ -346,8 +339,7 @@ def action_permanently_delete_versions(
 
 
 def get_s3_client(bucket: str, profile: str | None) -> BaseClient:
-    """
-    Create an object storage client and validate that the bucket has versioning enabled.
+    """Create an object storage client and validate that the bucket has versioning enabled.
 
     Args:
         bucket: The name of the object storage bucket.
@@ -356,7 +348,6 @@ def get_s3_client(bucket: str, profile: str | None) -> BaseClient:
     Returns:
         A configured boto3 object storage client.
     """
-
     session_kwargs = {}
     if profile:
         session_kwargs["profile_name"] = profile
@@ -380,8 +371,7 @@ def get_s3_client(bucket: str, profile: str | None) -> BaseClient:
 
 
 def parse_retention_period(value: str) -> datetime:
-    """
-    Parse a duration string (e.g., '3 seconds', '30 days', '2 weeks') and return a datetime object.
+    """Parse a duration string (e.g., '3 seconds', '30 days', '2 weeks') and return a datetime object.
 
     Args:
         value: The duration string to parse. Supports `seconds`, `minutes`, `hours`, `days`, and `weeks`.

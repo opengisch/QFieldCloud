@@ -7,7 +7,7 @@ from collections.abc import Iterable
 from datetime import timedelta
 from pathlib import Path
 from traceback import TracebackException
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import docker
 import docker.client
@@ -19,7 +19,6 @@ from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.forms.models import model_to_dict
 from django.utils import timezone
-from docker.models.containers import Container
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
     ApplyJob,
@@ -40,6 +39,9 @@ from tenacity import (
     wait_random_exponential,
 )
 
+if TYPE_CHECKING:
+    from docker.models.containers import Container
+
 logger = logging.getLogger(__name__)
 
 # TODO @suricactus: Delete when QF-6868 Log DEBUG level when DEBUG=True, see https://app.clickup.com/t/QF-6868
@@ -57,7 +59,7 @@ TOKEN_EXPIRATION_TIME_BUFFER_S = 60
 """Extra time in seconds for the dedicated worker token to keep the token valid, in addition to `JobRun.container_timeout_secs`. Useful when the worker takes longer to start."""
 
 
-class JobException(Exception):
+class JobError(Exception):
     pass
 
 
@@ -217,7 +219,7 @@ class JobRun:
             qgis_major_project_version = 3
 
         if qgis_major_project_version not in self.qgis_images:
-            raise JobException(
+            raise JobError(
                 f"Unsupported QGIS major version {qgis_major_project_version} for project {self.job.project.id} stored with {self.job.project.qgis_version}."
             )
 
@@ -448,7 +450,9 @@ class JobRun:
             mem_limit=config.WORKER_QGIS_MEMORY_LIMIT,
             cpu_shares=config.WORKER_QGIS_CPU_SHARES,
             labels={
-                "app": f"{settings.ENVIRONMENT}_worker",
+                "qfieldcloud.role": "worker",
+                "qfieldcloud.environment": settings.ENVIRONMENT,
+                "qfieldcloud.compose_project_name": settings.COMPOSE_PROJECT_NAME,
                 "type": self.job.type,
                 "job_id": str(self.job.id),
                 "project_id": str(self.job.project_id),
@@ -746,7 +750,7 @@ class CreateProjectJobRun(JobRun):
         )
 
         if qgis_major_project_version not in self.qgis_images:
-            raise JobException(
+            raise JobError(
                 f"Unsupported QGIS major version {qgis_major_project_version} for project {self.job.project.id} cloned from project {clone_from_project.id} stored with {clone_from_project.qgis_version}."
             )
 
@@ -758,7 +762,13 @@ def cancel_orphaned_workers() -> None:
 
     try:
         running_workers: list[Container] = client.containers.list(
-            filters={"label": f"app={settings.ENVIRONMENT}_worker"},
+            filters={
+                "label": [
+                    "qfieldcloud.role=worker",
+                    f"qfieldcloud.environment={settings.ENVIRONMENT}",
+                    f"qfieldcloud.compose_project_name={settings.COMPOSE_PROJECT_NAME}",
+                ],
+            },
         )
     except docker.errors.NotFound:
         # We don't mind empty references since they mean there is no

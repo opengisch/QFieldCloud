@@ -43,7 +43,7 @@ class SendNotificationsJob(CronJobBase):
                     logging.warning(f"{user} has notifications, but no email set !")
                     continue
 
-                QFIELDCLOUD_HOST = settings.QFIELDCLOUD_HOST
+                QFIELDCLOUD_HOST = settings.QFIELDCLOUD_HOST  # noqa: N806
 
                 logging.debug(f"Sending an email to {user} !")
 

@@ -24,7 +24,7 @@ class QfcTestCase(APITransactionTestCase):
         self.token1 = AuthToken.objects.get_or_create(user=self.user1)[0]
 
     def test_project_type_defaults_to_regular(self):
-        """Test that a normally named project gets a project type of `REGULAR`"""
+        """Test that a normally named project gets a project type of `REGULAR`."""
         project = Project.objects.create(name="project", owner=self.user1)
 
         self.assertEqual(project.project_type, Project.ProjectType.REGULAR)
@@ -38,7 +38,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(project.project_type, Project.ProjectType.SHARED_DATASETS)
 
     def test_project_type_updates_when_renamed_to_shared_datasets(self):
-        """Test that renaming an existing empty project (no QGIS project file) as the constant `SHARED_DATASETS_PROJECT_NAME` flips `project_type`"""
+        """Test that renaming an existing empty project (no QGIS project file) as the constant `SHARED_DATASETS_PROJECT_NAME` flips `project_type`."""
         project = Project.objects.create(name="project", owner=self.user1)
         self.assertEqual(project.project_type, Project.ProjectType.REGULAR)
 
@@ -74,7 +74,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(project.project_type, Project.ProjectType.TEMPLATE)
 
     def test_project_type_cannot_be_forced_to_shared_datasets(self):
-        """Test that a normally named project raises when saved as of type `SHARED_DATASETS`"""
+        """Test that a normally named project raises when saved as of type `SHARED_DATASETS`."""
         with self.assertRaises(ValidationError):
             Project.objects.create(
                 name="project",

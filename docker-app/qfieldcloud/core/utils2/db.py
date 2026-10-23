@@ -24,8 +24,7 @@ def get_or_none(
 
 @contextmanager
 def advisory_lock(lock_name: str, lock_timeout: str = "20s") -> Iterator[None]:
-    """
-    Makes transactions that name the same resource run one at a time.
+    """Makes transactions that name the same resource run one at a time.
 
     Reserves a name rather than locking table rows. The first transaction to
     claim a name holds it until it ends; others wait. Only works if every code

@@ -4,6 +4,7 @@ from datetime import datetime
 
 from constance import config
 from constance.test import override_config
+from django.conf import settings
 from django.core.cache import cache
 from django.test import override_settings
 from rest_framework import status
@@ -31,6 +32,9 @@ class QfcTestCase(APITransactionTestCase):
 
         self.assertIn("storage", data)
         self.assertEqual(data["storage"], StatusValue.OK)
+
+        self.assertIn("version", data)
+        self.assertEqual(data["version"], settings.SENTRY_RELEASE)
 
         self.assertIn("status_page_url", data)
         self.assertEqual(data["status_page_url"], config.STATUS_PAGE_URL)

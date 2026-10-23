@@ -76,8 +76,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def _make_organization(self, collaborator_limit: int = -1) -> Organization:
-        """Organization owned by `user1`, with `user2` as a member and a plan
-        that allows `collaborator_limit` collaborators per private project."""
+        """Organization owned by `user1`, with `user2` as a member and a plan that allows `collaborator_limit` collaborators per private project."""
         organization = Organization.objects.create(
             username="org1",
             organization_owner=self.user1,
@@ -92,8 +91,7 @@ class QfcTestCase(APITransactionTestCase):
         return organization
 
     def _add_collaborator(self, project, collaborator, role="reader"):
-        """Adds `collaborator` to `project` through the collaborators API and asserts
-        the request was accepted."""
+        """Adds `collaborator` to `project` through the collaborators API and asserts the request was accepted."""
         response = self.client.post(
             f"/api/v1/collaborators/{project.id}/",
             {"collaborator": collaborator.username, "role": role},

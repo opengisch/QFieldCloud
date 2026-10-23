@@ -5,14 +5,14 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-    def refactor_status_forward(apps, schema_editor):
+    def refactor_status_forward(apps, schema_editor):  # noqa: N805
         Job = apps.get_model("core", "Job")
         Job.objects.filter(status=1).update(status_str="queued")
         Job.objects.filter(status=2).update(status_str="deferred")
         Job.objects.filter(status=3).update(status_str="finished")
         Job.objects.filter(status=4).update(status_str="failed")
 
-    def refactor_status_backward(apps, schema_editor):
+    def refactor_status_backward(apps, schema_editor):  # noqa: N805
         Job = apps.get_model("core", "Job")
         Job.objects.filter(status_str="queued").update(status=1)
         Job.objects.filter(status_str="started").update(status=2)
@@ -21,28 +21,28 @@ class Migration(migrations.Migration):
         Job.objects.filter(status_str="finished").update(status=3)
         Job.objects.filter(status_str="failed").update(status=4)
 
-    def add_created_by(apps, schema_editor):
+    def add_created_by(apps, schema_editor):  # noqa: N805
         Job = apps.get_model("core", "Job")
 
         for job in Job.objects.all():
             job.created_by = job.project.owner
             job.save()
 
-    def add_export_jobs_forward(apps, schema_editor):
+    def add_export_jobs_forward(apps, schema_editor):  # noqa: N805
         Job = apps.get_model("core", "Job")
         ExportJob = apps.get_model("core", "ExportJob")
 
         for job in Job.objects.all():
             ExportJob.objects.create(pk=job.pk, exportlog=job.exportlog)
 
-    def add_export_jobs_backward(apps, schema_editor):
+    def add_export_jobs_backward(apps, schema_editor):  # noqa: N805
         Job = apps.get_model("core", "Job")
         ExportJob = apps.get_model("core", "ExportJob")
 
         for export_job in ExportJob.objects.all():
             Job.objects.filter(pk=export_job.pk).update(exportlog=export_job.exportlog)
 
-    def refactor_deltas_status_forward(apps, schema_editor):
+    def refactor_deltas_status_forward(apps, schema_editor):  # noqa: N805
         Delta = apps.get_model("core", "Delta")
 
         Delta.objects.filter(status=1).update(last_status="pending")
@@ -54,7 +54,7 @@ class Migration(migrations.Migration):
         Delta.objects.filter(status=7).update(last_status="ignored")
         Delta.objects.filter(status=8).update(last_status="unpermitted")
 
-    def refactor_deltas_status_backward(apps, schema_editor):
+    def refactor_deltas_status_backward(apps, schema_editor):  # noqa: N805
         Delta = apps.get_model("core", "Delta")
 
         Delta.objects.filter(last_status="pending").update(status=1)
@@ -66,7 +66,7 @@ class Migration(migrations.Migration):
         Delta.objects.filter(last_status="ignored").update(status=7)
         Delta.objects.filter(last_status="unpermitted").update(status=8)
 
-    def refactor_deltas_forward(apps, schema_editor):
+    def refactor_deltas_forward(apps, schema_editor):  # noqa: N805
         Delta = apps.get_model("core", "Delta")
         ApplyJob = apps.get_model("core", "ApplyJob")
         ApplyJobDelta = apps.get_model("core", "ApplyJobDelta")

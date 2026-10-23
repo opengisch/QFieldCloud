@@ -7,11 +7,7 @@ class AuthConfig(AppConfig):
 
     @classmethod
     def initialize(cls):
-        """
-        Initialize authentication.
-        This method is re-entrant and can be called multiple times.
-        """
-
+        """Initialize authentication. This method is re-entrant and can be called multiple times."""
         if cls.initialized:
             return
 

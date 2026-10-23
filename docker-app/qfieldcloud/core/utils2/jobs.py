@@ -23,8 +23,7 @@ def apply_deltas(
     overwrite_conflicts: bool,
     delta_ids: list[str] | None = None,
 ) -> list["models.ApplyJob"]:
-    """Apply a deltas"""
-
+    """Apply a deltas."""
     if delta_ids is None:
         delta_ids = []
 
@@ -157,14 +156,12 @@ def queue_job(
     job_model: type[models.Job],
     triggered_by: models.Person | None = None,
 ) -> list[models.Job]:
-    """
-    Queues a job of the given type for given project(s), triggered by the given person.
+    """Queues a job of the given type for given project(s), triggered by the given person.
 
     If triggered by person is not provided, the job will appear to be triggered by the project owner or the project's organization owner.
 
     This function is not running in a transaction by default, it's caller's responsibility to determine this.
     """
-
     assert job_model in TRIGGERABLE_JOBS
 
     if isinstance(projects, Project):

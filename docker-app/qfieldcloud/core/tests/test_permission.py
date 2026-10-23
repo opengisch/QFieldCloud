@@ -155,7 +155,7 @@ class QfcTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_add_team_as_collaborators(self):
-        def assertBecomeCollaborator(u: User, p: Project, error: Exception = None):
+        def assertBecomeCollaborator(u: User, p: Project, error: Exception = None):  # noqa: N802
             if error is None:
                 self.assertTrue(perms.check_can_become_collaborator(u, p))
             else:
@@ -218,8 +218,8 @@ class QfcTestCase(APITestCase):
 
         # non-premium user cannot collaborate on private user project with max_premium_collaborators set to 1
         subscription = u1.useraccount.current_subscription
-        subscription.plan.max_premium_collaborators_per_private_project = 1
-        subscription.plan.save()
+        subscription.regular_plan.max_premium_collaborators_per_private_project = 1
+        subscription.regular_plan.save()
         assertBecomeCollaborator(u2, p1, perms.ExpectedPremiumUserError)
 
         # premium user can collaborate on private user project with max_premium_collaborators set to 1
@@ -233,13 +233,13 @@ class QfcTestCase(APITestCase):
 
         # non-premium user can collaborate on public user project with max_premium_collaborators set to 1
         subscription = u2.useraccount.current_subscription
-        subscription.plan = default_plan
-        subscription.plan.save()
+        subscription.regular_plan = default_plan
+        subscription.regular_plan.save()
         p1.is_public = True
         p1.save()
         assertBecomeCollaborator(u2, p1, None)
 
         # non-premium user can collaborate on public user project with max_premium_collaborators set to 0
-        subscription.plan.max_premium_collaborators_per_private_project = 0
-        subscription.plan.save()
+        subscription.regular_plan.max_premium_collaborators_per_private_project = 0
+        subscription.regular_plan.save()
         assertBecomeCollaborator(u2, p1, None)
