@@ -1,15 +1,15 @@
-{% load i18n %}
+{% load i18n unfold %}
 
 <div class="qfc-admin-project-files-load-wrapper">
     <dialog class="qfc-admin-project-files-dialog">
         <pre></pre>
 
-        <button class="btn btn-primary" type="button">OK</button>
+        {% component "unfold/components/button.html" with type="button" %}OK{% endcomponent %}
     </dialog>
 
-    <button class="qfc-admin-projects-files-actions-reload-btn btn btn-sm btn-info" type="button">
+    {% component "unfold/components/button.html" with type="button" variant="default" icon="refresh" class="qfc-admin-projects-files-actions-reload-btn" %}
         {% trans 'Refresh Files List' %}
-    </button>
+    {% endcomponent %}
     <span class="qfc-admin-project-files-count"></span>
     <div>
         <table class="qfc-admin-project-files-table">
@@ -44,16 +44,17 @@
                         <td></td>
                         <td class="qfc-admin-project-files-text-right"></td>
                         <td>
-                            <button type="button" class="qfc-admin-projects-files-actions-info-btn btn btn-sm btn-outline-info">{% trans 'Details' %}</button>
+                            {% component "unfold/components/button.html" with type="button" variant="default" size="sm" class="qfc-admin-projects-files-actions-info-btn" %}{% trans 'Details' %}{% endcomponent %}
                         </td>
                         <td>
-                            <select class="custom-select-sm">
+                            <select class="{{ select_classes }}">
                                 <option value="">{% trans 'Select a version...' %}</option>
                             </select>
                         </td>
                         <td>
-                            <button type="button" class="qfc-admin-projects-files-actions-download-btn btn btn-sm btn-outline-info" title="{% trans 'Download the selected version or, by default the latest' %}">{% trans 'Download' %}</button>
-                            <button type="button" class="qfc-admin-projects-files-actions-delete-btn btn btn-sm btn-outline-danger" data-csrf-token="">{% trans 'Delete' %}</button>
+                            {% trans 'Download the selected version or, by default the latest' as download_title %}
+                            {% component "unfold/components/button.html" with type="button" variant="default" size="sm" title=download_title class="qfc-admin-projects-files-actions-download-btn" %}{% trans 'Download' %}{% endcomponent %}
+                            {% component "unfold/components/button.html" with type="button" variant="danger" size="sm" class="qfc-admin-projects-files-actions-delete-btn" %}{% trans 'Delete' %}{% endcomponent %}
                         </td>
                     </tr>
                 </template>

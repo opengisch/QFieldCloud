@@ -1,0 +1,53 @@
+{% load i18n unfold %}
+
+{% if original %}
+    <div class="qfc-related-links-card">
+        {% trans "Related" as related_title %}
+        {% component "unfold/components/card.html" with title=related_title %}
+            <div class="qfc-related-links">
+                {% url 'admin:project_project_changelist' as projects_url %}
+                {% url 'admin:core_organization_changelist' as organizations_url %}
+                {% url 'admin:core_job_changelist' as jobs_url %}
+                {% url 'admin:core_delta_changelist' as deltas_url %}
+                {% url 'admin:core_faultydeltafile_changelist' as faulty_deltas_url %}
+                {% url 'admin:auditlog_logentry_changelist' as audit_logs_url %}
+
+                {% component "unfold/components/link.html" with class="text-link" href=projects_url|add:"?q=owner:"|add:original.username icon="folder" %}
+                    {% trans 'Owned projects' %}
+                {% endcomponent %}
+
+                {% component "unfold/components/link.html" with class="text-link" href=projects_url|add:"?q=collaborator:"|add:original.username icon="group_work" %}
+                    {% trans 'Projects collaborations' %}
+                {% endcomponent %}
+
+                {% component "unfold/components/link.html" with class="text-link" href=organizations_url|add:"?q=owner:"|add:original.username icon="corporate_fare" %}
+                    {% trans 'Owned organizations' %}
+                {% endcomponent %}
+
+                {% component "unfold/components/link.html" with class="text-link" href=subscriptions_changelist_url|add:"?q="|add:original.username icon="credit_card" %}
+                    {% trans 'Subscriptions' %}
+                {% endcomponent %}
+
+                {% component "unfold/components/link.html" with class="text-link" href=organizations_url|add:"?q=member:"|add:original.username icon="groups" %}
+                    {% trans 'Organization memberships' %}
+                {% endcomponent %}
+
+                {% component "unfold/components/link.html" with class="text-link" href=jobs_url|add:"?q=created_by:"|add:original.username icon="work_history" %}
+                    {% trans 'Jobs' %}
+                {% endcomponent %}
+
+                {% component "unfold/components/link.html" with class="text-link" href=deltas_url|add:"?q=created_by:"|add:original.username icon="difference" %}
+                    {% trans 'Deltas' %}
+                {% endcomponent %}
+
+                {% component "unfold/components/link.html" with class="text-link" href=faulty_deltas_url|add:"?q=owner:"|add:original.username icon="report" %}
+                    {% trans 'Faulty deltas' %}
+                {% endcomponent %}
+
+                {% component "unfold/components/link.html" with class="text-link" href=audit_logs_url|add:"?q=user:"|add:original.username icon="history" %}
+                    {% trans 'Audit logs' %}
+                {% endcomponent %}
+            </div>
+        {% endcomponent %}
+    </div>
+{% endif %}

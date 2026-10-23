@@ -56,11 +56,9 @@ django==5.2.17
     #   django-filter
     #   django-invitations
     #   django-ipware
-    #   django-jazzmin
     #   django-log-request-id
     #   django-migrate-sql-deux
     #   django-model-utils
-    #   django-nonrelated-inlines
     #   django-notifications-hq
     #   django-phonenumber-field
     #   django-ranged-response
@@ -71,6 +69,7 @@ django==5.2.17
     #   django-stubs-ext
     #   django-tables2
     #   django-timezone-field
+    #   django-unfold
     #   djangorestframework
     #   drf-spectacular
     #   jsonfield
@@ -110,8 +109,6 @@ django-invitations==2.1.0
     # via -r requirements/requirements.in
 django-ipware==8.0.0
     # via -r requirements/requirements.in
-django-jazzmin==3.0.1
-    # via -r requirements/requirements.in
 django-log-request-id==2.1.2
     # via -r requirements/requirements.in
 django-migrate-sql-deux==2.1.0
@@ -120,8 +117,6 @@ django-model-utils==5.0.0
     # via
     #   -r requirements/requirements.in
     #   django-notifications-hq
-django-nonrelated-inlines==0.2
-    # via -r requirements/requirements.in
 django-notifications-hq @ git+https://github.com/django-notifications/django-notifications.git@4c44bcea2504d9a3fcd26366b232a13732a08f2a
     # via -r requirements/requirements.in
 django-phonenumber-field==8.5.0
@@ -145,6 +140,8 @@ django-stubs-ext==6.1.0
 django-tables2==3.0.1
     # via -r requirements/requirements.in
 django-timezone-field==7.2.2
+    # via -r requirements/requirements.in
+django-unfold==0.110.0
     # via -r requirements/requirements.in
 djangorestframework==3.18.0
     # via

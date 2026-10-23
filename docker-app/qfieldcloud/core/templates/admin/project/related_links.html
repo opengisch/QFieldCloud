@@ -1,0 +1,22 @@
+{% load i18n unfold %}
+
+{% if original %}
+    <div class="qfc-related-links-card">
+        {% trans "Related" as related_title %}
+        {% component "unfold/components/card.html" with title=related_title %}
+            <div class="qfc-related-links">
+                {% with project_id=original.pk|stringformat:"s" %}
+                    {% url 'admin:core_job_changelist' as jobs_url %}
+                    {% component "unfold/components/link.html" with class="text-link" href=jobs_url|add:"?q="|add:project_id icon="work_history" %}
+                        {% trans 'Project jobs' %}
+                    {% endcomponent %}
+
+                    {% url 'admin:core_faultydeltafile_changelist' as faulty_deltafiles_url %}
+                    {% component "unfold/components/link.html" with class="text-link" href=faulty_deltafiles_url|add:"?q="|add:project_id icon="report" %}
+                        {% trans 'Faulty deltafiles' %}
+                    {% endcomponent %}
+                {% endwith %}
+            </div>
+        {% endcomponent %}
+    </div>
+{% endif %}

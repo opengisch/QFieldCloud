@@ -6,6 +6,7 @@ from django.contrib import admin
 from django.http import HttpRequest
 from django.utils import timezone
 from django.utils.translation import gettext as _
+from unfold.admin import ModelAdmin
 
 from qfieldcloud.core.admin import (
     QFieldCloudModelAdmin,
@@ -15,7 +16,7 @@ from qfieldcloud.core.admin import (
 from qfieldcloud.subscription.models import PackageType, Plan, Subscription
 
 
-class PlanAdmin(admin.ModelAdmin):
+class PlanAdmin(ModelAdmin):
     list_display = [
         "code",
         "is_default",
@@ -28,7 +29,7 @@ class PlanAdmin(admin.ModelAdmin):
     ]
 
 
-class PackageTypeAdmin(admin.ModelAdmin):
+class PackageTypeAdmin(ModelAdmin):
     list_display = [
         "code",
         "is_public",
