@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 
 import sentry_sdk
 from django.templatetags.static import static
+from django.urls import reverse_lazy
 from sentry_sdk.integrations.django import DjangoIntegration
 from unfold.contrib.constance.settings import UNFOLD_CONSTANCE_ADDITIONAL_FIELDS
 
@@ -1000,6 +1001,20 @@ UNFOLD = {
     ],
     "SCRIPTS": [
         lambda request: static("js/qfc_admin.js"),
+    ],
+    "SITE_DROPDOWN": [
+        # Unfold drops the logo's home link once a dropdown is set
+        {
+            "icon": "home",
+            "title": "Admin home",
+            "link": reverse_lazy("admin:index"),
+        },
+        {
+            "icon": "copyright",
+            "title": f"{datetime.now().year} OPENGIS.ch",
+            "link": "https://www.opengis.ch",
+            "attrs": {"target": "_blank"},
+        },
     ],
     "COLORS": {
         "primary": {
