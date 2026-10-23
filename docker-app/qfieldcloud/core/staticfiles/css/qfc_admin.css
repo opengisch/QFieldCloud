@@ -1,18 +1,10 @@
-.object-tools{
-    margin-bottom: 1rem;
-}
-
-#jazzy-logo img{
-    box-shadow: none!important;
-}
-
 .qfc-table {
     width: 100%;
     border-collapse: collapse;
 }
 
 .qfc-table thead {
-    background-color: #ddd;
+    background-color: var(--color-base-50);
 }
 
 .qfc-table th,
@@ -22,13 +14,21 @@
 }
 
 .qfc-table th {
-    border-bottom: 2px solid #ddd;
+    border-bottom: 1px solid var(--color-base-200);
     font-weight: 600;
 }
 
 .qfc-table tbody tr {
-    border-bottom: 1px solid #ddd;
-    background-color: #f8f9fa;
+    border-bottom: 1px solid var(--color-base-200);
+}
+
+.dark .qfc-table thead {
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+.dark .qfc-table th,
+.dark .qfc-table tbody tr {
+    border-color: var(--color-base-800);
 }
 
 /* Pretty text fields */
@@ -39,8 +39,8 @@
 .qfc-pretty-field .qfc-code {
     padding: 1rem;
     overflow: auto;
-    background: #f6f8fa;
-    color: #24292f;
+    background: var(--color-base-50);
+    color: var(--color-base-900);
     white-space: pre;
     display: block;
     line-height: 1.4;
@@ -60,8 +60,8 @@
     display: flex;
     gap: .5rem;
     padding: .5rem;
-    background: rgba(255,255,255,.92);
-    border: 1px solid rgba(0,0,0,.08);
+    background: var(--color-base-50);
+    border: 1px solid var(--color-base-200);
     backdrop-filter: blur(10px);
     box-shadow: 0 4px 12px rgba(0,0,0,.08);
     z-index: 1000;
@@ -78,4 +78,51 @@
 .qfc-pretty-field .qfc-code .number  { color: #b54708; }
 .qfc-pretty-field .qfc-code .boolean { color: #7a1cac; }
 .qfc-pretty-field .qfc-code .null    { color: #c62828; }
+
+.dark .qfc-pretty-field .qfc-code {
+    background: var(--color-base-900);
+    color: var(--color-base-100);
+}
+
+.dark .qfc-pretty-field .qfc-pretty-field-actions {
+    background: var(--color-base-800);
+    border-color: var(--color-base-700);
+}
+
+/* lighter variants of the token colors, readable on the dark background */
+.dark .qfc-pretty-field .qfc-code .key     { color: #79c0ff; }
+.dark .qfc-pretty-field .qfc-code .string  { color: #7ee787; }
+.dark .qfc-pretty-field .qfc-code .number  { color: #ffa657; }
+.dark .qfc-pretty-field .qfc-code .boolean { color: #d2a8ff; }
+.dark .qfc-pretty-field .qfc-code .null    { color: #ff7b72; }
 /* /Pretty text fields */
+
+/* Global search */
+.qfc-global-search {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.qfc-global-search-form {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.qfc-global-search-table {
+    overflow-x: auto;
+}
+
+.qfc-global-search-pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1rem;
+}
+
+.qfc-global-search-pagination-pages {
+    display: flex;
+    gap: 0.5rem;
+}
+/* /Global search */
