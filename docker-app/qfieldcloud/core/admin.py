@@ -60,6 +60,7 @@ from invitations.utils import get_invitation_model
 from rest_framework.authtoken.models import TokenProxy
 from unfold.admin import ModelAdmin, StackedInline, TabularInline
 from unfold.decorators import action
+from unfold.paginator import InfinitePaginator
 from unfold.sites import UnfoldAdminSite
 from unfold.views import ChangeList
 
@@ -805,6 +806,8 @@ class ProjectInline(TabularInline):
 
 
 class PersonAdmin(QFieldCloudModelAdmin):
+    paginator = InfinitePaginator
+
     list_display = (
         "username",
         "first_name",
@@ -1130,6 +1133,8 @@ class IsFinalizedJobFilter(admin.SimpleListFilter):
 
 
 class JobAdmin(QFieldCloudModelAdmin):
+    paginator = InfinitePaginator
+
     list_display = (
         "id",
         "project",
@@ -1317,6 +1322,8 @@ class IsFinalizedDeltaJobFilter(admin.SimpleListFilter):
 
 
 class DeltaAdmin(QFieldCloudModelAdmin):
+    paginator = InfinitePaginator
+
     list_display = (
         "id",
         "deltafile_id",
@@ -1698,6 +1705,8 @@ class LogEntryAdmin(
     BaseLogEntryAdmin,
     ModelAdmin,
 ):
+    paginator = InfinitePaginator
+
     list_filter = ("action", QFieldCloudResourceTypeFilter)
 
     search_parser_config = {
