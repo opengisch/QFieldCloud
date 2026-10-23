@@ -1,6 +1,7 @@
 from typing import Any
 
 from django.contrib import admin
+from unfold.paginator import InfinitePaginator
 
 from qfieldcloud.core.admin import QFieldCloudModelAdmin, qfc_admin_site
 from qfieldcloud.filestorage.models import File, FileVersion
@@ -48,6 +49,8 @@ class FileAdmin(QFieldCloudModelAdmin):
 
 
 class FileVersionAdmin(QFieldCloudModelAdmin):
+    paginator = InfinitePaginator
+
     readonly_fields = [
         "id",
         "file",

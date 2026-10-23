@@ -14,6 +14,7 @@ from django.utils.safestring import SafeText
 from django.utils.translation import gettext_lazy as _
 from unfold.admin import StackedInline, TabularInline
 from unfold.decorators import action
+from unfold.paginator import InfinitePaginator
 from unfold.widgets import SELECT_CLASSES
 
 from qfieldcloud.core.admin import (
@@ -223,6 +224,8 @@ class QgisProjectInline(StackedInline):
 
 
 class LayerAdmin(QFieldCloudModelAdmin):
+    paginator = InfinitePaginator
+
     has_direct_delete_permission = False
 
     OWNER_LOOKUP = "qgis_project__project__owner"
@@ -364,6 +367,8 @@ class ProjectForm(ModelForm):
 
 
 class ProjectAdmin(QFieldCloudModelAdmin):
+    paginator = InfinitePaginator
+
     form = ProjectForm
     list_display = (
         "id",
