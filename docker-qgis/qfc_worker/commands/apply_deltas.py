@@ -16,9 +16,11 @@ import jsonschema
 
 # pylint: disable=no-name-in-module
 from qgis.core import (
+    Qgis,
     QgsDataSourceUri,
     QgsExpression,
     QgsFeature,
+    QgsFieldConstraints,
     QgsGeometry,
     QgsMapLayer,
     QgsProject,
@@ -462,8 +464,9 @@ def apply_deltas_without_transaction(
                     layer, delta, overwrite_conflicts=overwrite_conflicts
                 )
 
-                # apparently the only way to obtain the feature if there is no edit buffer is use the returned created_feature
-                if not has_edit_buffer:
+                # apparently the only way to obtain the feature if there is no edit buffer is use the returned created_feature.
+                # Also when an existing feature (fid >= 0) was patched instead, as `committedFeaturesAdded` is not emitted then.
+                if not has_edit_buffer or created_feature.id() >= 0:
                     feature = created_feature
             elif delta["method"] == str(DeltaMethod.PATCH):
                 feature = patch_feature(
@@ -829,6 +832,62 @@ def create_feature(
                 attr_value = new_feat_attrs[attr_name]
                 attr_index = fields.indexFromName(attr_name)
                 feat_attrs[attr_index] = attr_value
+
+    # `createFeature` silently replaces values violating a unique constraint (e.g. `001` becomes `001_1`)
+    # so we handle such cases as conflicts if `overwrite_conflicts` is False.
+    pk_idx = fields.indexOf(get_pk_attr_name(layer))
+    conflicts = []
+    conflicting_fids = []
+
+    for idx, value in feat_attrs.items():
+        field = fields.at(idx)
+
+        # ignore the primary key
+        if idx == pk_idx:
+            continue
+
+        if value is None:
+            continue
+
+        # ignore non-unique fields for conflict checking
+        if (
+            not field.constraints().constraints()
+            & QgsFieldConstraints.Constraint.ConstraintUnique
+        ):
+            continue
+
+        expr = QgsExpression.createFieldEqualityExpression(field.name(), value)
+        for f in layer.getFeatures(expr):
+            conflicting_fids.append(f.id())
+            conflicts.append(
+                f"The unique attribute '{field.name()}' value '{value}' already exists"
+            )
+
+    if conflicts:
+        if not overwrite_conflicts or len(conflicting_fids) != 1:
+            raise DeltaError(
+                "There are conflicts with an already existing feature.",
+                conflicts=conflicts,
+                e_type=DeltaErrorType.Conflict,
+            )
+
+        # patch the existing feature, keeping its PK
+        fid = conflicting_fids.pop()
+        new_attrs = {}
+        for idx, value in feat_attrs.items():
+            if idx != pk_idx and fields.fieldOrigin(idx) == Qgis.FieldOrigin.Provider:
+                new_attrs[idx] = value
+
+        # check if the geometry and attributes can be updated successfully
+        if (
+            not geometry.isNull() and not layer.changeGeometry(fid, geometry, True)
+        ) or not layer.changeAttributeValues(fid, new_attrs, {}, True):
+            raise DeltaError(
+                f"Unable to patch the existing feature with fid {fid}",
+                provider_errors=layer.dataProvider().errors(),
+            )
+
+        return layer.getFeature(fid)
 
     new_feat = QgsVectorLayerUtils.createFeature(layer, geometry, feat_attrs)
 
