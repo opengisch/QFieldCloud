@@ -1255,7 +1255,10 @@ class JobAdmin(QFieldCloudModelAdmin):
     )
     has_direct_delete_permission = False
 
-    actions_detail = ("rerun_job", "export_applyjob_deltafile")
+    actions_detail = (
+        "rerun_job",
+        "export_applyjob_deltafile",
+    )
 
     search_parser_config = {
         "created_by": {
