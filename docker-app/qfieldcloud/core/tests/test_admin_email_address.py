@@ -50,6 +50,7 @@ class QfcTestCase(TestCase):
 
         resp = self.client.get(self.url)
         content = b"".join(resp.streaming_content).decode()
+        # we only compare some of the exported columns, the rest aren't worth checking
         rows = []
 
         for row in csv.DictReader(io.StringIO(content)):
