@@ -378,6 +378,7 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         "the_qgis_file",
         "qgis_version",
         "overwrite_conflicts",
+        "unique_constraint_delta_behavior",
         "has_restricted_projectfiles",
         "file_storage_bytes",
         "storage_keep_versions",
