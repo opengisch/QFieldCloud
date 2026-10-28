@@ -1463,7 +1463,7 @@ class DeltaAdmin(QFieldCloudModelAdmin):
 
     formfield_overrides = {JSONField: {"widget": PrettyJSONWidget}}
 
-    actions_submit_line = ("apply_delta",)
+    actions_detail = ("apply_delta",)
 
     search_parser_config = {
         "created_by": {
@@ -1501,18 +1501,14 @@ class DeltaAdmin(QFieldCloudModelAdmin):
     def set_status_unpermitted(self, request, queryset):
         queryset.update(last_status=Delta.Status.UNPERMITTED)
 
-    def response_change(self, request, delta):
-        # Unfold runs the submit line action on save, stay on the delta page afterwards to show the outcome
-        if self.get_unfold_action("apply_delta").action_name in request.POST:
-            return HttpResponseRedirect(request.path)
+    @action(description=_("Apply delta"), url_path="apply-delta", icon="play_arrow")
+    def apply_delta(self, request: HttpRequest, object_id: str) -> HttpResponse:
+        delta = get_object_or_404(self.get_queryset(request), pk=object_id)
+        redirect_url = reverse("admin:core_delta_change", args=[object_id])
 
-        return super().response_change(request, delta)
-
-    @action(description=_("Apply delta"), icon="play_arrow")
-    def apply_delta(self, request: HttpRequest, delta: Delta) -> None:
         if not delta.project.has_the_qgis_file:
             self.message_user(request, "Missing project file", level=messages.ERROR)
-            return
+            return HttpResponseRedirect(redirect_url)
 
         if not jobs.apply_deltas(
             delta.project,
@@ -1527,12 +1523,14 @@ class DeltaAdmin(QFieldCloudModelAdmin):
                 "is already part of a running apply job, or the project owner is not allowed to create jobs.",
                 level=messages.ERROR,
             )
-            return
+            return HttpResponseRedirect(redirect_url)
 
         self.message_user(request, "Delta application started")
 
         # we need to sleep 1 second, just to make sure the apply delta started
         time.sleep(1)
+
+        return HttpResponseRedirect(redirect_url)
 
     @admin.action(description="Download deltas as deltafile")
     def download_deltafile(self, request, queryset: QuerySet) -> HttpResponse | None:
