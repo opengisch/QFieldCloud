@@ -1,7 +1,6 @@
 import csv
 import json
 import time
-import uuid
 from collections import namedtuple
 from collections.abc import Generator, Iterable
 from datetime import datetime, timezone
@@ -13,22 +12,27 @@ from allauth.account.admin import EmailAddressAdmin as EmailAddressAdminBase
 from allauth.account.forms import EmailAwarePasswordResetTokenGenerator
 from allauth.account.models import EmailAddress
 from allauth.account.utils import user_pk_to_url_str
+from allauth.socialaccount.admin import SocialAccountAdmin as SocialAccountAdminBase
+from allauth.socialaccount.admin import SocialAppAdmin as SocialAppAdminBase
+from allauth.socialaccount.admin import SocialTokenAdmin as SocialTokenAdminBase
+from allauth.socialaccount.models import SocialAccount, SocialApp, SocialToken
 from auditlog.admin import LogEntryAdmin as BaseLogEntryAdmin
 from auditlog.filters import ResourceTypeFilter
 from auditlog.models import ContentType, LogEntry
-from axes.admin import AccessAttemptAdmin, AccessFailureLogAdmin, AccessLogAdmin
+from axes.admin import AccessAttemptAdmin as AccessAttemptAdminBase
+from axes.admin import AccessFailureLogAdmin as AccessFailureLogAdminBase
+from axes.admin import AccessLogAdmin as AccessLogAdminBase
 from axes.models import AccessAttempt, AccessFailureLog, AccessLog
 from constance.admin import Config, ConstanceAdmin
 from django.conf import settings
 from django.contrib import admin, messages
-from django.contrib.admin.sites import AdminSite
 from django.contrib.admin.templatetags.admin_urls import admin_urlname
-from django.contrib.admin.views.main import ChangeList
 from django.contrib.auth.models import Group
 from django.contrib.auth.views import logout_then_login, redirect_to_login
+from django.contrib.sites.admin import SiteAdmin as SiteAdminBase
+from django.contrib.sites.models import Site
 from django.core.exceptions import (
     ImproperlyConfigured,
-    PermissionDenied,
     ValidationError,
 )
 from django.core.paginator import Paginator
@@ -40,7 +44,7 @@ from django.db.models.functions import Lower
 from django.forms import ModelForm, fields, widgets
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.http.response import Http404, HttpResponseRedirect, StreamingHttpResponse
-from django.shortcuts import render, resolve_url
+from django.shortcuts import get_object_or_404, render, resolve_url
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
 from django.utils.decorators import method_decorator
@@ -49,9 +53,15 @@ from django.utils.http import urlencode
 from django.utils.safestring import SafeText
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.cache import never_cache
+from django_cron.admin import CronJobLogAdmin as CronJobLogAdminBase
+from django_cron.models import CronJobLock, CronJobLog
 from invitations.admin import InvitationAdmin as InvitationAdminBase
 from invitations.utils import get_invitation_model
 from rest_framework.authtoken.models import TokenProxy
+from unfold.admin import ModelAdmin, StackedInline, TabularInline
+from unfold.decorators import action
+from unfold.sites import UnfoldAdminSite
+from unfold.views import ChangeList
 
 from qfieldcloud.core.models import (
     ApplyJob,
@@ -75,7 +85,7 @@ from qfieldcloud.project.models import Project
 from qfieldcloud.subscription.models import get_subscription_model
 
 
-class QfcAdminSite(AdminSite):
+class QfcAdminSite(UnfoldAdminSite):
     site_header = _("QFieldCloud Admin")
     site_title = _("QFieldCloud Admin")
     index_title = _("QFieldCloud Admin")
@@ -110,6 +120,41 @@ class QfcAdminSite(AdminSite):
         return logout_then_login(request)
 
     # TODO consider adding a logout view to redirect to the Allauth's logout view, but then we lose the nice template we have right now.
+
+    def get_app_list(
+        self, request: HttpRequest, app_label: str | None = None
+    ) -> list[dict[str, Any]]:
+        """Adds a "General" group with the global search link on top of the app list, shown in the sidebar and on the admin index.
+
+        `UNFOLD["SIDEBAR"]["navigation"]` would hide the automatic app list behind "All applications", so add further admin-wide links here instead.
+        """
+        app_list = super().get_app_list(request, app_label)
+
+        if app_label is not None:
+            return app_list
+
+        global_search_url = reverse("admin:global_search", current_app=self.name)
+        app_list.insert(
+            0,
+            {
+                "name": _("General"),
+                "app_label": "general",
+                "app_url": global_search_url,
+                "has_module_perms": True,
+                "models": [
+                    {
+                        "name": _("Global search"),
+                        "object_name": "GlobalSearch",
+                        "admin_url": global_search_url,
+                        "add_url": None,
+                        "view_only": True,
+                        "perms": {"view": True},
+                    },
+                ],
+            },
+        )
+
+        return app_list
 
     def get_urls(self):
         """Add custom admin URLs including the global search view."""
@@ -408,7 +453,7 @@ class QFieldCloudModelAdmin(  # type: ignore
     ModelAdminEstimateCountMixin,
     ModelAdminSearchParserMixin,
     ModelAdminListDisplayAutoFkeyFields,
-    admin.ModelAdmin,
+    ModelAdmin,
 ):
     def has_delete_permission(self, request, obj=None):
         """Reimplementing this Django Admin method to allow deleting related objects in django admin from another ModelAdmin.
@@ -425,15 +470,6 @@ class QFieldCloudModelAdmin(  # type: ignore
                     return self.has_direct_delete_permission
 
         return super().has_delete_permission(request, obj)
-
-
-class QFieldCloudInlineAdmin(admin.TabularInline):
-    template = "admin/edit_inline/tabular_customized.html"
-
-    def get_formset(self, request, obj=None, **kwargs):
-        self.parent_obj = obj
-
-        return super().get_formset(request, obj, **kwargs)
 
 
 def admin_urlname_by_obj(value, arg):
@@ -479,17 +515,8 @@ UserEmailDetails = namedtuple(
 )
 
 
-class EmailAddressAdmin(EmailAddressAdminBase):
-    def get_urls(self):
-        urls = super().get_urls()
-        return [
-            path(
-                "admin/export_emails_to_csv/",
-                self.admin_site.admin_view(self.export_emails_to_csv),
-                name="export_emails_to_csv",
-            ),
-            *urls,
-        ]
+class EmailAddressAdmin(EmailAddressAdminBase, ModelAdmin):
+    actions_list = ("export_emails_to_csv",)
 
     def gen_users_email_addresses(self) -> Generator[UserEmailDetails, None, None]:
         raw_queryset = User.objects.raw(
@@ -572,8 +599,12 @@ class EmailAddressAdmin(EmailAddressAdminBase):
             for row in raw_queryset
         )
 
-    @admin.action(description="Export all users' email contact details to .csv")  # type: ignore
-    def export_emails_to_csv(self, request) -> StreamingHttpResponse:
+    @action(
+        description=_("CSV export"),
+        url_path="export-emails-to-csv",
+        icon="download",
+    )
+    def export_emails_to_csv(self, request: HttpRequest) -> StreamingHttpResponse:
         """Export all users' email contact details to .csv."""
 
         class PseudoBuffer:
@@ -635,7 +666,7 @@ def search_parser(
 
 def model_admin_url(obj, name: str | None = None) -> SafeText:
     url = resolve_url(admin_urlname_by_obj(obj, SafeText("change")), obj.pk)
-    return format_html('<a href="{}">{}</a>', url, name or str(obj))
+    return format_html('<a href="{}" class="text-link">{}</a>', url, name or str(obj))
 
 
 def format_text(value, syntax: Literal["text", "json"]) -> SafeText:
@@ -659,8 +690,9 @@ def format_text(value, syntax: Literal["text", "json"]) -> SafeText:
     )
 
 
-class MemberOrganizationInline(admin.TabularInline):
+class MemberOrganizationInline(TabularInline):
     model = OrganizationMember
+    tab = True
     extra = 0
 
     def has_add_permission(self, request, obj):
@@ -682,8 +714,9 @@ class MemberOrganizationInline(admin.TabularInline):
         return obj.type in (User.Type.PERSON, User.Type.ORGANIZATION)
 
 
-class MemberTeamInline(admin.TabularInline):
+class MemberTeamInline(TabularInline):
     model = TeamMember
+    tab = True
     extra = 0
 
     def has_add_permission(self, request, obj):
@@ -705,8 +738,9 @@ class MemberTeamInline(admin.TabularInline):
         return obj.type in (User.Type.PERSON, User.Type.ORGANIZATION)
 
 
-class UserAccountInline(admin.StackedInline):
+class UserAccountInline(StackedInline):
     model = UserAccount
+    tab = True
     extra = 1
     has_direct_delete_permission = False
 
@@ -714,8 +748,9 @@ class UserAccountInline(admin.StackedInline):
         return obj is None
 
 
-class ProjectInline(admin.TabularInline):
+class ProjectInline(TabularInline):
     model = Project
+    tab = True
     fk_name = "owner"
     extra = 0
     absolute_max = 5000
@@ -789,8 +824,24 @@ class PersonAdmin(QFieldCloudModelAdmin):
 
     inlines = (UserAccountInline,)
 
-    add_form_template = "admin/change_form.html"
-    change_form_template = "admin/person_change_form.html"
+    actions_detail = (
+        "password_reset_url",
+        {
+            "title": _("Related"),
+            "icon": "link",
+            "items": [
+                "related_owned_projects",
+                "related_project_collaborations",
+                "related_owned_organizations",
+                "related_subscriptions",
+                "related_organization_memberships",
+                "related_jobs",
+                "related_deltas",
+                "related_faulty_deltas",
+                "related_audit_logs",
+            ],
+        },
+    )
 
     @admin.display(description=_("Storage"))
     def storage_usage__field(self, instance) -> str:
@@ -807,52 +858,138 @@ class PersonAdmin(QFieldCloudModelAdmin):
         obj.clean()
         obj.save()
 
-    def change_view(
-        self,
-        request: HttpRequest,
-        object_id: str,
-        form_url: str = "",
-        extra_context: Any | None = None,
+    def _get_username(self, request: HttpRequest, object_id: str) -> str:
+        return get_object_or_404(self.get_queryset(request), pk=object_id).username
+
+    @action(
+        description=_("Owned projects"),
+        url_path="related-owned-projects",
+        icon="folder",
+    )
+    def related_owned_projects(
+        self, request: HttpRequest, object_id: str
     ) -> HttpResponse:
-        # Add the subscription model is editable flag to the extra context
-        extra_context = extra_context or {}
-
-        extra_context.update(
-            {
-                "subscription_model": get_subscription_model(),
-            }
+        username = self._get_username(request, object_id)
+        return redirect_to_changelist(
+            "admin:project_project_changelist", f"owner:{username}"
         )
 
-        return super().change_view(
-            request, object_id, form_url, extra_context=extra_context
+    @action(
+        description=_("Projects collaborations"),
+        url_path="related-project-collaborations",
+        icon="group_work",
+    )
+    def related_project_collaborations(
+        self, request: HttpRequest, object_id: str
+    ) -> HttpResponse:
+        username = self._get_username(request, object_id)
+        return redirect_to_changelist(
+            "admin:project_project_changelist", f"collaborator:{username}"
         )
 
-    def get_urls(self):
-        urls = super().get_urls()
+    @action(
+        description=_("Owned organizations"),
+        url_path="related-owned-organizations",
+        icon="corporate_fare",
+    )
+    def related_owned_organizations(
+        self, request: HttpRequest, object_id: str
+    ) -> HttpResponse:
+        username = self._get_username(request, object_id)
+        return redirect_to_changelist(
+            "admin:core_organization_changelist", f"owner:{username}"
+        )
 
-        urls = [
-            *urls,
-            path(
-                "<int:user_id>/password_reset_url",
-                self.admin_site.admin_view(self.password_reset_url),
-                name="password_reset_url",
-            ),
-        ]
+    @action(
+        description=_("Subscriptions"),
+        url_path="related-subscriptions",
+        icon="credit_card",
+    )
+    def related_subscriptions(
+        self, request: HttpRequest, object_id: str
+    ) -> HttpResponse:
+        username = self._get_username(request, object_id)
+        # the subscription model differs between deployments, so its changelist URL is resolved here
+        subscription_meta = get_subscription_model()._meta
+        return redirect_to_changelist(
+            f"admin:{subscription_meta.app_label}_{subscription_meta.model_name}_changelist",
+            username,
+        )
 
-        return urls
+    @action(
+        description=_("Organization memberships"),
+        url_path="related-organization-memberships",
+        icon="groups",
+    )
+    def related_organization_memberships(
+        self, request: HttpRequest, object_id: str
+    ) -> HttpResponse:
+        username = self._get_username(request, object_id)
+        return redirect_to_changelist(
+            "admin:core_organization_changelist", f"member:{username}"
+        )
 
+    @action(
+        description=_("Jobs"),
+        url_path="related-jobs",
+        icon="work_history",
+    )
+    def related_jobs(self, request: HttpRequest, object_id: str) -> HttpResponse:
+        username = self._get_username(request, object_id)
+        return redirect_to_changelist(
+            "admin:core_job_changelist", f"created_by:{username}"
+        )
+
+    @action(
+        description=_("Deltas"),
+        url_path="related-deltas",
+        icon="difference",
+    )
+    def related_deltas(self, request: HttpRequest, object_id: str) -> HttpResponse:
+        username = self._get_username(request, object_id)
+        return redirect_to_changelist(
+            "admin:core_delta_changelist", f"created_by:{username}"
+        )
+
+    @action(
+        description=_("Faulty deltas"),
+        url_path="related-faulty-deltas",
+        icon="report",
+    )
+    def related_faulty_deltas(
+        self, request: HttpRequest, object_id: str
+    ) -> HttpResponse:
+        username = self._get_username(request, object_id)
+        return redirect_to_changelist(
+            "admin:core_faultydeltafile_changelist", f"owner:{username}"
+        )
+
+    @action(
+        description=_("Audit logs"),
+        url_path="related-audit-logs",
+        icon="history",
+    )
+    def related_audit_logs(self, request: HttpRequest, object_id: str) -> HttpResponse:
+        username = self._get_username(request, object_id)
+        return redirect_to_changelist(
+            "admin:auditlog_logentry_changelist", f"user:{username}"
+        )
+
+    @action(
+        description=_("Generate reset password URL"),
+        url_path="password-reset-url",
+        icon="lock_reset",
+        permissions=["change"],
+    )
     @method_decorator(never_cache)
-    def password_reset_url(self, request, user_id, form_url=""):
-        if not self.has_change_permission(request):
-            raise PermissionDenied
-
-        user = self.get_object(request, user_id)
+    def password_reset_url(self, request: HttpRequest, object_id: str) -> HttpResponse:
+        user = self.get_object(request, object_id)
         if user is None:
             raise Http404(
                 _("%(name)s object with primary key %(key)r does not exist.")
                 % {
                     "name": self.model._meta.verbose_name,
-                    "key": escape(user_id),
+                    "key": escape(object_id),
                 }
             )
 
@@ -996,17 +1133,37 @@ class SecretAdmin(QFieldCloudModelAdmin):
         }
 
 
-class SecretInlineBase(QFieldCloudInlineAdmin):
+def get_secret_add_url(parent_field: str, object_id: str) -> str:
+    """Returns the secret add view URL, prefilled with the parent organization or project, see `SecretAdmin.get_changeform_initial_data`."""
+    return f"{reverse('admin:core_secret_add')}?{urlencode({f'{parent_field}_id': object_id})}"
+
+
+class SecretInlineBase(TabularInline):
     model = Secret
+    tab = True
     fields = ("link_to_secret", "type", "assigned_to", "created_by")
     readonly_fields = ("link_to_secret",)
     max_num = 0
     extra = 0
+    # the "Add secret" button below the inline table
+    template_after = "admin/inline_add_secret.html"
+    # the organization or project being edited, set in `get_formset`
+    parent_obj: Any = None
+
+    def get_formset(self, request, obj=None, **kwargs):
+        # Django creates the inline instances per request, so keeping the parent here is safe
+        self.parent_obj = obj
+        return super().get_formset(request, obj, **kwargs)
+
+    @property
+    def add_secret_url(self) -> str:
+        """The URL of the "Add secret" button below the inline table."""
+        return get_secret_add_url(self.parent_obj._meta.model_name, self.parent_obj.pk)
 
     @admin.display(description=_("Name"))
     def link_to_secret(self, obj):
         url = reverse("admin:core_secret_change", args=[obj.pk])
-        return format_html('<a href="{}">{}</a>', url, obj.name)
+        return format_html('<a href="{}" class="text-link">{}</a>', url, obj.name)
 
     def has_add_permission(self, request, obj=None):
         return False
@@ -1017,40 +1174,24 @@ class SecretInlineBase(QFieldCloudInlineAdmin):
     def has_delete_permission(self, request, obj=None):
         return False
 
-    def get_query_params(self) -> dict[str, str]:
-        """Return query parameters for the 'Add Secret' button."""
-        return {}
 
-    @property
-    def bottom_html(self):
-        if self.parent_obj:
-            return format_html(
-                """
-                    <a href="{url}?{query_params}" class="btn btn-default form-control">
-                        <i class="fa fa-plus-circle"></i>
-                        {text}
-                    </a>
-                """,
-                url=reverse("admin:core_secret_add"),
-                query_params=urlencode(self.get_query_params()),
-                text="Add Secret",
-            )
-        else:
-            return ""
+def redirect_to_add_secret(parent_field: str, object_id: str) -> HttpResponse:
+    """Redirects to the secret add view, prefilled with the parent organization or project."""
+    return HttpResponseRedirect(get_secret_add_url(parent_field, object_id))
+
+
+def redirect_to_changelist(url_name: str, search: str) -> HttpResponse:
+    """Redirects to a changelist filtered by the admin search, used by the "Related" detail actions."""
+    return HttpResponseRedirect(f"{reverse(url_name)}?{urlencode({'q': search})}")
 
 
 class OrganizationSecretInline(SecretInlineBase):
     fk_name = "organization"
 
-    def get_query_params(self) -> dict[str, str]:
-        """Return query parameters for the 'Add Secret' button."""
-        return {
-            "organization_id": str(self.parent_obj.pk),
-        }
 
-
-class DeltaInline(admin.TabularInline):
+class DeltaInline(TabularInline):
     model = ApplyJob.deltas_to_apply.through
+    tab = True
 
     fields = (
         "delta",
@@ -1131,7 +1272,10 @@ class JobAdmin(QFieldCloudModelAdmin):
     )
     has_direct_delete_permission = False
 
-    change_form_template = "admin/job_change_form.html"
+    actions_detail = (
+        "rerun_job",
+        "export_applyjob_deltafile",
+    )
 
     search_parser_config = {
         "created_by": {
@@ -1168,22 +1312,6 @@ class JobAdmin(QFieldCloudModelAdmin):
 
         return inlines
 
-    def get_urls(self):
-        urls = super().get_urls()
-        return [
-            path(
-                "<uuid:apply_job_id>/export-deltafile",
-                self.admin_site.admin_view(self.export_applyjob_deltafile),
-                name="export_applyjob_deltafile",
-            ),
-            path(
-                "<path:object_id>/rerun/",
-                self.admin_site.admin_view(self.rerun_job),
-                name="rerun_job",
-            ),
-            *urls,
-        ]
-
     def error_type(self, instance):
         if instance.feedback and "error_type" in instance.feedback:
             return f"{instance.feedback['error_type']}".strip()
@@ -1202,10 +1330,22 @@ class JobAdmin(QFieldCloudModelAdmin):
     def feedback__pre(self, instance):
         return format_text(instance.feedback, "json")
 
+    def has_export_applyjob_deltafile_permission(
+        self, request: HttpRequest, object_id: str | None = None
+    ) -> bool:
+        """Only apply jobs have deltas to export."""
+        return Job.objects.filter(pk=object_id, type=Job.Type.DELTA_APPLY).exists()
+
+    @action(
+        description=_("Download deltafile"),
+        url_path="export-deltafile",
+        icon="download",
+        permissions=["export_applyjob_deltafile"],
+    )
     def export_applyjob_deltafile(
-        self, request: HttpRequest, apply_job_id: uuid.UUID
+        self, request: HttpRequest, object_id: str
     ) -> HttpResponse:
-        apply_job = ApplyJob.objects.get(id=apply_job_id)
+        apply_job = ApplyJob.objects.get(id=object_id)
         deltas_qs = apply_job.deltas_to_apply.all().values_list("content", flat=True)
         project_id = apply_job.project_id
         deltafile = delta_utils.generate_deltafile(deltas_qs, project_id)
@@ -1222,13 +1362,15 @@ class JobAdmin(QFieldCloudModelAdmin):
             },
         )
 
-    def rerun_job(self, request, object_id):
-        Job.objects.filter(pk=object_id).update(status="pending")
-        return HttpResponseRedirect("..")
+    @action(description=_("Re-run job"), url_path="rerun", icon="replay")
+    def rerun_job(self, request: HttpRequest, object_id: str) -> HttpResponse:
+        Job.objects.filter(pk=object_id).update(status=Job.Status.PENDING)
+        return HttpResponseRedirect(reverse("admin:core_job_change", args=[object_id]))
 
 
-class ApplyJobDeltaInline(admin.TabularInline):
+class ApplyJobDeltaInline(TabularInline):
     model = ApplyJobDelta
+    tab = True
 
     readonly_fields = (
         "job_id",
@@ -1299,7 +1441,6 @@ class DeltaAdmin(QFieldCloudModelAdmin):
         "set_status_pending",
         "set_status_ignored",
         "set_status_unpermitted",
-        "apply_selected_deltas",
         "download_deltafile",
     )
 
@@ -1342,7 +1483,7 @@ class DeltaAdmin(QFieldCloudModelAdmin):
 
     formfield_overrides = {JSONField: {"widget": PrettyJSONWidget}}
 
-    change_form_template = "admin/delta_change_form.html"
+    actions_detail = ("apply_delta",)
 
     search_parser_config = {
         "created_by": {
@@ -1380,16 +1521,14 @@ class DeltaAdmin(QFieldCloudModelAdmin):
     def set_status_unpermitted(self, request, queryset):
         queryset.update(last_status=Delta.Status.UNPERMITTED)
 
-    def response_change(self, request, delta):
-        if "_apply_delta_btn" in request.POST:
-            return self.apply_delta(request, delta)
+    @action(description=_("Apply delta"), url_path="apply-delta", icon="play_arrow")
+    def apply_delta(self, request: HttpRequest, object_id: str) -> HttpResponse:
+        delta = get_object_or_404(self.get_queryset(request), pk=object_id)
+        redirect_url = reverse("admin:core_delta_change", args=[object_id])
 
-        return super().response_change(request, delta)
-
-    def apply_delta(self, request, delta):
         if not delta.project.has_the_qgis_file:
             self.message_user(request, "Missing project file", level=messages.ERROR)
-            return HttpResponseRedirect(".")
+            return HttpResponseRedirect(redirect_url)
 
         if not jobs.apply_deltas(
             delta.project,
@@ -1404,14 +1543,14 @@ class DeltaAdmin(QFieldCloudModelAdmin):
                 "is already part of a running apply job, or the project owner is not allowed to create jobs.",
                 level=messages.ERROR,
             )
-            return HttpResponseRedirect(".")
+            return HttpResponseRedirect(redirect_url)
 
         self.message_user(request, "Delta application started")
 
         # we need to sleep 1 second, just to make sure the apply delta started
         time.sleep(1)
 
-        return HttpResponseRedirect(".")
+        return HttpResponseRedirect(redirect_url)
 
     @admin.action(description="Download deltas as deltafile")
     def download_deltafile(self, request, queryset: QuerySet) -> HttpResponse | None:
@@ -1436,8 +1575,9 @@ class DeltaAdmin(QFieldCloudModelAdmin):
         )
 
 
-class OrganizationMemberInline(admin.TabularInline):
+class OrganizationMemberInline(TabularInline):
     model = OrganizationMember
+    tab = True
     fk_name = "organization"
     extra = 0
 
@@ -1455,8 +1595,9 @@ class OrganizationMemberInline(admin.TabularInline):
     )
 
 
-class TeamInline(admin.TabularInline):
+class TeamInline(TabularInline):
     model = Team
+    tab = True
     fk_name = "team_organization"
     extra = 0
 
@@ -1478,6 +1619,7 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
         TeamInline,
         OrganizationSecretInline,
     )
+
     fields = (
         "storage_usage__field",
         "username",
@@ -1554,8 +1696,9 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
         super().save_formset(request, form, formset, change)
 
 
-class TeamMemberInline(admin.TabularInline):
+class TeamMemberInline(TabularInline):
     model = TeamMember
+    tab = True
     fk_name = "team"
     extra = 0
 
@@ -1604,7 +1747,7 @@ class TeamAdmin(QFieldCloudModelAdmin):
         return super().get_form(request, obj, bool(change), **kwargs)
 
 
-class InvitationAdmin(InvitationAdminBase):
+class InvitationAdmin(InvitationAdminBase, ModelAdmin):
     list_display = ("email", "inviter", "created", "sent", "accepted")
     list_select_related = ("inviter",)
     list_filter = (
@@ -1650,6 +1793,7 @@ class LogEntryAdmin(
     ModelAdminEstimateCountMixin,
     ModelAdminSearchParserMixin,
     BaseLogEntryAdmin,
+    ModelAdmin,
 ):
     list_filter = ("action", QFieldCloudResourceTypeFilter)
 
@@ -1706,12 +1850,53 @@ class FaultyDeltaFilesAdmin(QFieldCloudModelAdmin):
         if obj.deltafile:
             filename = basename(obj.deltafile.name)
             return format_html(
-                '<a href="{}" target="_blank">{}</a>',
+                '<a href="{}" target="_blank" class="text-link">{}</a>',
                 obj.deltafile.url,
                 filename,
             )
 
         return "-"
+
+
+# Third-party admins, kept as they are, but on top of Unfold's `ModelAdmin` to get Unfold's widgets and changelists.
+class GroupAdmin(ModelAdmin):
+    pass
+
+
+class SiteAdmin(SiteAdminBase, ModelAdmin):
+    pass
+
+
+class SocialAppAdmin(SocialAppAdminBase, ModelAdmin):
+    pass
+
+
+class SocialAccountAdmin(SocialAccountAdminBase, ModelAdmin):
+    pass
+
+
+class SocialTokenAdmin(SocialTokenAdminBase, ModelAdmin):
+    pass
+
+
+class CronJobLogAdmin(CronJobLogAdminBase, ModelAdmin):
+    pass
+
+
+class CronJobLockAdmin(ModelAdmin):
+    pass
+
+
+class AccessAttemptAdmin(AccessAttemptAdminBase, ModelAdmin):
+    pass
+
+
+class AccessFailureLogAdmin(AccessFailureLogAdminBase, ModelAdmin):
+    pass
+
+
+class AccessLogAdmin(AccessLogAdminBase, ModelAdmin):
+    pass
 
 
 Invitation = get_invitation_model()
@@ -1725,6 +1910,12 @@ qfc_admin_site.unregister(AccessAttempt)
 qfc_admin_site.unregister(AccessFailureLog)
 qfc_admin_site.unregister(AccessLog)
 qfc_admin_site.unregister([Config])
+qfc_admin_site.unregister(Site)
+qfc_admin_site.unregister(SocialApp)
+qfc_admin_site.unregister(SocialAccount)
+qfc_admin_site.unregister(SocialToken)
+qfc_admin_site.unregister(CronJobLog)
+qfc_admin_site.unregister(CronJobLock)
 
 qfc_admin_site.register(Invitation, InvitationAdmin)
 qfc_admin_site.register(Person, PersonAdmin)
@@ -1735,7 +1926,13 @@ qfc_admin_site.register(Delta, DeltaAdmin)
 qfc_admin_site.register(Job, JobAdmin)
 qfc_admin_site.register(LogEntry, LogEntryAdmin)
 qfc_admin_site.register(FaultyDeltaFile, FaultyDeltaFilesAdmin)
-qfc_admin_site.register(Group)
+qfc_admin_site.register(Group, GroupAdmin)
+qfc_admin_site.register(Site, SiteAdmin)
+qfc_admin_site.register(SocialApp, SocialAppAdmin)
+qfc_admin_site.register(SocialAccount, SocialAccountAdmin)
+qfc_admin_site.register(SocialToken, SocialTokenAdmin)
+qfc_admin_site.register(CronJobLog, CronJobLogAdmin)
+qfc_admin_site.register(CronJobLock, CronJobLockAdmin)
 qfc_admin_site.register(AccessAttempt, AccessAttemptAdmin)
 qfc_admin_site.register(AccessFailureLog, AccessFailureLogAdmin)
 qfc_admin_site.register(AccessLog, AccessLogAdmin)

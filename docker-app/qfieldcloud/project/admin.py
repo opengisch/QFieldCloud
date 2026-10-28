@@ -8,9 +8,12 @@ from django.core.files.storage import storages
 from django.forms import ModelForm, fields, widgets
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.template.loader import render_to_string
-from django.urls import path
+from django.urls import reverse
 from django.utils.safestring import SafeText
 from django.utils.translation import gettext_lazy as _
+from unfold.admin import StackedInline, TabularInline
+from unfold.decorators import action
+from unfold.widgets import SELECT_CLASSES
 
 from qfieldcloud.core.admin import (
     QFieldCloudModelAdmin,
@@ -18,6 +21,8 @@ from qfieldcloud.core.admin import (
     format_text,
     model_admin_url,
     qfc_admin_site,
+    redirect_to_add_secret,
+    redirect_to_changelist,
 )
 from qfieldcloud.core.models import ProcessProjectfileJob, ProjectCollaborator, User
 from qfieldcloud.core.utils import get_file_storage_choices
@@ -59,16 +64,30 @@ def qgis_project_layers_list(qgis_project: "QgisProject") -> SafeText:
             }
         )
 
+    if not rows:
+        return SafeText("-")
+
     return SafeText(
         render_to_string(
-            "admin/simple_table.html",
-            {"headers": headers, "rows": rows},
+            "unfold/components/table.html",
+            {
+                "table": {
+                    "headers": list(headers.values()),
+                    "rows": [list(row.values()) for row in rows],
+                },
+            },
         )
     )
 
 
 class ProjectFilesWidget(widgets.Input):
     template_name = "admin/project_files_widget.html"
+
+    def get_context(self, name, value, attrs):
+        context = super().get_context(name, value, attrs)
+        context["select_classes"] = " ".join(SELECT_CLASSES)
+
+        return context
 
 
 class OwnerTypeFilter(admin.SimpleListFilter):
@@ -87,8 +106,9 @@ class OwnerTypeFilter(admin.SimpleListFilter):
         return queryset.filter(owner__type=value)
 
 
-class ProjectCollaboratorInline(admin.TabularInline):
+class ProjectCollaboratorInline(TabularInline):
     model = ProjectCollaborator
+    tab = True
 
     extra = 0
 
@@ -102,8 +122,9 @@ class ProjectCollaboratorInline(admin.TabularInline):
     autocomplete_fields = ("collaborator",)
 
 
-class UserProjectCollaboratorInline(admin.TabularInline):
+class UserProjectCollaboratorInline(TabularInline):
     model = ProjectCollaborator
+    tab = True
     extra = 0
 
     def has_add_permission(self, request, obj):
@@ -125,16 +146,9 @@ class UserProjectCollaboratorInline(admin.TabularInline):
         return obj.type == User.Type.PERSON
 
 
-class ProjectSecretInline(SecretInlineBase):
-    def get_query_params(self) -> dict[str, str]:
-        """Return query parameters for the 'Add Secret' button."""
-        return {
-            "project_id": str(self.parent_obj.pk),
-        }
-
-
-class ProjectSeedInline(admin.StackedInline):
+class ProjectSeedInline(StackedInline):
     model = ProjectSeed
+    tab = True
     extra = 1
     has_direct_delete_permission = False
     fk_name = "project"
@@ -172,8 +186,9 @@ class ProjectSeedInline(admin.StackedInline):
         return False
 
 
-class QgisProjectInline(admin.StackedInline):
+class QgisProjectInline(StackedInline):
     model = QgisProject
+    tab = True
     extra = 0
     has_direct_delete_permission = False
     fk_name = "project"
@@ -416,7 +431,7 @@ class ProjectAdmin(QFieldCloudModelAdmin):
     )
     inlines = (
         ProjectSeedInline,
-        ProjectSecretInline,
+        SecretInlineBase,
         ProjectCollaboratorInline,
         QgisProjectInline,
     )
@@ -429,7 +444,21 @@ class ProjectAdmin(QFieldCloudModelAdmin):
 
     ordering = ("-updated_at",)
 
-    change_form_template = "admin/project_change_form.html"
+    actions_detail = (
+        {
+            "title": _("Actions"),
+            "icon": "bolt",
+            "items": [
+                "run_process_projectfile_job",
+                "add_secret",
+            ],
+        },
+        {
+            "title": _("Related"),
+            "icon": "link",
+            "items": ["related_jobs", "related_faulty_deltafiles"],
+        },
+    )
 
     search_parser_config = {
         "owner": {
@@ -472,23 +501,53 @@ class ProjectAdmin(QFieldCloudModelAdmin):
 
         super().save_formset(request, form, formset, change)
 
-    def get_urls(self) -> list:
-        urls = super().get_urls()
-        return [
-            path(
-                "<path:object_id>/run-process-projectfile-job/",
-                self.admin_site.admin_view(self.run_process_projectfile_job),
-                name="run_process_projectfile_job",
-            ),
-            *urls,
-        ]
+    def has_add_secret_permission(
+        self, request: HttpRequest, object_id: str | None = None
+    ) -> bool:
+        return request.user.has_perm("core.add_secret")  # type: ignore[union-attr]
 
+    @action(
+        description=_("Add secret"),
+        url_path="add-secret",
+        icon="key",
+        permissions=["add_secret"],
+    )
+    def add_secret(self, request: HttpRequest, object_id: str) -> HttpResponse:
+        return redirect_to_add_secret("project", object_id)
+
+    @action(
+        description=_("Run process projectfile job"),
+        url_path="run-process-projectfile-job",
+        icon="play_arrow",
+    )
     def run_process_projectfile_job(
         self, request: HttpRequest, object_id: str
     ) -> HttpResponse:
         project = Project.objects.get(pk=object_id)
         jobs.queue_job(project, ProcessProjectfileJob)
-        return HttpResponseRedirect("..")
+        return HttpResponseRedirect(
+            reverse("admin:project_project_change", args=[object_id])
+        )
+
+    @action(
+        description=_("Project jobs"),
+        url_path="related-jobs",
+        icon="work_history",
+    )
+    def related_jobs(self, request: HttpRequest, object_id: str) -> HttpResponse:
+        return redirect_to_changelist("admin:core_job_changelist", object_id)
+
+    @action(
+        description=_("Faulty deltafiles"),
+        url_path="related-faulty-deltafiles",
+        icon="report",
+    )
+    def related_faulty_deltafiles(
+        self, request: HttpRequest, object_id: str
+    ) -> HttpResponse:
+        return redirect_to_changelist(
+            "admin:core_faultydeltafile_changelist", object_id
+        )
 
 
 qfc_admin_site.register(Project, ProjectAdmin)
