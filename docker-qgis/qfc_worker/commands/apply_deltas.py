@@ -32,6 +32,7 @@ from qgis.PyQt.QtCore import QCoreApplication, QDate, QDateTime, Qt, QTime
 from qfc_worker.commands_base import QfcBaseCommand
 from qfc_worker.utils import (
     download_project,
+    get_unique_field_names,
     start_app,
     stop_app,
     upload_project,
@@ -844,6 +845,16 @@ def create_feature(
     new_feat_attrs = new_feat_delta.get("attributes", {})
     feat_attrs = {}
 
+    # NOTE must be checked before `QgsVectorLayerUtils.createFeature()`, as it silently replaces duplicate values of unique fields.
+    if (
+        unique_constraint_delta_behavior
+        == UniqueConstraintDeltaBehavior.CREATE_CONFLICT
+    ):
+        check_unique_constraint_conflicts(
+            layer,
+            new_feat_attrs or {},
+        )
+
     if new_feat_attrs:
         for field in fields:
             attr_name = field.name()
@@ -921,6 +932,16 @@ def patch_feature(
                 conflicts=conflicts,
                 e_type=DeltaErrorType.Conflict,
             )
+
+    if (
+        unique_constraint_delta_behavior
+        == UniqueConstraintDeltaBehavior.CREATE_CONFLICT
+    ):
+        check_unique_constraint_conflicts(
+            layer,
+            new_feature_delta.get("attributes", {}) or {},
+            ignore_fids=[old_feature.id()],
+        )
 
     geometry = None
 
@@ -1087,6 +1108,48 @@ def compare_feature(
                 )
 
     return conflicts
+
+
+def check_unique_constraint_conflicts(
+    layer: QgsVectorLayer,
+    attrs: dict[str, Any],
+    ignore_fids: list[int] | None = None,
+) -> None:
+    """Checks whether incoming attribute values already exist in fields with a unique constraint.
+
+    If so, the function will raise a `DeltaError` with the conflict details.
+    The primary key is ignored, as its uniqueness is already handled by QGIS.
+    """
+    fields = layer.fields()
+    pk_field_idx = fields.indexOf(get_pk_attr_name(layer))
+    conflicts = []
+
+    unique_field_names = get_unique_field_names(fields, pk_field_idx)
+
+    for attr_name in unique_field_names:
+        if attr_name not in attrs:
+            continue
+
+        attr_value = attrs[attr_name]
+
+        if attr_value is None:
+            continue
+
+        if QgsVectorLayerUtils.valueExists(
+            layer, fields.indexOf(attr_name), attr_value, ignore_fids or []
+        ):
+            conflicts.append(
+                f'The attribute "{attr_name}" has a unique constraint, but the value "{attr_value}" already exists in another feature.'
+            )
+
+    if len(conflicts) > 0:
+        # here we raise a conflict no matter the value of `overwrite_conflicts`,
+        # since unique constraint conflicts shall not be ignored / made silent.
+        raise DeltaError(
+            "There are unique constraint conflicts with already existing features!",
+            conflicts=conflicts,
+            e_type=DeltaErrorType.Conflict,
+        )
 
 
 @lru_cache(maxsize=128)
