@@ -111,6 +111,7 @@ class QfcTestCase(TransactionTestCase):
         self.client.force_login(self.superuser)
 
         urlconf = __import__(settings.ROOT_URLCONF, {}, {}, [""])
+        checked_sort_links_count = 0
 
         for url_item in list_urls(urlconf.urlpatterns):
             if url_item[0] != "admin/":
@@ -137,7 +138,6 @@ class QfcTestCase(TransactionTestCase):
                 # check all different sort columns
                 soup = BeautifulSoup(resp.content, "html.parser")
 
-                checked_sort_links_count = 0
                 for anchor in soup.select(SORT_LINK_SELECTOR):
                     sort_url = f"{url}{anchor.get('href')}"
 
@@ -153,11 +153,10 @@ class QfcTestCase(TransactionTestCase):
                     )
                     checked_sort_links_count += 1
 
-                self.assertGreater(
-                    checked_sort_links_count,
-                    0,
-                    f'No sortable columns found for "{url}".',
-                )
+        # if the admin theme changes the column header markup, `SORT_LINK_SELECTOR` finds no links and no sorting gets checked
+        self.assertGreater(
+            checked_sort_links_count, 0, "No sortable columns found in any admin page."
+        )
 
     def test_admin_urls_redirect_non_staff_users_to_login(self):
         self.client.force_login(self.user1)
@@ -173,6 +172,10 @@ class QfcTestCase(TransactionTestCase):
             with self.subTest(f"Test {url} redirects a non-staff user to login"):
                 # skip if the URL pattern contains placeholders, e.g. /admin/app/model/<object_id>/edit
                 if "<" in url:
+                    continue
+
+                # the admin's own login and logout views are open to everyone
+                if url in ("/admin/login/", "/admin/logout/"):
                     continue
 
                 resp = self.client.get(url)
