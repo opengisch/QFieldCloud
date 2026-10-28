@@ -313,7 +313,7 @@ class QfcTestCase(TransactionTestCase):
         self.client.force_login(staff_user)
 
         resp = self.client.get(
-            reverse("admin:core_organization_add_secret", args=[self.organization.pk])
+            reverse("admin:project_project_add_secret", args=[self.project.pk])
         )
 
         self.assertEqual(resp.status_code, 403)

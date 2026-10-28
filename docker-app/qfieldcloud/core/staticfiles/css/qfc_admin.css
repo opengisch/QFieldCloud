@@ -131,3 +131,13 @@
     gap: 0.5rem;
 }
 /* /Global search */
+
+/* Inline extras: content rendered below an inline table through the inline's `template_after`, e.g. the "Add secret" button */
+.qfc-inline-after {
+    margin-top: 1rem;
+}
+
+.qfc-inline-after > a {
+    width: 100%;
+}
+/* /Inline extras */
