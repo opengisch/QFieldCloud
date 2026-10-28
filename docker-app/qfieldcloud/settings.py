@@ -996,6 +996,8 @@ UNFOLD = {
             "href": lambda request: static("favicon.ico"),
         },
     ],
+    "ENVIRONMENT": [ENVIRONMENT.capitalize(), "info"],
+    "ENVIRONMENT_TITLE_PREFIX": "qfieldcloud.core.admin.get_admin_environment_title_prefix",
     "STYLES": [
         lambda request: static("css/qfc_admin.css"),
     ],
