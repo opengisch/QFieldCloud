@@ -445,8 +445,14 @@ class ProjectAdmin(QFieldCloudModelAdmin):
     ordering = ("-updated_at",)
 
     actions_detail = (
-        "run_process_projectfile_job",
-        "add_secret",
+        {
+            "title": _("Actions"),
+            "icon": "bolt",
+            "items": [
+                "run_process_projectfile_job",
+                "add_secret",
+            ],
+        },
         {
             "title": _("Related"),
             "icon": "link",
