@@ -1133,6 +1133,11 @@ class SecretAdmin(QFieldCloudModelAdmin):
         }
 
 
+def get_secret_add_url(parent_field: str, object_id: str) -> str:
+    """Returns the secret add view URL, prefilled with the parent organization or project, see `SecretAdmin.get_changeform_initial_data`."""
+    return f"{reverse('admin:core_secret_add')}?{urlencode({f'{parent_field}_id': object_id})}"
+
+
 class SecretInlineBase(TabularInline):
     model = Secret
     tab = True
@@ -1140,6 +1145,20 @@ class SecretInlineBase(TabularInline):
     readonly_fields = ("link_to_secret",)
     max_num = 0
     extra = 0
+    # the "Add secret" button below the inline table
+    template_after = "admin/inline_add_secret.html"
+    # the organization or project being edited, set in `get_formset`
+    parent_obj: Any = None
+
+    def get_formset(self, request, obj=None, **kwargs):
+        # Django creates the inline instances per request, so keeping the parent here is safe
+        self.parent_obj = obj
+        return super().get_formset(request, obj, **kwargs)
+
+    @property
+    def add_secret_url(self) -> str:
+        """The URL of the "Add secret" button below the inline table."""
+        return get_secret_add_url(self.parent_obj._meta.model_name, self.parent_obj.pk)
 
     @admin.display(description=_("Name"))
     def link_to_secret(self, obj):
@@ -1157,10 +1176,8 @@ class SecretInlineBase(TabularInline):
 
 
 def redirect_to_add_secret(parent_field: str, object_id: str) -> HttpResponse:
-    """Redirects to the secret add view, prefilled with the parent organization or project, see `SecretAdmin.get_changeform_initial_data`."""
-    return HttpResponseRedirect(
-        f"{reverse('admin:core_secret_add')}?{urlencode({f'{parent_field}_id': object_id})}"
-    )
+    """Redirects to the secret add view, prefilled with the parent organization or project."""
+    return HttpResponseRedirect(get_secret_add_url(parent_field, object_id))
 
 
 def redirect_to_changelist(url_name: str, search: str) -> HttpResponse:
@@ -1603,7 +1620,6 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
         OrganizationSecretInline,
     )
 
-    actions_detail = ("add_secret",)
     fields = (
         "storage_usage__field",
         "username",
@@ -1647,20 +1663,6 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
             "filter": "membership_roles__user__username__iexact",
         },
     }
-
-    def has_add_secret_permission(
-        self, request: HttpRequest, object_id: str | None = None
-    ) -> bool:
-        return request.user.has_perm("core.add_secret")  # type: ignore[union-attr]
-
-    @action(
-        description=_("Add secret"),
-        url_path="add-secret",
-        icon="key",
-        permissions=["add_secret"],
-    )
-    def add_secret(self, request: HttpRequest, object_id: str) -> HttpResponse:
-        return redirect_to_add_secret("organization", object_id)
 
     @admin.display(description=_("Active members"))
     def active_users_links(self, instance) -> str:
