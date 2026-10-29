@@ -16,7 +16,6 @@ class Migration(migrations.Migration):
                 choices=[
                     ("create_conflict", "Create a conflict"),
                     ("qgis_default", "Let the QGIS default behavior apply"),
-                    ("update_existing_feature", "Update the existing feature"),
                 ],
                 default="create_conflict",
                 help_text="How the deltas should be handled when they violate unique constraints for this project.",

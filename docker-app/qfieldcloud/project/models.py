@@ -259,10 +259,6 @@ class Project(models.Model):
     class UniqueConstraintDeltaBehavior(models.TextChoices):
         CREATE_CONFLICT = "create_conflict", _("Create a conflict")
         QGIS_DEFAULT = "qgis_default", _("Let the QGIS default behavior apply")
-        UPDATE_EXISTING_FEATURE = (
-            "update_existing_feature",
-            _("Update the existing feature"),
-        )
 
     # Project types configurable from clients
     CONFIGURABLE_PROJECT_TYPES = [
