@@ -31,6 +31,7 @@ from qgis.core import (
     QgsCsException,
     QgsFieldConstraints,
     QgsLayerTree,
+    QgsLayerTreeNode,
     QgsMapLayer,
     QgsMapSettings,
     QgsProject,
@@ -364,6 +365,35 @@ def open_qgis_project_temporarily(
     """
     map_settings = QgsMapSettings()
 
+    def get_canvas_layers(layer_tree: QgsLayerTree):
+        canvas_layers = []
+
+        def visit_layer_tree_node(node: QgsLayerTreeNode):
+            if QgsLayerTree.isLayer(node):
+                if not node.layer():
+                    return
+
+                if node.layer().isSpatial() and node.isVisible():
+                    canvas_layers.append(node.layer())
+
+            children = node.children()
+            for child in children:
+                visit_layer_tree_node(child)
+
+        if layer_tree.hasCustomLayerOrder():
+            layers = layer_tree.customLayerOrder()
+            for layer in layers:
+                node_layer = layer_tree.findLayer(layer.id())
+                if not node_layer or not node_layer.layer():
+                    continue
+
+                if node_layer.layer().isSpatial() and node_layer.isVisible():
+                    canvas_layers.append(node_layer.layer())
+        else:
+            visit_layer_tree_node(layer_tree)
+
+        return canvas_layers
+
     def on_project_read_wrapper(
         tmp_project: QgsProject,
         map_settings: QgsMapSettings,
@@ -397,7 +427,7 @@ def open_qgis_project_temporarily(
 
             layer_tree = settings["layer_tree"]
             if layer_tree:
-                map_settings.setLayers(reversed(list(layer_tree.customLayerOrder())))
+                map_settings.setLayers(get_canvas_layers(layer_tree))
 
             if map_settings.extent().isEmpty():
                 # set to full extent if empty
