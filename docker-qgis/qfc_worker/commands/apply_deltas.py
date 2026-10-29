@@ -103,7 +103,6 @@ class UniqueConstraintDeltaBehavior(str, Enum):
 
     CREATE_CONFLICT = "create_conflict"
     QGIS_DEFAULT = "qgis_default"
-    UPDATE_EXISTING_FEATURE = "update_existing_feature"
 
 
 class DeltaFeature(TypedDict):
