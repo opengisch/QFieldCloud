@@ -238,8 +238,36 @@ class QgisProjectInline(QfcStackedInline):
         return False
 
 
+class QgisLayerFieldInline(TabularInline):
+    model = QgisLayerField
+    ordering = ("ordering",)
+    show_title = False
+
+    fields = (
+        "name__link",
+        "type_display",
+        "alias",
+        "comment",
+    )
+    readonly_fields = fields
+
+    @admin.display(description=_("Name"))
+    def name__link(self, instance: QgisLayerField) -> SafeText:
+        return model_admin_url(instance, instance.name)
+
+    def has_add_permission(self, request, obj=None) -> bool:
+        return False
+
+    def has_change_permission(self, request, obj=None) -> bool:
+        return False
+
+    def has_delete_permission(self, request, obj=None) -> bool:
+        return False
+
+
 class LayerAdmin(QFieldCloudModelAdmin):
     has_direct_delete_permission = False
+    inlines = (QgisLayerFieldInline,)
 
     OWNER_LOOKUP = "qgis_project__project__owner"
 
@@ -289,7 +317,6 @@ class LayerAdmin(QFieldCloudModelAdmin):
         "provider_error_summary",
         "provider_error_message",
         "qfs_settings__pre",
-        "fields__list",
         "created_at",
         "updated_at",
     )
@@ -308,10 +335,6 @@ class LayerAdmin(QFieldCloudModelAdmin):
     @admin.display(description=_("QFieldSync settings"))
     def qfs_settings__pre(self, instance: QgisLayer) -> SafeText:
         return format_text(instance.qfs_settings, "json")
-
-    @admin.display(description=_("Fields"))
-    def fields__list(self, instance: QgisLayer) -> SafeText:
-        return render_qgis_layer_fields_table(instance)
 
     def has_add_permission(self, request, obj=None) -> bool:
         return False

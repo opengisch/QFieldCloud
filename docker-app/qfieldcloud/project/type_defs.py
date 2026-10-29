@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TypedDict
+from typing import Any, TypedDict
 
 
 class QgisProjectDetails(TypedDict, total=False):
@@ -85,4 +85,4 @@ class FieldDetails(TypedDict):
     default_value: str
     set_default_value_on_update: bool
     widget_type: str
-    widget_config: dict
+    widget_config: dict[str, Any]

@@ -1045,7 +1045,7 @@ def layers_data_to_string(layers_by_id):
             fields_table.append(
                 [
                     f["name"],
-                    f["type"],
+                    f["type_display"],
                     f["length"],
                     f["precision"],
                     f["is_not_null"],
