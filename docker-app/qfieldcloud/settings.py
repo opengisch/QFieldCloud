@@ -709,6 +709,9 @@ QFIELDCLOUD_TEST_SKIP_SORT_ADMIN_URLS = ("/admin/django_cron/cronjoblog/?o=4",)
 # Sets the default admin list view per page, the Django default is 100
 QFIELDCLOUD_ADMIN_LIST_PER_PAGE = 20
 
+# Sets the admin inlines per page, Unfold paginates an inline only if its `per_page` is set
+QFIELDCLOUD_ADMIN_INLINE_PER_PAGE = 10
+
 # Use pg meta table estimate for pagination and display above n entries
 QFIELDCLOUD_ADMIN_EXACT_COUNT_LIMIT = 10000
 

@@ -705,6 +705,7 @@ class MemberOrganizationInline(TabularInline):
     model = OrganizationMember
     tab = True
     extra = 0
+    per_page = settings.QFIELDCLOUD_ADMIN_INLINE_PER_PAGE
 
     def has_add_permission(self, request, obj):
         if obj is None:
@@ -729,6 +730,7 @@ class MemberTeamInline(TabularInline):
     model = TeamMember
     tab = True
     extra = 0
+    per_page = settings.QFIELDCLOUD_ADMIN_INLINE_PER_PAGE
 
     def has_add_permission(self, request, obj):
         if obj is None:
@@ -754,6 +756,7 @@ class UserAccountInline(StackedInline):
     tab = True
     extra = 1
     has_direct_delete_permission = False
+    per_page = settings.QFIELDCLOUD_ADMIN_INLINE_PER_PAGE
 
     def has_add_permission(self, request, obj):
         return obj is None
@@ -765,6 +768,7 @@ class ProjectInline(TabularInline):
     fk_name = "owner"
     extra = 0
     absolute_max = 5000
+    per_page = settings.QFIELDCLOUD_ADMIN_INLINE_PER_PAGE
 
     fields = ("owned_project", "created_by", "is_public", "overwrite_conflicts")
     readonly_fields = ("owned_project", "created_by")
@@ -1591,6 +1595,7 @@ class OrganizationMemberInline(TabularInline):
     tab = True
     fk_name = "organization"
     extra = 0
+    per_page = settings.QFIELDCLOUD_ADMIN_INLINE_PER_PAGE
 
     # These fields must be autocomplete due to performance issue in the default Django admin theme, as the foreign key dropdown renders all the options.
     autocomplete_fields = (
@@ -1611,6 +1616,7 @@ class TeamInline(TabularInline):
     tab = True
     fk_name = "team_organization"
     extra = 0
+    per_page = settings.QFIELDCLOUD_ADMIN_INLINE_PER_PAGE
 
     fields = ("username",)
     has_direct_delete_permission = False
@@ -1712,6 +1718,7 @@ class TeamMemberInline(TabularInline):
     tab = True
     fk_name = "team"
     extra = 0
+    per_page = settings.QFIELDCLOUD_ADMIN_INLINE_PER_PAGE
 
     autocomplete_fields = ("member",)
 
