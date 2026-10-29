@@ -364,21 +364,22 @@ def open_qgis_project_temporarily(
         a dictionary with the project details and the project instance
     """
     map_settings = QgsMapSettings()
-    canvas_layers = []
 
-    def visit_layer_tree_node(node: QgsLayerTreeNode):
-        if QgsLayerTree.isLayer(node):
-            if not node.layer():
-                return
+    def get_canvas_layers(layer_tree: QgsLayerTree):
+        canvas_layers = []
 
-            if node.layer().isSpatial() and node.isVisible():
-                canvas_layers.append(node.layer())
+        def visit_layer_tree_node(node: QgsLayerTreeNode):
+            if QgsLayerTree.isLayer(node):
+                if not node.layer():
+                    return
 
-        children = node.children()
-        for child in children:
-            visit_layer_tree_node(child)
+                if node.layer().isSpatial() and node.isVisible():
+                    canvas_layers.append(node.layer())
 
-    def prepare_canvas_layers(layer_tree: QgsLayerTree):
+            children = node.children()
+            for child in children:
+                visit_layer_tree_node(child)
+
         if layer_tree.hasCustomLayerOrder():
             layers = layer_tree.customLayerOrder()
             for layer in layers:
@@ -390,6 +391,8 @@ def open_qgis_project_temporarily(
                     canvas_layers.append(node_layer.layer())
         else:
             visit_layer_tree_node(layer_tree)
+
+        return canvas_layers
 
     def on_project_read_wrapper(
         tmp_project: QgsProject,
@@ -424,8 +427,7 @@ def open_qgis_project_temporarily(
 
             layer_tree = settings["layer_tree"]
             if layer_tree:
-                prepare_canvas_layers(layer_tree)
-                map_settings.setLayers(canvas_layers)
+                map_settings.setLayers(get_canvas_layers(layer_tree))
 
             if map_settings.extent().isEmpty():
                 # set to full extent if empty
