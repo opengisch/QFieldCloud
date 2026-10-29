@@ -6,6 +6,7 @@ from uuid import UUID
 from xml.etree import ElementTree
 
 from qgis.core import (
+    Qgis,
     QgsCoordinateReferenceSystem,
     QgsGeometry,
     QgsMapRendererCustomPainterJob,
@@ -211,6 +212,9 @@ def _generate_thumbnail(
         del tmp_project
 
         return None
+
+    # Disable label drawing to speed up rendering and avoid preview thumbnails covered with text
+    map_settings.setFlag(Qgis.MapSettingsFlag.DrawLabeling, False)
 
     img = QImage(map_settings.outputSize(), QImage.Format.Format_ARGB32)
     painter = QPainter(img)
