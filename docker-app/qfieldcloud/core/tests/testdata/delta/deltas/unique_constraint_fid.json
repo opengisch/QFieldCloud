@@ -1,0 +1,84 @@
+{
+    "deltas": [
+        {
+            "uuid": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+            "clientId": "11111111-1111-1111-1111-111111111111",
+            "exportId": "22222222-2222-2222-2222-222222222222",
+            "localPk": "1000",
+            "sourcePk": "",
+            "localLayerId": "points_fid_dfd85300_cf93_49db_a4fa_4406cf892d0a",
+            "sourceLayerId": "points_fid_dfd85300_cf93_49db_a4fa_4406cf892d0a",
+            "method": "create",
+            "new": {
+                "geometry": "POINT (10 0)",
+                "attributes": {
+                    "fid_1": 1000,
+                    "fid": 20,
+                    "name": "duplicate"
+                }
+            }
+        },
+        {
+            "uuid": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+            "clientId": "11111111-1111-1111-1111-111111111111",
+            "exportId": "22222222-2222-2222-2222-222222222222",
+            "localPk": "1",
+            "sourcePk": "1",
+            "localLayerId": "points_fid_dfd85300_cf93_49db_a4fa_4406cf892d0a",
+            "sourceLayerId": "points_fid_dfd85300_cf93_49db_a4fa_4406cf892d0a",
+            "method": "patch",
+            "new": {
+                "attributes": {
+                    "fid": 20
+                }
+            },
+            "old": {
+                "attributes": {
+                    "fid": 10
+                }
+            }
+        },
+        {
+            "uuid": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+            "clientId": "11111111-1111-1111-1111-111111111111",
+            "exportId": "22222222-2222-2222-2222-222222222222",
+            "localPk": "1001",
+            "sourcePk": "",
+            "localLayerId": "points_fid_dfd85300_cf93_49db_a4fa_4406cf892d0a",
+            "sourceLayerId": "points_fid_dfd85300_cf93_49db_a4fa_4406cf892d0a",
+            "method": "create",
+            "new": {
+                "geometry": "POINT (11 0)",
+                "attributes": {
+                    "fid_1": 1001,
+                    "fid": 30,
+                    "name": "created"
+                }
+            }
+        },
+        {
+            "uuid": "dddddddd-dddd-dddd-dddd-dddddddddddd",
+            "clientId": "11111111-1111-1111-1111-111111111111",
+            "exportId": "22222222-2222-2222-2222-222222222222",
+            "localPk": "2",
+            "sourcePk": "2",
+            "localLayerId": "points_fid_dfd85300_cf93_49db_a4fa_4406cf892d0a",
+            "sourceLayerId": "points_fid_dfd85300_cf93_49db_a4fa_4406cf892d0a",
+            "method": "patch",
+            "new": {
+                "attributes": {
+                    "fid": 40
+                }
+            },
+            "old": {
+                "attributes": {
+                    "fid": 20
+                }
+            }
+        }
+    ],
+    "files": [],
+    "id": "ffffffff-ffff-ffff-ffff-ffffffffffff",
+    "project": "00000000-0000-0000-0000-000000000000",
+    "version": "1.0"
+}
