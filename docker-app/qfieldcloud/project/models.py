@@ -142,8 +142,7 @@ class ProjectQueryset(models.QuerySet):
     def with_prefetch(self) -> ProjectQueryset:
         """A heavier version of the `Project` with all common `select_related` and `prefetch_related` in place."""
         return (
-            self.defer("project_details")
-            .select_related(
+            self.select_related(
                 "qgis_project",
                 "owner",
                 "owner__useraccount",
@@ -341,7 +340,6 @@ class Project(models.Model):
         on_delete=models.SET_NULL,
         related_name="+",
     )
-    project_details = models.JSONField(blank=True, null=True)
     is_public = models.BooleanField(
         default=False,
         help_text=_(

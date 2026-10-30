@@ -682,11 +682,8 @@ class ProcessProjectfileJobRun(JobRun):
         return context
 
     def after_docker_run(self) -> None:
-        update_fields = ["project_details"]
         project = self.job.project
-        project.project_details = self.job.feedback["outputs"]["project_details"][
-            "project_details"
-        ]
+        details = self.job.feedback["outputs"]["project_details"]["project_details"]
 
         # Since the `Project.qgis_version` field is newly added, we want to backfill it for old projects that didn't have it set,
         # but the `process_projectfile` job can detect the QGIS version from the project file and return it in the feedback, we can set it here.
@@ -694,16 +691,12 @@ class ProcessProjectfileJobRun(JobRun):
         # the correct QGIS docker image to run the job.
         # Therefore, we cannot use the very similar `QgisProject.qgis_version` field,
         # which is not populated until the first `process_projectfile` job is run.
-        if self.job.project.qgis_version is None and project.project_details.get(
-            "qgis_version"
-        ):
-            project.qgis_version = project.project_details["qgis_version"]
-            update_fields.append("qgis_version")
-
-        project.save(update_fields=update_fields)
+        if project.qgis_version is None and details.get("qgis_version"):
+            project.qgis_version = details["qgis_version"]
+            project.save(update_fields=["qgis_version"])
 
         QgisProject.objects.update_from_details(
-            project, project.the_qgis_file.latest_version, project.project_details
+            project, project.the_qgis_file.latest_version, details
         )
 
     def after_docker_exception(self) -> None:
@@ -711,11 +704,6 @@ class ProcessProjectfileJobRun(JobRun):
 
         if hasattr(project, "qgis_project"):
             project.qgis_project.delete()
-
-        # TODO @manylon: keep in sync with `QgisProject` until `Project.project_details` is dropped, see https://app.clickup.com/t/2192114/QF-8600
-        if project.project_details is not None:
-            project.project_details = None
-            project.save(update_fields=("project_details",))
 
 
 class CreateProjectJobRun(JobRun):

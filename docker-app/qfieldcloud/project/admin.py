@@ -404,7 +404,6 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         "data_last_updated_at",
         "restricted_data_last_updated_at",
         "data_last_packaged_at",
-        "project_details__pre",
         "locked_at",
         "is_featured",
         "file_storage",
@@ -425,7 +424,6 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         "data_last_updated_at",
         "restricted_data_last_updated_at",
         "data_last_packaged_at",
-        "project_details__pre",
         "locked_at",
         "file_storage_migrated_at",
         "the_qgis_file",
@@ -485,12 +483,6 @@ class ProjectAdmin(QFieldCloudModelAdmin):
 
     def project_files(self, instance):
         return instance.pk
-
-    def project_details__pre(self, instance):
-        if instance.project_details is None:
-            return ""
-
-        return format_text(instance.project_details, "json")
 
     def save_formset(self, request, form, formset, change):
         for form_obj in formset:
