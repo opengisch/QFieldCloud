@@ -401,6 +401,10 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         "is_attachment_download_on_demand",
         "project_files",
     )
+    # the public collaborator role only takes effect on public projects
+    conditional_fields = {
+        "public_collaborator_role": "is_public == true",
+    }
     readonly_fields = (
         "id",
         "created_by",
