@@ -544,7 +544,12 @@ class PackageJobRun(JobRun):
 
 class ApplyDeltaJobRun(JobRun):
     job_class = ApplyJob
-    command = ["apply_deltas", "%(project__id)s", "%(project__the_qgis_file_name)s"]
+    command = [
+        "apply_deltas",
+        "%(project__id)s",
+        "%(project__the_qgis_file_name)s",
+        "%(project__unique_constraint_delta_behavior)s",
+    ]
 
     def __init__(self, job_id: str) -> None:
         super().__init__(job_id)

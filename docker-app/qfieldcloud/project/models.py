@@ -255,6 +255,10 @@ class Project(models.Model):
         SHARED_DATASETS = "shared_datasets", _("Shared Datasets")
         TEMPLATE = "template", _("Template")
 
+    class UniqueConstraintDeltaBehavior(models.TextChoices):
+        CREATE_CONFLICT = "create_conflict", _("Create a conflict")
+        QGIS_DEFAULT = "qgis_default", _("Let the QGIS default behavior apply")
+
     # Project types configurable from clients
     CONFIGURABLE_PROJECT_TYPES = [
         ProjectType.REGULAR,
@@ -358,6 +362,15 @@ class Project(models.Model):
 
     project_type = models.CharField(
         max_length=32, choices=ProjectType.choices, default=ProjectType.REGULAR
+    )
+
+    unique_constraint_delta_behavior = models.CharField(
+        max_length=32,
+        choices=UniqueConstraintDeltaBehavior.choices,
+        default=UniqueConstraintDeltaBehavior.CREATE_CONFLICT,
+        help_text=_(
+            "How the deltas should be handled when they violate unique constraints for this project."
+        ),
     )
 
     # the Person or Organization id that owns the project

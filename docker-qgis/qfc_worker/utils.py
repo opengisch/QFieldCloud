@@ -30,6 +30,7 @@ from qgis.core import (
     QgsCoordinateTransform,
     QgsCsException,
     QgsFieldConstraints,
+    QgsFields,
     QgsLayerTree,
     QgsLayerTreeNode,
     QgsMapLayer,
@@ -1304,3 +1305,22 @@ def get_qgis_version_from_project_file(filename: str | Path) -> str:
             return version_match.group(1)
     except (zipfile.BadZipFile, ET.ParseError) as err:
         raise ValueError(str(err)) from err
+
+
+def get_unique_field_names(
+    fields: QgsFields, pk_field_idx: int, ignore_pk: bool = True
+) -> list[str]:
+    """Get the names of fields with unique constraints."""
+    unique_field_names = []
+
+    for idx, field in enumerate(fields):
+        if idx == pk_field_idx and ignore_pk:
+            continue
+
+        if (
+            field.constraints().constraints()
+            & QgsFieldConstraints.Constraint.ConstraintUnique
+        ):
+            unique_field_names.append(field.name())
+
+    return unique_field_names
