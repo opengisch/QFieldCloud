@@ -3,12 +3,10 @@ from typing import Any
 from django import forms
 from django.conf import settings
 from django.contrib import admin
-from django.contrib.admin.utils import display_for_value
 from django.core.exceptions import ValidationError
 from django.core.files.storage import storages
 from django.forms import ModelForm, fields, widgets
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
-from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils.safestring import SafeText
 from django.utils.translation import gettext_lazy as _
@@ -38,47 +36,6 @@ from qfieldcloud.project.models import (
     QgisLayer,
     QgisProject,
 )
-
-
-def qgis_project_layers_list(qgis_project: "QgisProject") -> SafeText:
-    headers = {
-        "name": _("Name"),
-        "layer_type": _("Type"),
-        "geom_type": _("Geometry"),
-        "is_valid": _("Valid"),
-        "error": _("Error"),
-    }
-    rows = []
-    for layer in qgis_project.layers.order_by("ordering"):
-        if layer.error_code != LayerErrorCode.NO_ERROR:
-            error_display = layer.get_error_code_display()
-        else:
-            error_display = "-"
-
-        rows.append(
-            {
-                "name": model_admin_url(layer, layer.name),
-                "layer_type": layer.get_layer_type_display(),
-                "geom_type": layer.get_geom_type_display(),
-                "is_valid": display_for_value(layer.is_valid, "-", boolean=True),
-                "error": error_display,
-            }
-        )
-
-    if not rows:
-        return SafeText("-")
-
-    return SafeText(
-        render_to_string(
-            "unfold/components/table.html",
-            {
-                "table": {
-                    "headers": list(headers.values()),
-                    "rows": [list(row.values()) for row in rows],
-                },
-            },
-        )
-    )
 
 
 class ProjectFilesWidget(widgets.Input):
@@ -188,12 +145,48 @@ class ProjectSeedInline(StackedInline):
         return False
 
 
+class QgisLayerInline(TabularInline):
+    model = QgisLayer
+    ordering = ("ordering",)
+    show_title = False
+
+    fields = (
+        "name__link",
+        "layer_type",
+        "geom_type",
+        "is_valid",
+        "error_code__display",
+    )
+    readonly_fields = fields
+
+    @admin.display(description=_("Name"))
+    def name__link(self, instance: QgisLayer) -> SafeText:
+        return model_admin_url(instance, instance.name)
+
+    @admin.display(description=_("Error"))
+    def error_code__display(self, instance: QgisLayer) -> str:
+        if instance.error_code == LayerErrorCode.NO_ERROR:
+            return "-"
+
+        return instance.get_error_code_display()
+
+    def has_add_permission(self, request, obj=None) -> bool:
+        return False
+
+    def has_change_permission(self, request, obj=None) -> bool:
+        return False
+
+    def has_delete_permission(self, request, obj=None) -> bool:
+        return False
+
+
 class QgisProjectInline(StackedInline):
     model = QgisProject
     tab = True
     extra = 0
     has_direct_delete_permission = False
     fk_name = "project"
+    inlines = (QgisLayerInline,)
 
     fields = (
         "name",
@@ -203,17 +196,12 @@ class QgisProjectInline(StackedInline):
         "area_of_interest",
         "background_color",
         "custom_properties__pre",
-        "layers__list",
     )
     readonly_fields = fields
 
     @admin.display(description=_("Custom properties"))
     def custom_properties__pre(self, instance: QgisProject) -> SafeText:
         return format_text(instance.custom_properties, "json")
-
-    @admin.display(description=_("Layers"))
-    def layers__list(self, instance: QgisProject) -> SafeText:
-        return qgis_project_layers_list(instance)
 
     def has_add_permission(self, request, obj=None) -> bool:
         return False
