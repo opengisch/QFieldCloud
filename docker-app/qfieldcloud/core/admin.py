@@ -60,6 +60,7 @@ from invitations.utils import get_invitation_model
 from rest_framework.authtoken.models import TokenProxy
 from unfold.admin import ModelAdmin, StackedInline, TabularInline
 from unfold.decorators import action
+from unfold.paginator import InfinitePaginator
 from unfold.sites import UnfoldAdminSite
 from unfold.views import ChangeList
 
@@ -1812,6 +1813,8 @@ class LogEntryAdmin(
     BaseLogEntryAdmin,
     ModelAdmin,
 ):
+    paginator = InfinitePaginator
+
     list_filter = ("action", QFieldCloudResourceTypeFilter)
 
     search_parser_config = {
@@ -1897,7 +1900,7 @@ class SocialTokenAdmin(SocialTokenAdminBase, ModelAdmin):
 
 
 class CronJobLogAdmin(CronJobLogAdminBase, ModelAdmin):
-    pass
+    paginator = InfinitePaginator
 
 
 class CronJobLockAdmin(ModelAdmin):
@@ -1909,11 +1912,11 @@ class AccessAttemptAdmin(AccessAttemptAdminBase, ModelAdmin):
 
 
 class AccessFailureLogAdmin(AccessFailureLogAdminBase, ModelAdmin):
-    pass
+    paginator = InfinitePaginator
 
 
 class AccessLogAdmin(AccessLogAdminBase, ModelAdmin):
-    pass
+    paginator = InfinitePaginator
 
 
 Invitation = get_invitation_model()
