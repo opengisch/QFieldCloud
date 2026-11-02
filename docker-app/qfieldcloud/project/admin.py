@@ -1,7 +1,6 @@
 from typing import Any
 
 from django import forms
-from django.conf import settings
 from django.contrib import admin
 from django.core.exceptions import ValidationError
 from django.core.files.storage import storages
@@ -10,11 +9,12 @@ from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.urls import reverse
 from django.utils.safestring import SafeText
 from django.utils.translation import gettext_lazy as _
-from unfold.admin import StackedInline, TabularInline
 from unfold.decorators import action
 from unfold.widgets import SELECT_CLASSES
 
 from qfieldcloud.core.admin import (
+    QfcStackedInline,
+    QfcTabularInline,
     QFieldCloudModelAdmin,
     SecretInlineBase,
     format_text,
@@ -64,12 +64,11 @@ class OwnerTypeFilter(admin.SimpleListFilter):
         return queryset.filter(owner__type=value)
 
 
-class ProjectCollaboratorInline(TabularInline):
+class ProjectCollaboratorInline(QfcTabularInline):
     model = ProjectCollaborator
     tab = True
 
     extra = 0
-    per_page = settings.QFIELDCLOUD_ADMIN_INLINE_PER_PAGE
 
     readonly_fields = (
         "created_by",
@@ -81,7 +80,7 @@ class ProjectCollaboratorInline(TabularInline):
     autocomplete_fields = ("collaborator",)
 
 
-class UserProjectCollaboratorInline(TabularInline):
+class UserProjectCollaboratorInline(QfcTabularInline):
     model = ProjectCollaborator
     tab = True
     extra = 0
@@ -105,7 +104,7 @@ class UserProjectCollaboratorInline(TabularInline):
         return obj.type == User.Type.PERSON
 
 
-class ProjectSeedInline(StackedInline):
+class ProjectSeedInline(QfcStackedInline):
     model = ProjectSeed
     tab = True
     extra = 1
@@ -145,7 +144,7 @@ class ProjectSeedInline(StackedInline):
         return False
 
 
-class QgisLayerInline(TabularInline):
+class QgisLayerInline(QfcTabularInline):
     model = QgisLayer
     ordering = ("ordering",)
     show_title = False
@@ -180,7 +179,7 @@ class QgisLayerInline(TabularInline):
         return False
 
 
-class QgisProjectInline(StackedInline):
+class QgisProjectInline(QfcStackedInline):
     model = QgisProject
     tab = True
     extra = 0

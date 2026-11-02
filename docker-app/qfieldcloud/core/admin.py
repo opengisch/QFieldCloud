@@ -483,6 +483,21 @@ class QFieldCloudModelAdmin(  # type: ignore
         return super().has_delete_permission(request, obj)
 
 
+class QfcInlineMixin:
+    """Shared settings of `QfcTabularInline` and `QfcStackedInline`."""
+
+    # NOTE: A custom `formset` must subclass Unfold's `PaginationFormSetMixin`, a plain formset will fail.
+    per_page = settings.QFIELDCLOUD_ADMIN_INLINE_PER_PAGE
+
+
+class QfcTabularInline(QfcInlineMixin, TabularInline):
+    """Base for all tabular inlines."""
+
+
+class QfcStackedInline(QfcInlineMixin, StackedInline):
+    """Base for all stacked inlines."""
+
+
 def admin_urlname_by_obj(value, arg):
     if isinstance(value, User):
         if value.is_person:
@@ -701,11 +716,10 @@ def format_text(value, syntax: Literal["text", "json"]) -> SafeText:
     )
 
 
-class MemberOrganizationInline(TabularInline):
+class MemberOrganizationInline(QfcTabularInline):
     model = OrganizationMember
     tab = True
     extra = 0
-    per_page = settings.QFIELDCLOUD_ADMIN_INLINE_PER_PAGE
 
     def has_add_permission(self, request, obj):
         if obj is None:
@@ -726,11 +740,10 @@ class MemberOrganizationInline(TabularInline):
         return obj.type in (User.Type.PERSON, User.Type.ORGANIZATION)
 
 
-class MemberTeamInline(TabularInline):
+class MemberTeamInline(QfcTabularInline):
     model = TeamMember
     tab = True
     extra = 0
-    per_page = settings.QFIELDCLOUD_ADMIN_INLINE_PER_PAGE
 
     def has_add_permission(self, request, obj):
         if obj is None:
@@ -751,24 +764,22 @@ class MemberTeamInline(TabularInline):
         return obj.type in (User.Type.PERSON, User.Type.ORGANIZATION)
 
 
-class UserAccountInline(StackedInline):
+class UserAccountInline(QfcStackedInline):
     model = UserAccount
     tab = True
     extra = 1
     has_direct_delete_permission = False
-    per_page = settings.QFIELDCLOUD_ADMIN_INLINE_PER_PAGE
 
     def has_add_permission(self, request, obj):
         return obj is None
 
 
-class ProjectInline(TabularInline):
+class ProjectInline(QfcTabularInline):
     model = Project
     tab = True
     fk_name = "owner"
     extra = 0
     absolute_max = 5000
-    per_page = settings.QFIELDCLOUD_ADMIN_INLINE_PER_PAGE
 
     fields = ("owned_project", "created_by", "is_public", "overwrite_conflicts")
     readonly_fields = ("owned_project", "created_by")
@@ -1152,7 +1163,7 @@ def get_secret_add_url(parent_field: str, object_id: str) -> str:
     return f"{reverse('admin:core_secret_add')}?{urlencode({f'{parent_field}_id': object_id})}"
 
 
-class SecretInlineBase(TabularInline):
+class SecretInlineBase(QfcTabularInline):
     model = Secret
     tab = True
     fields = ("link_to_secret", "type", "assigned_to", "created_by")
@@ -1203,7 +1214,7 @@ class OrganizationSecretInline(SecretInlineBase):
     fk_name = "organization"
 
 
-class DeltaInline(TabularInline):
+class DeltaInline(QfcTabularInline):
     model = ApplyJob.deltas_to_apply.through
     tab = True
 
@@ -1382,7 +1393,7 @@ class JobAdmin(QFieldCloudModelAdmin):
         return HttpResponseRedirect(reverse("admin:core_job_change", args=[object_id]))
 
 
-class ApplyJobDeltaInline(TabularInline):
+class ApplyJobDeltaInline(QfcTabularInline):
     model = ApplyJobDelta
     tab = True
 
@@ -1589,12 +1600,11 @@ class DeltaAdmin(QFieldCloudModelAdmin):
         )
 
 
-class OrganizationMemberInline(TabularInline):
+class OrganizationMemberInline(QfcTabularInline):
     model = OrganizationMember
     tab = True
     fk_name = "organization"
     extra = 0
-    per_page = settings.QFIELDCLOUD_ADMIN_INLINE_PER_PAGE
 
     # These fields must be autocomplete due to performance issue in the default Django admin theme, as the foreign key dropdown renders all the options.
     autocomplete_fields = (
@@ -1610,12 +1620,11 @@ class OrganizationMemberInline(TabularInline):
     )
 
 
-class TeamInline(TabularInline):
+class TeamInline(QfcTabularInline):
     model = Team
     tab = True
     fk_name = "team_organization"
     extra = 0
-    per_page = settings.QFIELDCLOUD_ADMIN_INLINE_PER_PAGE
 
     fields = ("username",)
     has_direct_delete_permission = False
@@ -1712,12 +1721,11 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
         super().save_formset(request, form, formset, change)
 
 
-class TeamMemberInline(TabularInline):
+class TeamMemberInline(QfcTabularInline):
     model = TeamMember
     tab = True
     fk_name = "team"
     extra = 0
-    per_page = settings.QFIELDCLOUD_ADMIN_INLINE_PER_PAGE
 
     autocomplete_fields = ("member",)
 
