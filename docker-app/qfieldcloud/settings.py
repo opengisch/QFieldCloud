@@ -807,6 +807,12 @@ CONSTANCE_CONFIG = {
 CONSTANCE_ADDITIONAL_FIELDS = {
     # Unfold widgets for the builtin types (`str`, `int`, `bool`, `datetime` etc.)
     **UNFOLD_CONSTANCE_ADDITIONAL_FIELDS,
+    datetime: [
+        "django.forms.SplitDateTimeField",
+        {
+            "widget": "unfold.widgets.UnfoldAdminSplitDateTimeWidget",
+        },
+    ],
     "textarea": [
         "django.forms.CharField",
         {
