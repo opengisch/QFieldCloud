@@ -5,7 +5,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("project", "0013_projectseed_json2qgis_file"),
+        ("project", "0014_remove_project_project_details"),
     ]
 
     operations = [
