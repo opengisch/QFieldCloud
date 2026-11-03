@@ -153,6 +153,7 @@ class QgisLayerInline(QfcTabularInline):
         "name__link",
         "layer_type",
         "geom_type",
+        "is_readonly",
         "is_valid",
         "error_code__display",
     )
@@ -253,6 +254,7 @@ class LayerAdmin(QFieldCloudModelAdmin):
         "file_name",
         "is_valid",
         "is_localized",
+        "is_readonly",
         "error_code",
         "error_summary",
         "error_message",
