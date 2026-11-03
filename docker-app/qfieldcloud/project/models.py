@@ -256,6 +256,8 @@ class Project(models.Model):
         TEMPLATE = "template", _("Template")
 
     class UniqueConstraintDeltaBehavior(models.TextChoices):
+        """Needs to be kept in sync with the worker's apply deltas `UniqueConstraintDeltaBehavior` enum mirror."""
+
         CREATE_CONFLICT = "create_conflict", _("Create a conflict")
         QGIS_DEFAULT = "qgis_default", _("Let the QGIS default behavior apply")
 
@@ -369,7 +371,7 @@ class Project(models.Model):
         choices=UniqueConstraintDeltaBehavior.choices,
         default=UniqueConstraintDeltaBehavior.CREATE_CONFLICT,
         help_text=_(
-            "How the deltas should be handled when they violate unique constraints for this project."
+            "How the deltas should be handled when they violate field unique constraints."
         ),
     )
 

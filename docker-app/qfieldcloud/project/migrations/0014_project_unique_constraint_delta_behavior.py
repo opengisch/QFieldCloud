@@ -18,7 +18,7 @@ class Migration(migrations.Migration):
                     ("qgis_default", "Let the QGIS default behavior apply"),
                 ],
                 default="create_conflict",
-                help_text="How the deltas should be handled when they violate unique constraints for this project.",
+                help_text="How the deltas should be handled when they violate field unique constraints.",
                 max_length=32,
             ),
         ),

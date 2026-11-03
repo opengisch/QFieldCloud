@@ -98,6 +98,8 @@ class DeltaStatus(str, Enum):
 
 
 class UniqueConstraintDeltaBehavior(str, Enum):
+    """Needs to be kept in sync with the `Project` Django model's unique constraint behavior."""
+
     def __str__(self):
         return str(self.value)
 
