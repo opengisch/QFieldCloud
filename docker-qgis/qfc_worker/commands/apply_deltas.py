@@ -948,7 +948,7 @@ def patch_feature(
         check_unique_constraint_conflicts(
             layer,
             new_feature_delta.get("attributes", {}) or {},
-            ignore_fids=[old_feature.id()],
+            ignore_fid=old_feature.id(),
         )
     elif unique_constraint_delta_behavior == UniqueConstraintDeltaBehavior.QGIS_DEFAULT:
         # Nothing to do, the default QGIS behavior.
@@ -1128,7 +1128,7 @@ def compare_feature(
 def check_unique_constraint_conflicts(
     layer: QgsVectorLayer,
     attrs: dict[str, Any],
-    ignore_fids: list[int] | None = None,
+    ignore_fid: int | None = None,
 ) -> None:
     """Checks whether incoming attribute values already exist in fields with a unique constraint.
 
@@ -1150,8 +1150,12 @@ def check_unique_constraint_conflicts(
         if attr_value is None:
             continue
 
+        ignore_fids = []
+        if ignore_fid:
+            ignore_fids.append(ignore_fid)
+
         if QgsVectorLayerUtils.valueExists(
-            layer, fields.indexOf(attr_name), attr_value, ignore_fids or []
+            layer, fields.indexOf(attr_name), attr_value, ignore_fids
         ):
             conflicts.append(
                 f'The attribute "{attr_name}" has a unique constraint, but the value "{attr_value}" already exists in another feature.'
