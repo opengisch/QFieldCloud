@@ -11,8 +11,14 @@ from django.test.testcases import TransactionTestCase
 from django.urls import reverse
 from django.urls.resolvers import URLPattern, URLResolver
 from unfold.admin import ModelAdmin
+from unfold.contrib.inlines.admin import NonrelatedInlineMixin
+from unfold.forms import PaginationFormSetMixin
 
-from qfieldcloud.core.admin import SecretAdmin, qfc_admin_site
+from qfieldcloud.core.admin import (
+    QfcInlineMixin,
+    SecretAdmin,
+    qfc_admin_site,
+)
 from qfieldcloud.core.models import (
     Delta,
     Organization,
@@ -106,6 +112,43 @@ class QfcTestCase(TransactionTestCase):
             non_unfold_admins.append(model._meta.label)
 
         self.assertEqual(non_unfold_admins, ["constance.Config"])
+
+    def test_all_inlines_are_qfc_inlines(self):
+        """Every inline must be based on `QfcTabularInline` or `QfcStackedInline`.
+
+        Non-related inlines and inlines with a custom formset are skipped.
+        Only the inlines declared in `inlines` are checked, not the ones added in `get_inlines`.
+        """
+        with self.subTest("Test every registered inline uses the base classes"):
+            inlines_to_check = []
+
+            for model_admin in qfc_admin_site._registry.values():
+                for inline_class in model_admin.inlines:
+                    inlines_to_check.append(inline_class)
+
+            non_qfc_inlines = []
+
+            while inlines_to_check:
+                inline_class = inlines_to_check.pop()
+
+                # Unfold renders the `inlines` of an inline as nested inlines
+                for nested_inline_class in getattr(inline_class, "inlines", ()):
+                    inlines_to_check.append(nested_inline_class)
+
+                if issubclass(inline_class, QfcInlineMixin):
+                    continue
+
+                # non-related inlines pick their rows in `get_form_queryset`, without a foreign key to the parent
+                if issubclass(inline_class, NonrelatedInlineMixin):
+                    continue
+
+                # a custom formset without Unfold's pagination can't use `per_page`
+                if not issubclass(inline_class.formset, PaginationFormSetMixin):
+                    continue
+
+                non_qfc_inlines.append(inline_class.__name__)
+
+            self.assertEqual(non_qfc_inlines, [])
 
     def test_admin_opens(self):
         self.client.force_login(self.superuser)
