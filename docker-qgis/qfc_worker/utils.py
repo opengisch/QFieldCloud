@@ -1308,13 +1308,13 @@ def get_qgis_version_from_project_file(filename: str | Path) -> str:
 
 
 def get_unique_field_names(
-    fields: QgsFields, pk_field_idx: int, ignore_pk: bool = True
+    fields: QgsFields, skip_field_idx: int | None = None
 ) -> list[str]:
     """Get the names of fields with unique constraints."""
     unique_field_names = []
 
     for idx, field in enumerate(fields):
-        if idx == pk_field_idx and ignore_pk:
+        if idx == skip_field_idx:
             continue
 
         if (
