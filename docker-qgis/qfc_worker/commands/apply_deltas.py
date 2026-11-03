@@ -855,6 +855,13 @@ def create_feature(
             layer,
             new_feat_attrs or {},
         )
+    elif unique_constraint_delta_behavior == UniqueConstraintDeltaBehavior.QGIS_DEFAULT:
+        # Nothing to do, the default behavior of `create_feature`.
+        pass
+    else:
+        raise NotImplementedError(
+            f"Unknown value for {unique_constraint_delta_behavior=}!"
+        )
 
     if new_feat_attrs:
         for field in fields:
@@ -942,6 +949,13 @@ def patch_feature(
             layer,
             new_feature_delta.get("attributes", {}) or {},
             ignore_fids=[old_feature.id()],
+        )
+    elif unique_constraint_delta_behavior == UniqueConstraintDeltaBehavior.QGIS_DEFAULT:
+        # Nothing to do, the default QGIS behavior.
+        pass
+    else:
+        raise NotImplementedError(
+            f"Unknown value for {unique_constraint_delta_behavior=}"
         )
 
     geometry = None
