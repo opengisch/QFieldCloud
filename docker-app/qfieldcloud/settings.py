@@ -708,6 +708,7 @@ QFIELDCLOUD_TEST_SKIP_SORT_ADMIN_URLS = ("/admin/django_cron/cronjoblog/?o=4",)
 QFIELDCLOUD_ADMIN_LIST_PER_PAGE = 20
 
 # Sets the admin inlines per page, Unfold paginates an inline only if its `per_page` is set
+# NOTE keep the number of inlines per page small, as each inline is a form of it's own and must fit in `django.forms.formsets.BaseFormSet.absolute_max`. What is more, all inlines on a page are submitted together and must fit in `DATA_UPLOAD_MAX_NUMBER_FIELDS`.
 QFIELDCLOUD_ADMIN_INLINE_PER_PAGE = 10
 
 # Use pg meta table estimate for pagination and display above n entries
