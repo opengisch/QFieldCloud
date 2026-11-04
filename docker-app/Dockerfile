@@ -113,8 +113,13 @@ USER 10001
 # a separate stage for webserver test environment
 FROM base AS webserver_test
 ENV LOGGER_SOURCE=app
+# CI runs this test target with the normal Gunicorn command, so it needs the
+# runtime dependencies as well as packages used only by the test suite.
+COPY ./requirements/requirements_runtime.txt requirements/requirements_runtime.txt
 COPY ./requirements/requirements_test.txt requirements/requirements_test.txt
-RUN uv pip install --system --no-cache -r requirements/requirements_test.txt
+RUN uv pip install --system --no-cache \
+    -r requirements/requirements_runtime.txt \
+    -r requirements/requirements_test.txt
 EXPOSE 8000
 
 COPY . .

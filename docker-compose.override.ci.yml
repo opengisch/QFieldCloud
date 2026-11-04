@@ -1,0 +1,27 @@
+# Trusted CI jobs apply this after build_images has pushed the exact commit tag.
+# !reset removes inherited build definitions, preventing Compose from rebuilding
+# a service locally instead of testing the shared image.
+services:
+  app:
+    image: ghcr.io/opengisch/qfieldcloud-app-test:${DOCKER_IMAGE_TAG}
+    build: !reset null
+
+  nginx:
+    image: ghcr.io/opengisch/qfieldcloud-nginx:${DOCKER_IMAGE_TAG}
+    build: !reset null
+
+  qgis3:
+    image: ghcr.io/opengisch/qfieldcloud-qgis3:${DOCKER_IMAGE_TAG}
+    build: !reset null
+
+  qgis4:
+    image: ghcr.io/opengisch/qfieldcloud-qgis4:${DOCKER_IMAGE_TAG}
+    build: !reset null
+
+  worker_wrapper:
+    image: ghcr.io/opengisch/qfieldcloud-worker-wrapper:${DOCKER_IMAGE_TAG}
+    build: !reset null
+
+  createbuckets:
+    image: ghcr.io/opengisch/qfieldcloud-createbuckets:${DOCKER_IMAGE_TAG}
+    build: !reset null
