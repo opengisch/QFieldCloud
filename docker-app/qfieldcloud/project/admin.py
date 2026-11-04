@@ -6,7 +6,6 @@ from django.core.exceptions import ValidationError
 from django.core.files.storage import storages
 from django.forms import ModelForm, fields, widgets
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
-from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils.safestring import SafeText
 from django.utils.translation import gettext_lazy as _
@@ -38,32 +37,6 @@ from qfieldcloud.project.models import (
     QgisLayerField,
     QgisProject,
 )
-
-
-def render_qgis_layer_fields_table(layer: "QgisLayer") -> SafeText:
-    headers = {
-        "name": _("Name"),
-        "type_display": _("Type"),
-        "alias": _("Alias"),
-        "comment": _("Comment"),
-    }
-    rows = []
-    for field in layer.fields.order_by("ordering"):
-        rows.append(
-            {
-                "name": model_admin_url(field, field.name),
-                "type_display": field.type_display,
-                "alias": field.alias or "-",
-                "comment": field.comment or "-",
-            }
-        )
-
-    return SafeText(
-        render_to_string(
-            "admin/simple_table.html",
-            {"headers": headers, "rows": rows},
-        )
-    )
 
 
 class ProjectFilesWidget(widgets.Input):
@@ -238,7 +211,7 @@ class QgisProjectInline(QfcStackedInline):
         return False
 
 
-class QgisLayerFieldInline(TabularInline):
+class QgisLayerFieldInline(QfcTabularInline):
     model = QgisLayerField
     ordering = ("ordering",)
     show_title = False
