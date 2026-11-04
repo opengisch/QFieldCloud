@@ -119,7 +119,7 @@ class ClearJobOutputsAfterRetentionPeriodJob(CronJobBase):
     def do(self):
         jobs = Job.objects.filter(
             created_at__lt=timezone.now()
-            - timedelta(days=config.JOB_OUTPUT_RETENTION_DAYS),
+            - timedelta(days=config.JOBS_LOGS_RETENTION_PERIOD_DAYS),
             output__isnull=False,
         )
 
