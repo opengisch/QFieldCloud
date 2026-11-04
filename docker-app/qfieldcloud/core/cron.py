@@ -124,3 +124,18 @@ class ClearJobOutputsAfterRetentionPeriodJob(CronJobBase):
         )
 
         jobs.update(output=None)
+
+
+class ClearJobFeedbackAfterRetentionPeriodJob(CronJobBase):
+    # runs every night at 04:00
+    schedule = Schedule(run_every_mins=1440, run_at_times=["04:00"])
+    code = "qfieldcloud.clear_jobs_feedback_after_retention_period"
+
+    def do(self):
+        jobs = Job.objects.filter(
+            created_at__lt=timezone.now()
+            - timedelta(days=config.JOBS_LOGS_RETENTION_PERIOD_DAYS),
+            feedback__isnull=False,
+        )
+
+        jobs.update(feedback=None)
