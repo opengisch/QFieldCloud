@@ -396,7 +396,7 @@ class ModelAdminSearchParserMixin:
 class ModelAdminListDisplayAutoFkeyFields:
     """Automatically converts foreign keys to links to their corresponding foreign model. Useful for fields such as `created_by`."""
 
-    model: models.Model
+    model: type[models.Model]
 
     list_display_auto_fkey_fields: bool | Iterable[str] = True
     """
@@ -541,7 +541,7 @@ UserEmailDetails = namedtuple(
 )
 
 
-class EmailAddressAdmin(EmailAddressAdminBase, ModelAdmin):
+class EmailAddressAdmin(EmailAddressAdminBase, QFieldCloudModelAdmin):
     actions_list = ("export_emails_to_csv",)
 
     def gen_users_email_addresses(self) -> Generator[UserEmailDetails, None, None]:
@@ -1772,7 +1772,7 @@ class TeamAdmin(QFieldCloudModelAdmin):
         return super().get_form(request, obj, bool(change), **kwargs)
 
 
-class InvitationAdmin(InvitationAdminBase, ModelAdmin):
+class InvitationAdmin(InvitationAdminBase, QFieldCloudModelAdmin):
     list_display = ("email", "inviter", "created", "sent", "accepted")
     list_select_related = ("inviter",)
     list_filter = (
@@ -1883,44 +1883,43 @@ class FaultyDeltaFilesAdmin(QFieldCloudModelAdmin):
         return "-"
 
 
-# Third-party admins, kept as they are, but on top of Unfold's `ModelAdmin` to get Unfold's widgets and changelists.
-class GroupAdmin(ModelAdmin):
+class GroupAdmin(QFieldCloudModelAdmin):
     pass
 
 
-class SiteAdmin(SiteAdminBase, ModelAdmin):
+class SiteAdmin(SiteAdminBase, QFieldCloudModelAdmin):  # type: ignore[misc]
     pass
 
 
-class SocialAppAdmin(SocialAppAdminBase, ModelAdmin):
+class SocialAppAdmin(SocialAppAdminBase, QFieldCloudModelAdmin):
     pass
 
 
-class SocialAccountAdmin(SocialAccountAdminBase, ModelAdmin):
+class SocialAccountAdmin(SocialAccountAdminBase, QFieldCloudModelAdmin):
     pass
 
 
-class SocialTokenAdmin(SocialTokenAdminBase, ModelAdmin):
+class SocialTokenAdmin(SocialTokenAdminBase, QFieldCloudModelAdmin):
     pass
 
 
-class CronJobLogAdmin(CronJobLogAdminBase, ModelAdmin):
+class CronJobLogAdmin(CronJobLogAdminBase, QFieldCloudModelAdmin):
     pass
 
 
-class CronJobLockAdmin(ModelAdmin):
+class CronJobLockAdmin(QFieldCloudModelAdmin):
     pass
 
 
-class AccessAttemptAdmin(AccessAttemptAdminBase, ModelAdmin):
+class AccessAttemptAdmin(AccessAttemptAdminBase, QFieldCloudModelAdmin):
     pass
 
 
-class AccessFailureLogAdmin(AccessFailureLogAdminBase, ModelAdmin):
+class AccessFailureLogAdmin(AccessFailureLogAdminBase, QFieldCloudModelAdmin):
     pass
 
 
-class AccessLogAdmin(AccessLogAdminBase, ModelAdmin):
+class AccessLogAdmin(AccessLogAdminBase, QFieldCloudModelAdmin):
     pass
 
 
