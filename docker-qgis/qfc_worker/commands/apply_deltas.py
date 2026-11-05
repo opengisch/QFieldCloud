@@ -1133,7 +1133,12 @@ def check_unique_constraint_conflicts(
     """Checks whether incoming attribute values already exist in fields with a unique constraint.
 
     If so, the function will raise a `DeltaError` with the conflict details.
-    The primary key is ignored, as its uniqueness is already handled by QGIS.
+    `ignore_fid` can be used to ignore a specific feature ID, typically the old fid during a delta patch.
+
+    Args:
+        layer: layer to check
+        attrs: dictionary of attribute values to check
+        ignore_fid: feature ID to ignore
     """
     fields = layer.fields()
     pk_field_idx = fields.indexOf(get_pk_attr_name(layer))
