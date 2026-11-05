@@ -1761,6 +1761,14 @@ class QgisLayer(models.Model):
 
 
 class QgisLayerFieldQuerySet(models.QuerySet):
+    @staticmethod
+    def _get_constraint_strength(value: str | None) -> QgsFieldConstraintStrength:
+        """Returns the matching `QgsFieldConstraintStrength`, or `NOT_SET` if `value` is missing or unknown."""
+        if value in QgsFieldConstraintStrength.values:
+            return QgsFieldConstraintStrength(value)
+
+        return QgsFieldConstraintStrength.NOT_SET
+
     @transaction.atomic()
     def update_from_details(
         self,
@@ -1787,30 +1795,36 @@ class QgisLayerFieldQuerySet(models.QuerySet):
             if not name:
                 continue
 
+            # Store `type` only if it is an integer, otherwise store `None`.
+            field_type = field_data.get("type")
+            if not isinstance(field_type, int):
+                field_type = None
+
             defaults = {
                 "ordering": ordering,
                 "alias": field_data.get("alias") or "",
                 "comment": field_data.get("comment") or "",
-                "type": field_data.get("type") or None,
+                "type": field_type,
                 "type_display": field_data.get("type_display") or "",
                 "length": field_data.get("length") or 0,
                 "precision": field_data.get("precision") or 0,
-                "is_not_null_strength": field_data.get("constraint_strength")
-                or QgsFieldConstraintStrength.NOT_SET,
+                "is_not_null_strength": self._get_constraint_strength(
+                    field_data.get("constraint_strength")
+                ),
                 "constraint_expression": field_data.get("constraint_expression") or "",
                 "constraint_expression_description": field_data.get(
                     "constraint_expression_description"
                 )
                 or "",
-                "constraint_expression_strength": field_data.get(
-                    "constraint_expression_strength"
-                )
-                or QgsFieldConstraintStrength.NOT_SET,
-                "is_unique_strength": field_data.get("is_unique_strength")
-                or QgsFieldConstraintStrength.NOT_SET,
+                "constraint_expression_strength": self._get_constraint_strength(
+                    field_data.get("constraint_expression_strength")
+                ),
+                "is_unique_strength": self._get_constraint_strength(
+                    field_data.get("is_unique_strength")
+                ),
                 "default_value": field_data.get("default_value") or "",
-                "set_default_value_on_update": field_data.get(
-                    "set_default_value_on_update", False
+                "set_default_value_on_update": bool(
+                    field_data.get("set_default_value_on_update")
                 ),
                 "widget_type": field_data.get("widget_type") or "",
                 "widget_config": field_data.get("widget_config") or {},

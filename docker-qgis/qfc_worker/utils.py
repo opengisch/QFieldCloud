@@ -820,12 +820,18 @@ def get_layers_data(project: QgsProject) -> dict[str, dict]:
             for field in layer.fields():
                 constraints = field.constraints()
 
+                # `field.type()` must be a plain `int`, so it can be matched by `QtType` in `qfieldcloud/project/enums.py`.
+                # PyQt5 enums are `int` and some PyQt6 enums are `enum.Enum` and not JSON serializable.
+                field_type = field.type()
+                if not isinstance(field_type, int):
+                    field_type = field_type.value
+
                 fields.append(
                     {
                         "name": field.name(),
                         "alias": field.alias(),
                         "comment": field.comment(),
-                        "type": field.type(),
+                        "type": field_type,
                         "type_display": field.displayType(),
                         "length": field.length(),
                         "precision": field.precision(),
