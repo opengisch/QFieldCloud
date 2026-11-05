@@ -1879,9 +1879,9 @@ class QgisLayerField(models.Model):
         help_text=_("QGIS field type as a Qt type enum value."),
     )
 
-    type_display = models.CharField(
+    # NOTE The provider type name is unbounded.
+    type_display = models.TextField(
         blank=True,
-        max_length=100,
         help_text=_("QGIS field type display name"),
     )
 
@@ -1937,8 +1937,8 @@ class QgisLayerField(models.Model):
         ),
     )
 
-    widget_type = models.CharField(
-        max_length=100,
+    # NOTE Plugins can register editor widgets with arbitrary names.
+    widget_type = models.TextField(
         blank=True,
         help_text=_("QGIS editor widget type configured for the field."),
     )
@@ -1952,8 +1952,10 @@ class QgisLayerField(models.Model):
         verbose_name_plural = _("QGIS layer fields")
         ordering = ["layer", "ordering"]
         constraints = [
+            # `name` is unbounded and can be too large for a Postgres btree index row, so this indexes MD5(name) instead.
             models.UniqueConstraint(
-                fields=["layer", "name"],
-                name="field_qgis_layer_qgis_field_name_uniq",
+                F("layer"),
+                MD5("name"),
+                name="field_layer_name_md5_uniq",
             )
         ]
