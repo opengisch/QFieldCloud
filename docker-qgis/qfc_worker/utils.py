@@ -38,6 +38,7 @@ from qgis.core import (
     QgsProject,
     QgsProjectArchive,
     QgsProviderRegistry,
+    QgsReadWriteContext,
     QgsRectangle,
     QgsReferencedRectangle,
     QgsSettings,
@@ -885,6 +886,7 @@ def get_layers_data(project: QgsProject) -> dict[str, dict]:
             ),
             "is_valid": layer.isValid(),
             "is_localized": layer_source.is_localized_path,
+            "is_readonly": is_layer_readonly(layer),
             "datasource": data_provider_source,
             "type": layer.type(),
             "type_name": layer.type().name,
@@ -1324,3 +1326,24 @@ def get_unique_field_names(
             unique_field_names.append(field.name())
 
     return unique_field_names
+
+
+def is_layer_readonly(layer: QgsMapLayer) -> bool:
+    """Check if the layer is read-only in the QGIS project.
+
+    We can't use `layer.readOnly()`, because it is `True` for every layer when the project is opened as read-only.
+    Instead, we load the layer again from its XML and check if it is read-only.
+    """
+    layer_xml = QDomDocument()
+    layer_xml.setContent(layer.originalXmlProperties())
+
+    # Reuse the same class as the `layer` param, as we may get any type of `QgsMapLayer`, e.g. vector, raster, etc.
+    layer = layer.__class__()
+    layer.readLayerXml(
+        layer_xml.documentElement(),
+        QgsReadWriteContext(),
+        # `FlagDontResolveLayers` stops QGIS from opening the data source
+        QgsMapLayer.ReadFlag.FlagDontResolveLayers,
+    )
+
+    return layer.readOnly()

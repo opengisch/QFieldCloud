@@ -971,9 +971,12 @@ class Project(models.Model):
                             ),
                         }
                     )
-                # the layer is missing a primary key, warn it is going to be read-only
+                # the layer is missing a primary key, warn it is going to be read-only, unless it is already marked as read-only in QGIS
                 elif layer.layer_type == QgsLayerType.Vector:
-                    if layer.qfs_settings.get("qfc_source_data_pk_name") == "":
+                    if (
+                        layer.qfs_settings.get("qfc_source_data_pk_name") == ""
+                        and not layer.is_readonly
+                    ):
                         problems.append(
                             {
                                 "layer": layer_name,
@@ -1557,6 +1560,7 @@ class QgisLayerQuerySet(models.QuerySet):
                 "file_name": layer_data.get("filename") or "",
                 "is_valid": layer_data.get("is_valid", False),
                 "is_localized": layer_data.get("is_localized", False),
+                "is_readonly": layer_data.get("is_readonly", None),
                 "error_code": layer_data.get("error_code") or LayerErrorCode.NO_ERROR,
                 "error_summary": layer_data.get("error_summary") or "",
                 "error_message": layer_data.get("error_message") or "",
@@ -1677,6 +1681,12 @@ class QgisLayer(models.Model):
 
     is_localized = models.BooleanField(
         default=False, help_text=_("Whether the layer is using a localized dataset.")
+    )
+
+    is_readonly = models.BooleanField(
+        null=True,
+        default=None,
+        help_text=_("Whether the layer is marked as read-only in the QGIS project."),
     )
 
     error_code = models.CharField(

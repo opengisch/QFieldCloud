@@ -45,6 +45,7 @@ class LayerDetails(TypedDict):
     filename: str
     is_valid: bool
     is_localized: bool
+    is_readonly: bool
     datasource: str
     error_code: str
     error_summary: str
