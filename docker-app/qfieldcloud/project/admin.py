@@ -213,6 +213,7 @@ class QgisProjectInline(QfcStackedInline):
 
 class QgisLayerFieldInline(QfcTabularInline):
     model = QgisLayerField
+    tab = True
     ordering = ("ordering",)
     show_title = False
 
