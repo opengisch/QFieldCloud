@@ -742,6 +742,7 @@ def extract_project_details(project: QgsProject) -> dict[str, str]:
 def get_constraint_strength(
     constraint_strength: QgsFieldConstraints.ConstraintStrength,
 ) -> str:
+    """Must be kept in sync with `QgsFieldConstraintStrength` in `qfieldcloud/project/enums.py`."""
     if (
         constraint_strength
         == QgsFieldConstraints.ConstraintStrength.ConstraintStrengthNotSet
@@ -819,12 +820,19 @@ def get_layers_data(project: QgsProject) -> dict[str, dict]:
             for field in layer.fields():
                 constraints = field.constraints()
 
+                # `field.type()` must be a plain `int`, so it can be matched by `QtType` in `qfieldcloud/project/enums.py`.
+                # PyQt5 enums are `int` and some PyQt6 enums are `enum.Enum` and not JSON serializable.
+                field_type = field.type()
+                if not isinstance(field_type, int):
+                    field_type = field_type.value
+
                 fields.append(
                     {
                         "name": field.name(),
                         "alias": field.alias(),
                         "comment": field.comment(),
-                        "type": field.typeName(),
+                        "type": field_type,
+                        "type_display": field.displayType(),
                         "length": field.length(),
                         "precision": field.precision(),
                         "is_not_null": bool(
@@ -1043,7 +1051,7 @@ def layers_data_to_string(layers_by_id):
             fields_table.append(
                 [
                     f["name"],
-                    f["type"],
+                    f["type_display"],
                     f["length"],
                     f["precision"],
                     f["is_not_null"],
@@ -1062,10 +1070,6 @@ def layers_data_to_string(layers_by_id):
                 "Alias",
             ],
         )
-
-        # Avoid dumping potentially very long field values which can affect performance
-        # TODO @suricactus: No need to delete fields once the `Layer` and `LayerField` models are implemented as the data will no longer fatten the `Project` model, see https://app.clickup.com/t/2192114/QF-8219
-        del layer_data["fields"]
 
     return output
 
