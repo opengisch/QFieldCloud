@@ -117,6 +117,8 @@ class ClearJobLogsAfterRetentionPeriodJob(CronJobBase):
     code = "qfieldcloud.clear_jobs_logs_after_retention_period"
 
     def do(self):
+        assert config.JOBS_LOGS_RETENTION_PERIOD_DAYS >= 90
+
         jobs = Job.objects.filter(
             created_at__lt=timezone.now()
             - timedelta(days=config.JOBS_LOGS_RETENTION_PERIOD_DAYS),
