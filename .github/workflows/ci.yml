@@ -5,7 +5,7 @@ permissions:
   contents: read
 
 env:
-  # Tie every image consumed by a test run to the exact commit under test.
+  # Tie every commit-tagged image to the exact commit under test.
   DOCKER_IMAGE_TAG: commit-${{ github.sha }}
   # Fork and Dependabot PR tokens cannot push commit images to GHCR.
   # For those PRs, each test job builds its images on the GitHub Actions runner.
@@ -144,12 +144,11 @@ jobs:
         with:
           images: ghcr.io/opengisch/qfieldcloud-${{ matrix.services.service_name }}
 
-          # On master, images used by both tests and deployments receive two GHCR tags:
-          # immutable `commit-<sha>` for this test run and mutable `edge` for deployment.
-          # Publishing a GitHub Release produces version and latest tags. Unlike a
-          # push to the `release` branch, the published event does not run tests.
+          # Test images receive an exact commit tag. The runtime app also receives
+          # this tag when already built because it is consumed downstream.
           tags: |
             type=raw,value=${{ env.DOCKER_IMAGE_TAG }},enable=${{ env.BUILD_FOR_TESTS == 'true' }}
+            type=raw,value=${{ env.DOCKER_IMAGE_TAG }},enable=${{ matrix.services.service_name == 'app' && env.PUBLISH_RUNTIME == 'true' }}
             type=match,pattern=v(.*),group=1,enable=${{ env.PUBLISH_RUNTIME == 'true' && github.event_name == 'release' }}
             type=raw,value=latest,enable=${{ env.PUBLISH_RUNTIME == 'true' && github.event_name == 'release' }}
             type=edge,branch=master,enable=${{ env.PUBLISH_RUNTIME == 'true' && github.event_name == 'push' && github.ref_name == 'master' }}
