@@ -5,7 +5,7 @@ permissions:
   contents: read
 
 env:
-  # Tie every image consumed by a test run to the exact commit under test.
+  # Tie every commit-tagged image to the exact commit under test.
   DOCKER_IMAGE_TAG: commit-${{ github.sha }}
   # Fork and Dependabot PR tokens cannot push commit images to GHCR.
   # For those PRs, each test job builds its images on the GitHub Actions runner.
@@ -144,13 +144,13 @@ jobs:
         with:
           images: ghcr.io/opengisch/qfieldcloud-${{ matrix.services.service_name }}
 
-          # On master, images used by both tests and deployments receive two GHCR tags:
-          # immutable `commit-<sha>` for this test run and mutable `edge` for deployment.
-          # Publishing a GitHub Release produces only version tags. Unlike a push
-          # to the `release` branch, the published event does not run tests.
+          # Test images receive an exact commit tag. The runtime app also receives
+          # this tag when already built because it is consumed downstream.
           tags: |
             type=raw,value=${{ env.DOCKER_IMAGE_TAG }},enable=${{ env.BUILD_FOR_TESTS == 'true' }}
+            type=raw,value=${{ env.DOCKER_IMAGE_TAG }},enable=${{ matrix.services.service_name == 'app' && env.PUBLISH_RUNTIME == 'true' }}
             type=match,pattern=v(.*),group=1,enable=${{ env.PUBLISH_RUNTIME == 'true' && github.event_name == 'release' }}
+            type=raw,value=latest,enable=${{ env.PUBLISH_RUNTIME == 'true' && github.event_name == 'release' }}
             type=edge,branch=master,enable=${{ env.PUBLISH_RUNTIME == 'true' && github.event_name == 'push' && github.ref_name == 'master' }}
 
       - name: Docker Metadata (Docker Hub)
@@ -164,6 +164,7 @@ jobs:
 
           tags: |
             type=match,pattern=v(.*),group=1,enable=${{ github.event_name == 'release' }}
+            type=raw,value=latest,enable=${{ github.event_name == 'release' }}
             type=edge,branch=master,enable=${{ github.event_name == 'push' && github.ref_name == 'master' }}
 
       - name: Login to GitHub Container Repository (ghcr.io)
@@ -208,7 +209,8 @@ jobs:
 
       - name: Docker Build ${{ matrix.services.service_name }}
         # Build and push only images needed for this event: commit-tagged test images
-        # or edge/version-tagged runtime images. Refresh their GHCR cache at the same time.
+        # or edge/version-tagged runtime images. Published releases are clean builds
+        # and do not read or update the mutable cache.
         if: env.BUILD_FOR_TESTS == 'true' || env.PUBLISH_RUNTIME == 'true'
         uses: docker/build-push-action@v7
         with:
@@ -220,8 +222,9 @@ jobs:
           tags: |
             ${{ steps.ghcr_metadata.outputs.tags }}
             ${{ steps.dockerhub_metadata.outputs.tags }}
-          cache-from: type=registry,ref=ghcr.io/opengisch/qfieldcloud-${{ matrix.services.service_name }}:buildcache
-          cache-to: type=registry,ref=ghcr.io/opengisch/qfieldcloud-${{ matrix.services.service_name }}:buildcache,mode=max
+          no-cache: ${{ github.event_name == 'release' }}
+          cache-from: ${{ github.event_name != 'release' && format('type=registry,ref=ghcr.io/opengisch/qfieldcloud-{0}:buildcache', matrix.services.service_name) || '' }}
+          cache-to: ${{ github.event_name != 'release' && format('type=registry,ref=ghcr.io/opengisch/qfieldcloud-{0}:buildcache,mode=max', matrix.services.service_name) || '' }}
 
   test:
     name: Run tests
