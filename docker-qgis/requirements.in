@@ -3,3 +3,4 @@ typing-extensions==4.16.0
 tabulate==v0.10.0
 requests==2.34.2
 qfieldcloud-sdk==0.18.0
+cryptography==50.0.2
