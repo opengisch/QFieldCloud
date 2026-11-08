@@ -77,6 +77,7 @@ from qfieldcloud.core.models import (
     TeamMember,
     User,
     UserAccount,
+    WorkerPool,
 )
 from qfieldcloud.core.paginators import LargeTablePaginator
 from qfieldcloud.core.utils2 import delta_utils, jobs, pg_service_file
@@ -1084,6 +1085,31 @@ class ProjectSecretForm(ModelForm):
         return cleaned_data
 
 
+class WorkerPoolAdmin(QFieldCloudModelAdmin):
+    """Manages worker pools. Changes that make secrets unreadable ask for confirmation first."""
+
+    model = WorkerPool
+    fields = (
+        "id",
+        "name",
+        "organization",
+        "public_key",
+        "created_at",
+    )
+    readonly_fields = ("id", "created_at")
+    list_display = (
+        "name",
+        "organization",
+        "created_at",
+    )
+    autocomplete_fields = ("organization",)
+
+    search_fields = (
+        "name__icontains",
+        "organization__username__icontains",
+    )
+
+
 class SecretAdmin(QFieldCloudModelAdmin):
     model = Secret
     form = ProjectSecretForm
@@ -1939,6 +1965,7 @@ qfc_admin_site.register(Person, PersonAdmin)
 qfc_admin_site.register(Organization, OrganizationAdmin)
 qfc_admin_site.register(Team, TeamAdmin)
 qfc_admin_site.register(Secret, SecretAdmin)
+qfc_admin_site.register(WorkerPool, WorkerPoolAdmin)
 qfc_admin_site.register(Delta, DeltaAdmin)
 qfc_admin_site.register(Job, JobAdmin)
 qfc_admin_site.register(LogEntry, LogEntryAdmin)

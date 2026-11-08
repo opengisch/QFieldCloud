@@ -35,6 +35,7 @@ from timezone_field import TimeZoneField
 
 from qfieldcloud.core import validators
 from qfieldcloud.core.fields import DynamicStorageFileField, QfcImageField, QfcImageFile
+from qfieldcloud.core.sealed_box import SealedBoxError, validate_public_key
 from qfieldcloud.project.enums import ProjectCollaboratorRole, ProjectRoleOrigins
 from qfieldcloud.subscription.exceptions import ReachedMaxOrganizationMembersError
 
@@ -1768,6 +1769,67 @@ class Secret(models.Model):
                 # we want either the project to be set or the organization, but never both set or unset, therefore ^ (XOR)
                 condition=Q(project__isnull=True) ^ Q(organization__isnull=True),
                 name="secret_assigned_to_organization_or_user",
+            ),
+        ]
+
+
+class WorkerPool(models.Model):
+    """Workers that share one credential and key pair and run the jobs of one owner.
+
+    A pool belongs to one organization, the single pool without one is the global pool.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    name = models.CharField(max_length=255)
+
+    # The organization the pool belongs to. The single pool without an organization is the global pool.
+    organization = models.OneToOneField(
+        Organization,
+        on_delete=models.CASCADE,
+        related_name="worker_pool",
+        limit_choices_to=Q(type=User.Type.ORGANIZATION),
+        null=True,
+        blank=True,
+    )
+
+    # The key secrets are sealed with, empty until the pool's workers provide it. The matching private key only exists on the pool's workers.
+    public_key = models.TextField(blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self) -> str:
+        return self.name
+
+    @classmethod
+    def effective_for(cls, owner: User) -> WorkerPool | None:
+        """Returns the pool that runs the jobs of `owner`, which is its own pool or otherwise the global pool.
+
+        NOTE an organization's pool applies even without a public key, so secrets of an organization that moved to its own workers never end up on the global pool.
+        """
+        return (
+            cls.objects.filter(organization_id=owner.pk).first()
+            or cls.objects.filter(organization__isnull=True).first()
+        )
+
+    def clean(self, **kwargs) -> None:
+        if self.public_key:
+            try:
+                validate_public_key(self.public_key)
+            except SealedBoxError as err:
+                raise ValidationError(
+                    {"public_key": _("Invalid worker pool public key.")}
+                ) from err
+
+        return super().clean(**kwargs)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["organization"],
+                condition=Q(organization__isnull=True),
+                nulls_distinct=False,
+                name="workerpool_single_global_pool_uniq",
             ),
         ]
 
