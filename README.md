@@ -228,6 +228,8 @@ DEBUG_WORKER_WRAPPER_DEBUGPY_PORT=5780
 DEMGEN_PORT=8201
 ```
 
+Also copy `STORAGES` from `.env` to `.env.test` and change the port in its `endpoint_url` to the value of `OBJECT_STORAGE_API_PORT`.
+
 Build the test docker compose stack:
 
 ```shell
@@ -451,6 +453,40 @@ Once the workers of a pool have registered their key, seal the existing secrets 
 ```shell
 docker compose exec app python manage.py sealexistingsecrets
 ```
+
+### Workers over HTTPS
+
+These workers need no Docker socket and only make outgoing HTTPS requests to QFieldCloud, so they can also run on another server, for example next to an internal PostGIS database. They run next to `worker_wrapper`, which keeps picking up jobs as long as it runs, so stop it to use only these workers.
+
+Every pool has one credential and one key pair, shared by all its workers. Secrets are sealed with the public key, so only the pool's workers can open the sealed copy. There is one global pool, and an organization can get its own in the admin under worker pools, which applies to all its projects.
+
+As long as `worker_wrapper` is part of QFieldCloud, every secret also keeps the encrypted value it reads, which the app can decrypt with its own key. The app only stops being able to read secrets once `worker_wrapper` and that value are removed in a later release.
+
+To set up a pool, register it once with its credential:
+
+```shell
+docker compose run --rm \
+  -e QFIELDCLOUD_URL=https://your.host/api/v1/ \
+  -e QFIELDCLOUD_WORKER_POOL_CREDENTIAL=<credential> \
+  qgis3 python3 -m qfc_worker.register
+```
+
+Set these in `.env`, and add `docker-compose.override.https-workers.yml` to `COMPOSE_FILE`:
+
+```shell
+QFIELDCLOUD_WORKER_QFIELDCLOUD_URL=https://your.host/api/v1/
+QFIELDCLOUD_WORKER_POOL_CREDENTIAL=<credential>
+QFIELDCLOUD_WORKER_PRIVATE_KEY=<private key>
+QFIELDCLOUD_HTTPS_WORKER_REPLICAS=2
+```
+
+If the certificate of QFieldCloud comes from a private certificate authority, mount its root certificate into the workers and point `REQUESTS_CA_BUNDLE` to it. On a local instance, also add `docker-compose.override.https-workers.local.yml` to `COMPOSE_FILE`, which does this and connects the workers through nginx.
+
+Then start the workers with `docker compose up -d`. Each container runs one job, exits and is restarted, and empties its temporary directories before the next job. Project files are kept on the disk of the container, so leave room for the largest projects.
+
+Secrets of an organization that gets its own pool must be entered again, as they were sealed for the global pool. The same applies after "Reset key" on a pool.
+
+If only the credential has leaked, generate a new credential in the admin and update the workers. If a worker may be compromised, generate a new credential, use "Reset key", register the pool again and have the users change the real database passwords, as the credential and the private key are in the same environment.
 
 
 ### Using certificate from Let's Encrypt
