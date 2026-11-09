@@ -20,6 +20,11 @@ from django.db import IntegrityError, transaction
 from django.forms.models import model_to_dict
 from django.utils import timezone
 from qfieldcloud.authentication.models import AuthToken
+from qfieldcloud.core.job_results import (
+    apply_delta_results,
+    apply_package_result,
+    apply_project_details,
+)
 from qfieldcloud.core.models import (
     ApplyJob,
     ApplyJobDelta,
@@ -29,8 +34,6 @@ from qfieldcloud.core.models import (
     ProcessProjectfileJob,
     Secret,
 )
-from qfieldcloud.core.utils2 import packages
-from qfieldcloud.project.models import QgisProject
 from qfieldcloud.project.utils.project_utils import get_qgis_major_version
 from tenacity import (
     retry,
@@ -535,11 +538,7 @@ class PackageJobRun(JobRun):
         self.data_last_packaged_at = timezone.now()
 
     def after_docker_run(self) -> None:
-        # only successfully finished packaging jobs should update the Project.data_last_packaged_at
-        self.job.project.data_last_packaged_at = self.data_last_packaged_at
-        self.job.project.save(update_fields=("data_last_packaged_at",))
-
-        packages.delete_obsolete_packages(projects=[self.job.project])
+        apply_package_result(self.job, self.data_last_packaged_at)
 
 
 class ApplyDeltaJobRun(JobRun):
@@ -609,46 +608,7 @@ class ApplyDeltaJobRun(JobRun):
             json.dump(deltafile_contents, f)
 
     def after_docker_run(self) -> None:
-        delta_feedback = self.job.feedback["outputs"]["apply_deltas"]["delta_feedback"]
-        is_data_modified = False
-
-        for feedback in delta_feedback:
-            delta_id = feedback["delta_id"]
-            status = feedback["status"]
-            modified_pk = feedback["modified_pk"]
-
-            if status == "status_applied":
-                status = Delta.Status.APPLIED
-                is_data_modified = True
-            elif status == "status_conflict":
-                status = Delta.Status.CONFLICT
-            elif status == "status_apply_failed":
-                status = Delta.Status.NOT_APPLIED
-            else:
-                status = Delta.Status.ERROR
-                # not certain what happened
-                is_data_modified = True
-
-            Delta.objects.filter(pk=delta_id).update(
-                last_status=status,
-                last_feedback=feedback,
-                last_modified_pk=modified_pk,
-                last_apply_attempt_at=self.job.started_at,
-                last_apply_attempt_by=self.job.created_by,
-            )
-
-            ApplyJobDelta.objects.filter(
-                apply_job_id=self.job_id,
-                delta_id=delta_id,
-            ).update(
-                status=status,
-                feedback=feedback,
-                modified_pk=modified_pk,
-            )
-
-        if is_data_modified:
-            self.job.project.data_last_updated_at = timezone.now()
-            self.job.project.save(update_fields=("data_last_updated_at",))
+        apply_delta_results(self.job)
 
     def after_docker_exception(self) -> None:
         Delta.objects.filter(
@@ -687,22 +647,7 @@ class ProcessProjectfileJobRun(JobRun):
         return context
 
     def after_docker_run(self) -> None:
-        project = self.job.project
-        details = self.job.feedback["outputs"]["project_details"]["project_details"]
-
-        # Since the `Project.qgis_version` field is newly added, we want to backfill it for old projects that didn't have it set,
-        # but the `process_projectfile` job can detect the QGIS version from the project file and return it in the feedback, we can set it here.
-        # NOTE `Project.qgis_version` is used by `wrapper.JobRun.get_qgis_image()` to detect
-        # the correct QGIS docker image to run the job.
-        # Therefore, we cannot use the very similar `QgisProject.qgis_version` field,
-        # which is not populated until the first `process_projectfile` job is run.
-        if project.qgis_version is None and details.get("qgis_version"):
-            project.qgis_version = details["qgis_version"]
-            project.save(update_fields=["qgis_version"])
-
-        QgisProject.objects.update_from_details(
-            project, project.the_qgis_file.latest_version, details
-        )
+        apply_project_details(self.job)
 
     def after_docker_exception(self) -> None:
         project = self.job.project

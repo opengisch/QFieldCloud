@@ -1,6 +1,8 @@
+import json
+import logging
 from collections.abc import Iterable
 from datetime import timedelta
-from typing import NamedTuple
+from typing import IO, Any, NamedTuple
 
 from django.conf import settings
 from django.db import transaction
@@ -13,6 +15,7 @@ from qfieldcloud.core.exceptions import (
     JobSecretsMissingError,
     WorkerJobNotFoundError,
 )
+from qfieldcloud.core.job_results import apply_job_result
 from qfieldcloud.core.models import (
     ApplyJob,
     ApplyJobDelta,
@@ -24,6 +27,11 @@ from qfieldcloud.core.models import (
     WorkerPool,
 )
 from qfieldcloud.project.models import Project
+
+logger = logging.getLogger(__name__)
+
+# Above this a result can no longer be stored reliably in a database column.
+MAX_JOB_RESULT_BYTES = 200 * 1000 * 1000
 
 # Extra time after the job timeout, so a job that used all of it can still report its result.
 TOKEN_EXPIRATION_TIME_BUFFER = timedelta(seconds=60)
@@ -105,6 +113,7 @@ def claim_job(pool: WorkerPool) -> ClaimedJob | None:
         token = AuthToken.objects.create(
             user=job.created_by,
             client_type=AuthToken.ClientType.WORKER,
+            job=job,
             expires_at=timezone.now()
             + timedelta(seconds=settings.QFIELDCLOUD_WORKER_TIMEOUT_S)
             + TOKEN_EXPIRATION_TIME_BUFFER,
@@ -113,19 +122,15 @@ def claim_job(pool: WorkerPool) -> ClaimedJob | None:
     return ClaimedJob(job=job, token=token.key)
 
 
-def fail_job(job: Job, error: str, error_type: str) -> None:
-    """Marks a running job as failed with an error shown to the user."""
+def _mark_job_failed(job: Job) -> None:
     job.status = Job.Status.FAILED
     job.finished_at = timezone.now()
-    job.output = error
-    job.feedback = {
-        "error": error,
-        "error_type": error_type,
-        "error_class": "",
-        "error_origin": "worker_pool",
-        "error_stack": "",
-    }
-    job.save(update_fields=["status", "finished_at", "output", "feedback"])
+    job.save(update_fields=["status", "finished_at"])
+
+    if job.type == Job.Type.PROCESS_PROJECTFILE and hasattr(
+        job.project, "qgis_project"
+    ):
+        job.project.qgis_project.delete()
 
     if job.type == Job.Type.DELTA_APPLY:
         ApplyJob.objects.get(id=job.id).deltas_to_apply.update(
@@ -140,6 +145,114 @@ def fail_job(job: Job, error: str, error_type: str) -> None:
             feedback=None,
             modified_pk=None,
         )
+
+
+def _get_error_feedback(error: str, error_type: str) -> dict[str, Any]:
+    return {
+        "error": error,
+        "error_type": error_type,
+        "error_class": "",
+        "error_origin": "worker_pool",
+        "error_stack": "",
+    }
+
+
+def fail_job(job: Job, error: str, error_type: str) -> None:
+    """Marks a running job as failed with an error shown to the user."""
+    job.output = error
+    job.feedback = _get_error_feedback(error, error_type)
+    job.save(update_fields=["output", "feedback"])
+
+    _mark_job_failed(job)
+
+
+def _read_job_output(output_file: IO[bytes] | None) -> str:
+    if not output_file:
+        return ""
+
+    # NOTE postgres text cannot contain NUL characters, which project code could print
+    return (
+        output_file.read(MAX_JOB_RESULT_BYTES)
+        .decode("utf-8", errors="replace")
+        .replace("\x00", "")
+    )
+
+
+def _read_job_feedback(feedback_file: IO[bytes] | None) -> dict[str, Any]:
+    if not feedback_file:
+        return _get_error_feedback("The job sent no feedback.", "INVALID_RESULT")
+
+    contents = feedback_file.read(MAX_JOB_RESULT_BYTES + 1)
+
+    if len(contents) > MAX_JOB_RESULT_BYTES:
+        return _get_error_feedback("The job feedback is too large.", "RESULT_TOO_LARGE")
+
+    try:
+        feedback = json.loads(contents)
+    except ValueError:
+        return _get_error_feedback("The job feedback is invalid.", "INVALID_RESULT")
+
+    if not isinstance(feedback, dict):
+        return _get_error_feedback("The job feedback is invalid.", "INVALID_RESULT")
+
+    if feedback.get("error"):
+        feedback["error_origin"] = "container"
+
+    return feedback
+
+
+def complete_job(
+    job_id: str,
+    token: AuthToken,
+    exit_code: int,
+    feedback_file: IO[bytes] | None,
+    output_file: IO[bytes] | None,
+) -> None:
+    """Stores the result of a job that ran on a worker pool and ends the job and its token."""
+    with transaction.atomic():
+        job = (
+            Job.objects.select_for_update()
+            .filter(
+                pk=job_id,
+                created_by=token.user,
+                worker_pool__isnull=False,
+                status=Job.Status.STARTED,
+            )
+            # NOTE a token only completes the job it was created for, never another job of the same user
+            .filter(pk=token.job_id)
+            .first()
+        )
+
+        if not job:
+            raise WorkerJobNotFoundError()
+
+        job.output = _read_job_output(output_file)
+        job.feedback = _read_job_feedback(feedback_file)
+        job.feedback["container_exit_code"] = exit_code
+        job.save(update_fields=["output", "feedback"])
+
+        token.expires_at = timezone.now()
+        token.save(update_fields=["expires_at"])
+
+        if exit_code != 0 or job.feedback.get("error") is not None:
+            _mark_job_failed(job)
+            return
+
+        try:
+            with transaction.atomic():
+                apply_job_result(job)
+        except Exception as err:  # noqa: BLE001
+            logger.error(f"Failed to apply the result of job {job.pk}", exc_info=err)
+            job.feedback.update(
+                _get_error_feedback("The job result is invalid.", "INVALID_RESULT")
+            )
+            job.save(update_fields=["feedback"])
+            _mark_job_failed(job)
+            return
+
+        job.status = Job.Status.FINISHED
+        job.finished_at = timezone.now()
+        job.save(update_fields=["status", "finished_at"])
 
 
 def _get_missing_secret_names(

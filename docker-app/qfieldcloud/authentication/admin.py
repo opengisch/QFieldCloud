@@ -60,6 +60,7 @@ class AuthTokenAdmin(QFieldCloudModelAdmin):
         "last_used_at",
         "client_type",
         "user_agent",
+        "job",
     )
     list_filter = (
         "created_at",

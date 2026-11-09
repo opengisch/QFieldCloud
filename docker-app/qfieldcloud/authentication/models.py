@@ -81,6 +81,15 @@ class AuthToken(models.Model):
     client_type = models.CharField(
         max_length=32, choices=ClientType.choices, default=ClientType.UNKNOWN
     )
+    # The job a worker token was created for, it can only complete that job. Empty for all other tokens.
+    job = models.ForeignKey(
+        "core.Job",
+        verbose_name=_("Job"),
+        related_name="+",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+    )
 
     @property
     def is_active(self) -> bool:

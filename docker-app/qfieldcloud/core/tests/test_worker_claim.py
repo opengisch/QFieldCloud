@@ -100,11 +100,12 @@ class QfcTestCase(APITestCase):
         self.assertEqual(job.worker_pool, self.global_pool)
 
     def test_claim_returns_a_worker_token_of_the_job_creator(self):
-        self._create_job(self.person_project)
+        job = self._create_job(self.person_project)
 
         token = AuthToken.objects.get(key=self._claim().json()["token"])
 
         self.assertEqual(token.user, self.user1)
+        self.assertEqual(token.job, job)
         self.assertEqual(token.client_type, AuthToken.ClientType.WORKER)
         self.assertGreater(token.expires_at, timezone.now())
 

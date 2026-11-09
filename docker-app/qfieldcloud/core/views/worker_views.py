@@ -1,10 +1,14 @@
 from django.db import transaction
 from drf_spectacular.utils import extend_schema, extend_schema_view
-from qfieldcloud.authentication.authentication import WorkerPoolAuthentication
+from qfieldcloud.authentication.authentication import (
+    TokenAuthentication,
+    WorkerPoolAuthentication,
+)
+from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.exceptions import WorkerPoolKeyAlreadySetError
 from qfieldcloud.core.models import WorkerPool
 from qfieldcloud.core.sealed_box import SealedBoxError, validate_public_key
-from qfieldcloud.core.worker_pools import claim_job, fetch_job_secrets
+from qfieldcloud.core.worker_pools import claim_job, complete_job, fetch_job_secrets
 from rest_framework import permissions, serializers, status, views
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -120,3 +124,51 @@ class FetchJobSecretsView(views.APIView):
                 ]
             }
         )
+
+
+class IsWorkerToken(permissions.BasePermission):
+    """Allows requests authenticated with the short lived token of a job."""
+
+    def has_permission(self, request: Request, view: views.APIView) -> bool:
+        return (
+            isinstance(request.auth, AuthToken)
+            and request.auth.client_type == AuthToken.ClientType.WORKER
+        )
+
+
+class CompleteJobSerializer(serializers.Serializer):
+    """Validates the result a job runner reports."""
+
+    exit_code = serializers.IntegerField()
+    # NOTE files, because they may be far larger than Django accepts for other request data
+    feedback = serializers.FileField(required=False, allow_empty_file=True)
+    output = serializers.FileField(required=False, allow_empty_file=True)
+
+
+@extend_schema_view(
+    post=extend_schema(description="Report the result of a job"),
+)
+class CompleteJobView(views.APIView):
+    """Receives the result of a job from its runner."""
+
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsWorkerToken]
+    serializer_class = CompleteJobSerializer
+
+    def post(self, request: Request, job_id: str) -> Response:
+        """Finishes or fails a running job of the token's user and returns 204.
+
+        The token stops working afterwards. The results come from a worker that may run outside of our control, so they are validated before being applied.
+        """
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        complete_job(
+            job_id,
+            request.auth,
+            serializer.validated_data["exit_code"],
+            serializer.validated_data.get("feedback"),
+            serializer.validated_data.get("output"),
+        )
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
