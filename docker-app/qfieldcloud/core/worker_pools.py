@@ -8,7 +8,21 @@ from django.db.models import Q, QuerySet
 from django.utils import timezone
 
 from qfieldcloud.authentication.models import AuthToken
-from qfieldcloud.core.models import Job, Organization, Secret, WorkerPool
+from qfieldcloud.core.exceptions import (
+    JobSecretsAlreadyFetchedError,
+    JobSecretsMissingError,
+    WorkerJobNotFoundError,
+)
+from qfieldcloud.core.models import (
+    ApplyJob,
+    ApplyJobDelta,
+    Delta,
+    Job,
+    Organization,
+    SealedSecretValue,
+    Secret,
+    WorkerPool,
+)
 from qfieldcloud.project.models import Project
 
 # Extra time after the job timeout, so a job that used all of it can still report its result.
@@ -97,3 +111,90 @@ def claim_job(pool: WorkerPool) -> ClaimedJob | None:
         )
 
     return ClaimedJob(job=job, token=token.key)
+
+
+def fail_job(job: Job, error: str, error_type: str) -> None:
+    """Marks a running job as failed with an error shown to the user."""
+    job.status = Job.Status.FAILED
+    job.finished_at = timezone.now()
+    job.output = error
+    job.feedback = {
+        "error": error,
+        "error_type": error_type,
+        "error_class": "",
+        "error_origin": "worker_pool",
+        "error_stack": "",
+    }
+    job.save(update_fields=["status", "finished_at", "output", "feedback"])
+
+    if job.type == Job.Type.DELTA_APPLY:
+        ApplyJob.objects.get(id=job.id).deltas_to_apply.update(
+            last_status=Delta.Status.ERROR,
+            last_feedback=None,
+            last_modified_pk=None,
+            last_apply_attempt_at=job.started_at,
+            last_apply_attempt_by=job.created_by,
+        )
+        ApplyJobDelta.objects.filter(apply_job_id=job.id).update(
+            status=Delta.Status.ERROR,
+            feedback=None,
+            modified_pk=None,
+        )
+
+
+def _get_missing_secret_names(
+    secrets: list[Secret], sealed_values: list[SealedSecretValue]
+) -> list[str]:
+    sealed_secrets = {sealed_value.secret.pk for sealed_value in sealed_values}
+
+    return sorted(secret.name for secret in secrets if secret.pk not in sealed_secrets)
+
+
+def fetch_job_secrets(job_id: str, pool: WorkerPool) -> list[SealedSecretValue]:
+    """Returns the sealed secrets of a running job, once. A job with unreadable secrets fails instead of running without them."""
+    missing_secret_names = []
+
+    with transaction.atomic():
+        job = (
+            Job.objects.select_for_update()
+            .filter(pk=job_id, worker_pool=pool, status=Job.Status.STARTED)
+            .first()
+        )
+
+        if not job:
+            raise WorkerJobNotFoundError()
+
+        if job.secrets_fetched_at:
+            raise JobSecretsAlreadyFetchedError()
+
+        job.secrets_fetched_at = timezone.now()
+        job.save(update_fields=["secrets_fetched_at"])
+
+        secrets = []
+
+        # NOTE a job whose user no longer exists cannot have its personal secrets resolved
+        if job.triggered_by:
+            secrets = list(
+                Secret.objects.for_user_and_project(job.triggered_by, job.project)  # type: ignore[attr-defined]
+            )
+
+        sealed_values = list(
+            SealedSecretValue.objects.select_related("secret").filter(
+                secret__in=secrets, pool=pool, key_id=pool.key_id
+            )
+        )
+        missing_secret_names = _get_missing_secret_names(secrets, sealed_values)
+
+        if missing_secret_names:
+            names = ", ".join(missing_secret_names)
+            fail_job(
+                job,
+                f"The job cannot run because these secrets must be entered again: {names}",
+                "MISSING_SECRETS",
+            )
+
+    # NOTE raised outside of the transaction, so the failed job is saved
+    if missing_secret_names:
+        raise JobSecretsMissingError(detail=missing_secret_names)
+
+    return sealed_values

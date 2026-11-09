@@ -67,6 +67,33 @@ class WorkerPoolKeyAlreadySetError(QFieldCloudError):
     log_as_error = False
 
 
+class WorkerJobNotFoundError(QFieldCloudError):
+    """Raised when a worker asks for a job its pool is not running."""
+
+    code = "worker_job_not_found"
+    message = "The job is not running on this worker pool"
+    status_code = status.HTTP_404_NOT_FOUND
+    log_as_error = False
+
+
+class JobSecretsAlreadyFetchedError(QFieldCloudError):
+    """Raised when the sealed secrets of a job are requested a second time."""
+
+    code = "job_secrets_already_fetched"
+    message = "The secrets of this job were already fetched"
+    status_code = status.HTTP_409_CONFLICT
+    log_as_error = False
+
+
+class JobSecretsMissingError(QFieldCloudError):
+    """Raised when a job needs secrets its worker pool cannot read, which also fails the job."""
+
+    code = "job_secrets_missing"
+    message = "The job needs secrets its worker pool cannot read"
+    status_code = status.HTTP_409_CONFLICT
+    log_as_error = False
+
+
 class NotAuthenticatedError(QFieldCloudError):
     """Raised when QFieldCloud unauthenticated request fails the permission checks."""
 

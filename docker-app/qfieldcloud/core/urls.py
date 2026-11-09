@@ -69,6 +69,10 @@ urlpatterns = [
     path("status/", status_views.APIStatusView.as_view()),
     path("worker/key/", worker_views.WorkerPoolKeyView.as_view()),
     path("worker/jobs/claim/", worker_views.ClaimJobView.as_view()),
+    path(
+        "worker/jobs/<uuid:job_id>/secrets/",
+        worker_views.FetchJobSecretsView.as_view(),
+    ),
     path("deltas/<uuid:projectid>/", deltas_views.ListCreateDeltasView.as_view()),
     path(
         "deltas/<uuid:projectid>/<uuid:deltafileid>/",

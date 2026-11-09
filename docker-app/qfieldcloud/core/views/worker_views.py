@@ -4,7 +4,7 @@ from qfieldcloud.authentication.authentication import WorkerPoolAuthentication
 from qfieldcloud.core.exceptions import WorkerPoolKeyAlreadySetError
 from qfieldcloud.core.models import WorkerPool
 from qfieldcloud.core.sealed_box import SealedBoxError, validate_public_key
-from qfieldcloud.core.worker_pools import claim_job
+from qfieldcloud.core.worker_pools import claim_job, fetch_job_secrets
 from rest_framework import permissions, serializers, status, views
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -89,5 +89,34 @@ class ClaimJobView(views.APIView):
                 "job_type": claimed_job.job.type,
                 "project_id": claimed_job.job.project_id,
                 "token": claimed_job.token,
+            }
+        )
+
+
+@extend_schema_view(
+    post=extend_schema(description="Fetch the sealed secrets of a job, once"),
+)
+class FetchJobSecretsView(views.APIView):
+    """Gives a worker the sealed secrets of its job."""
+
+    authentication_classes = [WorkerPoolAuthentication]
+    permission_classes = [IsWorkerPool]
+
+    def post(self, request: Request, job_id: str) -> Response:
+        """Returns the sealed secrets of a running job of the pool. Works once per job.
+
+        A job with secrets its pool cannot read is failed, so it never runs without them.
+        """
+        sealed_values = fetch_job_secrets(job_id, request.auth)
+
+        return Response(
+            {
+                "secrets": [
+                    {
+                        "secret_id": sealed_value.secret.pk,
+                        "ciphertext": sealed_value.ciphertext,
+                    }
+                    for sealed_value in sealed_values
+                ]
             }
         )

@@ -1386,6 +1386,9 @@ class Job(models.Model):
         max_length=64, default="", blank=True, db_index=True
     )
 
+    # When the worker fetched the sealed secrets of the job, which is allowed only once.
+    secrets_fetched_at = models.DateTimeField(blank=True, null=True, editable=False)
+
     # The pool whose worker claimed the job, empty for jobs run by the docker worker wrapper.
     worker_pool = models.ForeignKey(
         "WorkerPool",
