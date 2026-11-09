@@ -446,6 +446,12 @@ Create the global worker pool and store the printed credential with your deploym
 docker compose exec app python manage.py createglobalworkerpool
 ```
 
+Once the workers of a pool have registered their key, seal the existing secrets for it. It can safely be run again:
+
+```shell
+docker compose exec app python manage.py sealexistingsecrets
+```
+
 
 ### Using certificate from Let's Encrypt
 
