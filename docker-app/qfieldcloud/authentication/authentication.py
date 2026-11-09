@@ -5,6 +5,8 @@ from django.db.models import Q
 from django.http.request import HttpRequest
 from django.utils import timezone
 from django.utils.translation import gettext as _
+from drf_spectacular.extensions import OpenApiAuthenticationExtension
+from drf_spectacular.plumbing import build_bearer_security_scheme_object
 from rest_framework.authentication import (
     TokenAuthentication as DjangoRestFrameworkTokenAuthentication,
 )
@@ -99,3 +101,19 @@ class WorkerPoolAuthentication(DjangoRestFrameworkTokenAuthentication):
         ).update(last_seen_at=now)
 
         return (AnonymousUser(), pool)
+
+
+class WorkerPoolAuthenticationScheme(OpenApiAuthenticationExtension):
+    """Describes the worker pool credential in the API schema.
+
+    NOTE without it, the scheme of DRF's `TokenAuthentication` would also match this subclass, under the same name as user tokens.
+    """
+
+    target_class = WorkerPoolAuthentication
+    name = "workerPoolAuth"
+
+    def get_security_definition(self, auto_schema):
+        return build_bearer_security_scheme_object(
+            header_name="Authorization",
+            token_prefix=WorkerPoolAuthentication.keyword,
+        )

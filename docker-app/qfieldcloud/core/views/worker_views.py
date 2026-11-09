@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import transaction
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from qfieldcloud.authentication.authentication import (
     TokenAuthentication,
@@ -8,7 +9,7 @@ from qfieldcloud.authentication.authentication import (
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.exceptions import WorkerPoolKeyAlreadySetError
 from qfieldcloud.core.job_results import get_job_command
-from qfieldcloud.core.models import WorkerPool
+from qfieldcloud.core.models import Job, WorkerPool
 from qfieldcloud.core.sealed_box import SealedBoxError, validate_public_key
 from qfieldcloud.core.worker_pools import (
     DEFAULT_QGIS_MAJOR_VERSION,
@@ -45,7 +46,11 @@ class WorkerPoolKeySerializer(serializers.Serializer):
 
 
 @extend_schema_view(
-    put=extend_schema(description="Set the public key of the worker's pool"),
+    put=extend_schema(
+        description="Set the public key of the worker's pool",
+        request=WorkerPoolKeySerializer,
+        responses={204: None},
+    ),
 )
 class WorkerPoolKeyView(views.APIView):
     """Lets the workers of a pool register the pool's public key."""
@@ -83,8 +88,26 @@ class ClaimJobSerializer(serializers.Serializer):
     qgis_major_version = serializers.IntegerField(default=DEFAULT_QGIS_MAJOR_VERSION)
 
 
+class ClaimedJobSerializer(serializers.Serializer):
+    """A started job, what its worker runs and the token its runner authenticates with."""
+
+    job_id = serializers.UUIDField()
+    job_type = serializers.ChoiceField(choices=Job.Type.choices)
+    project_id = serializers.UUIDField()
+    # the arguments of `entrypoint.py`
+    command = serializers.ListField(child=serializers.CharField())
+    timeout_s = serializers.IntegerField()
+    # the time to report the result after the job timeout, the token expires afterwards
+    report_timeout_s = serializers.IntegerField()
+    token = serializers.CharField()
+
+
 @extend_schema_view(
-    post=extend_schema(description="Claim the next job of the worker's pool"),
+    post=extend_schema(
+        description="Claim the next job of the worker's pool",
+        request=ClaimJobSerializer,
+        responses={200: ClaimedJobSerializer, 204: None},
+    ),
 )
 class ClaimJobView(views.APIView):
     """Hands the next job of a pool to one of its workers."""
@@ -110,20 +133,39 @@ class ClaimJobView(views.APIView):
             return Response(status=status.HTTP_204_NO_CONTENT)
 
         return Response(
-            {
-                "job_id": claimed_job.job.pk,
-                "job_type": claimed_job.job.type,
-                "project_id": claimed_job.job.project_id,
-                "command": get_job_command(claimed_job.job),
-                "timeout_s": settings.QFIELDCLOUD_WORKER_TIMEOUT_S,
-                "report_timeout_s": int(JOB_REPORT_TIMEOUT.total_seconds()),
-                "token": claimed_job.token,
-            }
+            ClaimedJobSerializer(
+                {
+                    "job_id": claimed_job.job.pk,
+                    "job_type": claimed_job.job.type,
+                    "project_id": claimed_job.job.project_id,
+                    "command": get_job_command(claimed_job.job),
+                    "timeout_s": settings.QFIELDCLOUD_WORKER_TIMEOUT_S,
+                    "report_timeout_s": int(JOB_REPORT_TIMEOUT.total_seconds()),
+                    "token": claimed_job.token,
+                }
+            ).data
         )
 
 
+class SealedSecretSerializer(serializers.Serializer):
+    """A secret value sealed for the worker's pool."""
+
+    secret_id = serializers.IntegerField()
+    ciphertext = serializers.CharField()
+
+
+class JobSecretsSerializer(serializers.Serializer):
+    """The sealed secrets of a job."""
+
+    secrets = SealedSecretSerializer(many=True)
+
+
 @extend_schema_view(
-    post=extend_schema(description="Fetch the sealed secrets of a job, once"),
+    post=extend_schema(
+        description="Fetch the sealed secrets of a job, once",
+        request=None,
+        responses={200: JobSecretsSerializer},
+    ),
 )
 class FetchJobSecretsView(views.APIView):
     """Gives a worker the sealed secrets of its job."""
@@ -138,17 +180,7 @@ class FetchJobSecretsView(views.APIView):
         """
         sealed_values = fetch_job_secrets(job_id, request.auth)
 
-        return Response(
-            {
-                "secrets": [
-                    {
-                        "secret_id": sealed_value.secret.pk,
-                        "ciphertext": sealed_value.ciphertext,
-                    }
-                    for sealed_value in sealed_values
-                ]
-            }
-        )
+        return Response(JobSecretsSerializer({"secrets": sealed_values}).data)
 
 
 class IsWorkerToken(permissions.BasePermission):
@@ -173,7 +205,11 @@ class CompleteJobSerializer(serializers.Serializer):
 
 
 @extend_schema_view(
-    post=extend_schema(description="Report the result of a job"),
+    post=extend_schema(
+        description="Report the result of a job",
+        request=CompleteJobSerializer,
+        responses={204: None},
+    ),
 )
 class CompleteJobView(views.APIView):
     """Receives the result of a job from its runner."""
@@ -203,7 +239,11 @@ class CompleteJobView(views.APIView):
 
 
 @extend_schema_view(
-    post=extend_schema(description="Fetch the deltafile of a delta job, once"),
+    post=extend_schema(
+        description="Fetch the deltafile of a delta job, once",
+        request=None,
+        responses={200: OpenApiTypes.OBJECT},
+    ),
 )
 class FetchJobDeltafileView(views.APIView):
     """Gives a worker the deltas of its job."""
