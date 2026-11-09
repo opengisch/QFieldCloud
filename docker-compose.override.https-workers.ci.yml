@@ -1,0 +1,9 @@
+# Trusted CI jobs apply this after `docker-compose.override.https-workers.yml`, so the workers run the shared images.
+services:
+  https_worker_qgis3:
+    image: ghcr.io/opengisch/qfieldcloud-qgis3:${DOCKER_IMAGE_TAG}
+    build: !reset null
+
+  https_worker_qgis4:
+    image: ghcr.io/opengisch/qfieldcloud-qgis4:${DOCKER_IMAGE_TAG}
+    build: !reset null

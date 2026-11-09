@@ -249,6 +249,7 @@ jobs:
           - project
           - filestorage
           - __flaky__
+          - __https_workers__
     continue-on-error: true
     steps:
       - name: Checkout repo
@@ -303,6 +304,16 @@ jobs:
           }'
           EOF
           sed -ri 's/^QFIELDCLOUD_WORKER_DEQUEUE_INTERVAL_S=(.*)/QFIELDCLOUD_WORKER_DEQUEUE_INTERVAL_S=1/g' .env
+          if [[ "${{ matrix.django_app }}" == "__https_workers__" ]]; then
+            # The new workers replace `worker_wrapper`. The pool values are throwaway ones that match `test_https_workers.py`.
+            sed -ri 's|^COMPOSE_FILE=(.*)|COMPOSE_FILE=\1:docker-compose.override.https-workers.yml|g' .env
+            if [[ "$USE_PREBUILT_IMAGES" == "true" ]]; then
+              sed -ri 's|^COMPOSE_FILE=(.*)|COMPOSE_FILE=\1:docker-compose.override.https-workers.ci.yml|g' .env
+            fi
+            sed -ri 's|^QFIELDCLOUD_WORKER_REPLICAS=.*|QFIELDCLOUD_WORKER_REPLICAS=0|g' .env
+            sed -ri 's|^QFIELDCLOUD_WORKER_POOL_CREDENTIAL=.*|QFIELDCLOUD_WORKER_POOL_CREDENTIAL=ERUjQFuOqZmnNu_3EuAty5mnPdohecYX58sJknXWlF0|g' .env
+            sed -ri 's|^QFIELDCLOUD_WORKER_PRIVATE_KEY=.*|QFIELDCLOUD_WORKER_PRIVATE_KEY=gAK6rS5YAyOkPJN5jHbPg6zCuPfMGfI7sjaKdnTd0XE=|g' .env
+          fi
 
       - name: Login to GitHub Container Repository (ghcr.io)
         if: env.USE_PREBUILT_IMAGES == 'true'
@@ -331,7 +342,7 @@ jobs:
           docker compose run --rm app python manage.py collectstatic --no-input
 
       - name: Run mandatory unit and integration tests
-        if: matrix.django_app != '__flaky__'
+        if: matrix.django_app != '__flaky__' && matrix.django_app != '__https_workers__'
         run: |
           docker compose run --rm app python manage.py test --keepdb -v2 --exclude-tag="flaky" qfieldcloud.${{ matrix.django_app }}
 
@@ -339,6 +350,11 @@ jobs:
         if: matrix.django_app == '__flaky__'
         run: |
           docker compose run --rm app python manage.py test --keepdb -v2 --tag="flaky" qfieldcloud
+
+      - name: Run functional tests with the https workers
+        if: matrix.django_app == '__https_workers__'
+        run: |
+          docker compose run --rm -e QFIELDCLOUD_TEST_HTTPS_WORKERS=1 app python manage.py test --keepdb -v2 qfieldcloud.core.tests.test_https_workers
 
       - name: Run Object Storage Cleaner tests
         if: matrix.django_app == 'filestorage'

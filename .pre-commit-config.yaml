@@ -13,12 +13,12 @@ repos:
       - id: check-toml
       - id: check-yaml
         alias: check-yaml-safe
-        exclude: '^docker-compose\.override\.ci\.yml$'
+        exclude: '^docker-compose\.override\.(https-workers\.)?ci\.yml$'
       # Compose's !reset tag is valid Compose YAML but is rejected by the safe
       # YAML loader, so validate this one file with custom tags enabled.
       - id: check-yaml
         alias: check-yaml-compose-custom-tags
-        files: '^docker-compose\.override\.ci\.yml$'
+        files: '^docker-compose\.override\.(https-workers\.)?ci\.yml$'
         args:
           - '--unsafe'
       - id: debug-statements

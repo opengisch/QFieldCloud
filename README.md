@@ -249,6 +249,14 @@ Don't forget to update the `port` value in [`[test.localhost.qfield.cloud]` in y
 </details>
 
 
+#### Functional test of the https workers
+
+`qfieldcloud.core.tests.test_https_workers` runs real jobs on the workers of `docker-compose.override.https-workers.yml`, and is skipped unless `QFIELDCLOUD_TEST_HTTPS_WORKERS` is set. It needs a test stack with that file added to `COMPOSE_FILE`, `QFIELDCLOUD_WORKER_REPLICAS=0`, and the throwaway `QFIELDCLOUD_WORKER_POOL_CREDENTIAL` and `QFIELDCLOUD_WORKER_PRIVATE_KEY` from `.github/workflows/ci.yml`:
+
+```shell
+docker compose run --rm -e QFIELDCLOUD_TEST_HTTPS_WORKERS=1 app python manage.py test --keepdb qfieldcloud.core.tests.test_https_workers
+```
+
 #### Test coverage
 
 To get information about the current test coverage, run:
