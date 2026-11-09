@@ -1,0 +1,25 @@
+{% extends "admin/base_site.html" %}
+{% load i18n unfold %}
+
+{% block content %}
+<div id="content-main">
+    {% include "unfold/helpers/messages/warning.html" with message=warning %}
+    {% include "admin/worker_pool_affected.html" %}
+
+    <form method="post">
+        {% csrf_token %}
+        {% for name, value in post_items %}
+            <input type="hidden" name="{{ name }}" value="{{ value }}">
+        {% endfor %}
+        <input type="hidden" name="_confirmed" value="yes">
+
+        {% component "unfold/components/button.html" with submit=1 variant="danger" %}
+            {% trans 'Yes, continue' %}
+        {% endcomponent %}
+        {% url 'admin:core_workerpool_changelist' as pools_url %}
+        {% component "unfold/components/button.html" with href=pools_url variant="default" %}
+            {% trans 'Cancel' %}
+        {% endcomponent %}
+    </form>
+</div>
+{% endblock %}

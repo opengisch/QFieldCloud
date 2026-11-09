@@ -1,0 +1,21 @@
+{% load i18n unfold %}
+
+{% trans 'Secrets to re-enter' as secrets_title %}
+{% component "unfold/components/card.html" with title=secrets_title class="mb-3" %}
+    <p>{% blocktrans count counter=secrets_count %}{{ counter }} secret{% plural %}{{ counter }} secrets{% endblocktrans %}</p>
+    <ul>
+        {% for secret in affected_secrets %}
+            <li>{{ secret.name }} ({% firstof secret.project secret.organization %})</li>
+        {% endfor %}
+    </ul>
+{% endcomponent %}
+
+{% trans 'Affected projects' as projects_title %}
+{% component "unfold/components/card.html" with title=projects_title class="mb-3" %}
+    <p>{% blocktrans count counter=projects_count %}{{ counter }} project{% plural %}{{ counter }} projects{% endblocktrans %}</p>
+    <ul>
+        {% for project in affected_projects %}
+            <li>{{ project.name }}</li>
+        {% endfor %}
+    </ul>
+{% endcomponent %}

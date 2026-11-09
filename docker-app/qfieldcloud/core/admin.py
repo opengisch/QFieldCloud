@@ -37,7 +37,7 @@ from django.core.exceptions import (
 )
 from django.core.paginator import Paginator
 from django.core.validators import validate_email
-from django.db import models
+from django.db import models, transaction
 from django.db.models import Q, QuerySet
 from django.db.models.fields.json import JSONField
 from django.db.models.functions import Lower
@@ -73,6 +73,7 @@ from qfieldcloud.core.models import (
     Organization,
     OrganizationMember,
     Person,
+    SealedSecretValue,
     Secret,
     Team,
     TeamMember,
@@ -83,6 +84,11 @@ from qfieldcloud.core.models import (
 from qfieldcloud.core.paginators import LargeTablePaginator
 from qfieldcloud.core.utils2 import delta_utils, jobs, pg_service_file
 from qfieldcloud.core.utils2.storage import format_storage_usage
+from qfieldcloud.core.worker_pools import (
+    AffectedResources,
+    get_resources_affected_by_new_pool,
+    get_resources_affected_by_pool_removal,
+)
 from qfieldcloud.project.models import Project
 from qfieldcloud.subscription.models import get_subscription_model
 
@@ -1034,6 +1040,12 @@ class PersonAdmin(QFieldCloudModelAdmin):
         )
 
 
+@admin.display(boolean=True, description=_("Readable by workers"))
+def secret_readable_by_workers(obj: Secret) -> bool:
+    # NOTE annotated by `SecretQueryset.with_readability_by_workers`, so a list does not query per row
+    return obj.is_readable_by_workers  # type: ignore[attr-defined]
+
+
 class ProjectSecretForm(ModelForm):
     class Meta:
         model = Secret
@@ -1086,10 +1098,23 @@ class ProjectSecretForm(ModelForm):
         return cleaned_data
 
 
+AFFECTED_RESOURCES_SHOWN = 100
+
+
+def get_affected_context(affected: AffectedResources) -> dict[str, Any]:
+    return {
+        "affected_secrets": affected.secrets[:AFFECTED_RESOURCES_SHOWN],
+        "secrets_count": affected.secrets.count(),
+        "affected_projects": affected.projects[:AFFECTED_RESOURCES_SHOWN],
+        "projects_count": affected.projects.count(),
+    }
+
+
 class WorkerPoolAdmin(QFieldCloudModelAdmin):
     """Manages worker pools. Changes that make secrets unreadable ask for confirmation first."""
 
     model = WorkerPool
+    delete_confirmation_template = "admin/worker_pool_delete_confirmation.html"
     fields = (
         "id",
         "name",
@@ -1116,9 +1141,69 @@ class WorkerPoolAdmin(QFieldCloudModelAdmin):
 
         # NOTE an invalid form has already written the submitted value on `obj`, so check the stored one
         if obj and WorkerPool.objects.filter(pk=obj.pk).exclude(public_key="").exists():
-            return (*readonly_fields, "public_key")
+            readonly_fields = (*readonly_fields, "public_key")
+
+        # moving a pool to another owner would silently change where jobs and secrets go
+        if obj:
+            readonly_fields = (*readonly_fields, "organization")
 
         return readonly_fields
+
+    def get_actions(self, request):
+        actions = super().get_actions(request)
+
+        # deleting goes through the delete page, which lists the affected secrets
+        actions.pop("delete_selected", None)
+
+        return actions
+
+    def add_view(self, request, form_url="", extra_context=None):
+        if request.method == "POST" and "_confirmed" not in request.POST:
+            form = self.get_form(request, change=False)(request.POST)
+
+            if form.is_valid() and form.cleaned_data["organization"]:
+                affected = get_resources_affected_by_new_pool(
+                    form.cleaned_data["organization"]
+                )
+
+                if affected.secrets.exists():
+                    return self._confirmation_response(
+                        request,
+                        _(
+                            "From now on all jobs of this organization run on this pool. The secrets below cannot be read there and must be entered again, until then jobs that need them fail."
+                        ),
+                        affected,
+                    )
+
+        return super().add_view(request, form_url, extra_context)
+
+    def render_delete_form(self, request, context):
+        context.update(
+            get_affected_context(
+                get_resources_affected_by_pool_removal([context["object"]])
+            )
+        )
+
+        return super().render_delete_form(request, context)
+
+    def _confirmation_response(self, request, warning, affected):
+        """Asks for confirmation and submits the current POST data again."""
+        return TemplateResponse(
+            request,
+            "admin/worker_pool_confirm.html",
+            {
+                **self.admin_site.each_context(request),
+                **get_affected_context(affected),
+                "title": _("Secrets must be entered again"),
+                "warning": warning,
+                "post_items": [
+                    (name, value)
+                    for name, values in request.POST.lists()
+                    if name != "csrfmiddlewaretoken"
+                    for value in values
+                ],
+            },
+        )
 
     def save_model(self, request, obj, form, change):
         if not change:
@@ -1147,7 +1232,20 @@ class WorkerPoolAdmin(QFieldCloudModelAdmin):
     @admin.action(description="Reset key, secrets must be entered again")
     def reset_key(self, request, queryset):
         """Removes the public key of the pools and their sealed values, after confirmation. Secrets must then be entered again."""
-        count = queryset.update(public_key="")
+        affected = get_resources_affected_by_pool_removal(queryset)
+
+        if "_confirmed" not in request.POST and affected.secrets.exists():
+            return self._confirmation_response(
+                request,
+                _(
+                    "The workers of these pools need a new key. The secrets below are deleted from the pools and must be entered again, until then jobs that need them fail."
+                ),
+                affected,
+            )
+
+        with transaction.atomic():
+            SealedSecretValue.objects.filter(pool__in=queryset).delete()
+            count = queryset.update(public_key="")
 
         self.message_user(request, f"Reset the key of {count} worker pool(s).")
 
@@ -1183,10 +1281,12 @@ class SecretAdmin(QFieldCloudModelAdmin):
         "assigned_to",
         "project",
         "organization",
+        "readable_by_workers",
         "created_by",
         "created_at",
     )
     autocomplete_fields = ("project",)
+    readable_by_workers = staticmethod(secret_readable_by_workers)
 
     search_fields = (
         "name__icontains",
@@ -1194,6 +1294,9 @@ class SecretAdmin(QFieldCloudModelAdmin):
         "assigned_to__username__icontains",
         "organization__username__icontains",
     )
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).with_readability_by_workers()
 
     def get_readonly_fields(self, request, obj=None):
         readonly_fields = super().get_readonly_fields(request, obj)
@@ -1209,6 +1312,18 @@ class SecretAdmin(QFieldCloudModelAdmin):
             obj.created_by = request.user
 
         super().save_model(request, obj, form, change)
+
+        pool = obj.effective_pool
+
+        if pool and not pool.public_key:
+            self.message_user(
+                request,
+                _(
+                    "Saved, but worker pool %(name)s has no key yet, so workers cannot read this secret."
+                )
+                % {"name": pool.name},
+                level=messages.WARNING,
+            )
 
     def get_changeform_initial_data(self, request):
         project_id = request.GET.get("project_id")
@@ -1238,14 +1353,23 @@ def get_secret_add_url(parent_field: str, object_id: str) -> str:
 class SecretInlineBase(QfcTabularInline):
     model = Secret
     tab = True
-    fields = ("link_to_secret", "type", "assigned_to", "created_by")
-    readonly_fields = ("link_to_secret",)
+    fields = (
+        "link_to_secret",
+        "type",
+        "assigned_to",
+        secret_readable_by_workers,
+        "created_by",
+    )
+    readonly_fields = ("link_to_secret", secret_readable_by_workers)
     max_num = 0
     extra = 0
     # the "Add secret" button below the inline table
     template_after = "admin/inline_add_secret.html"
     # the organization or project being edited, set in `get_formset`
     parent_obj: Any = None
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).with_readability_by_workers()
 
     def get_formset(self, request, obj=None, **kwargs):
         # Django creates the inline instances per request, so keeping the parent here is safe
@@ -1725,6 +1849,7 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
         "default_project_role_for_members",
         "date_joined",
         "active_users_links",
+        "worker_pool_link",
     )
     list_display = (
         "username",
@@ -1744,6 +1869,7 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
         "date_joined",
         "storage_usage__field",
         "active_users_links",
+        "worker_pool_link",
     )
 
     list_select_related = ("organization_owner", "useraccount")
@@ -1760,6 +1886,28 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
             "filter": "membership_roles__user__username__iexact",
         },
     }
+
+    @admin.display(description=_("Worker pool"))
+    def worker_pool_link(self, instance) -> str:
+        if not instance.pk:
+            return "-"
+
+        pool = WorkerPool.objects.filter(organization=instance).first()
+
+        if not pool:
+            return str(_("Global"))
+
+        key_status = _("no key registered")
+
+        if pool.public_key:
+            key_status = _("key registered")
+
+        return format_html(
+            '<a href="{}" class="text-link">{}</a> ({})',
+            reverse("admin:core_workerpool_change", args=[pool.pk]),
+            pool.name,
+            key_status,
+        )
 
     @admin.display(description=_("Active members"))
     def active_users_links(self, instance) -> str:

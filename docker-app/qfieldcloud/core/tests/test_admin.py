@@ -386,7 +386,9 @@ class QfcTestCase(TransactionTestCase):
                 else:
                     link_columns.append(column.admin_order_field)
 
-            self.assertEqual(plain_columns, ["name", "type", "created_at"])
+            self.assertEqual(
+                plain_columns, ["name", "type", "readable_by_workers", "created_at"]
+            )
             self.assertEqual(
                 link_columns, ["assigned_to", "project", "organization", "created_by"]
             )

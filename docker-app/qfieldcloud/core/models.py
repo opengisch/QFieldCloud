@@ -26,6 +26,7 @@ from django.db.models import Case, Exists, F, OuterRef, Q, When
 from django.db.models import Value as V
 from django.db.models.aggregates import Count, Sum
 from django.db.models.fields.json import JSONField
+from django.db.models.functions import Coalesce
 from django.urls import reverse
 from django.utils.translation import gettext as _
 from encrypted_fields.fields import EncryptedTextField
@@ -1543,6 +1544,16 @@ class ApplyJobDelta(models.Model):
         return f"{self.apply_job_id}:{self.delta_id}"
 
 
+class Sha256Hex(models.Func):
+    """The SHA-256 hex digest of a text, the same as `hashlib.sha256(text.encode()).hexdigest()`.
+
+    NOTE Django's own `SHA256` needs the `pgcrypto` extension on PostgreSQL.
+    """
+
+    template = "ENCODE(SHA256(CONVERT_TO(%(expressions)s, 'UTF8')), 'hex')"
+    output_field = models.CharField()
+
+
 class SecretQueryset(models.QuerySet):
     def for_user_and_project(self, user: User, project: Project) -> SecretQueryset:
         """Returns a queryset with secrets for a specific user and project.
@@ -1654,6 +1665,41 @@ class SecretQueryset(models.QuerySet):
 
         return secret_qs
 
+    def with_readability_by_workers(self) -> SecretQueryset:
+        """Annotates `is_readable_by_workers`, whether the pool that runs the jobs of the secret's owner can read its value.
+
+        The pool is the owner's own pool, otherwise the global pool. Without any pool there is nothing to read the secret, so it counts as readable.
+        """
+        own_pool = WorkerPool.objects.filter(
+            organization_id=OuterRef("worker_pool_owner_id")
+        )
+        readable_sealed_values = SealedSecretValue.objects.filter(
+            secret=OuterRef("pk"), key_id=Sha256Hex("pool__public_key")
+        ).exclude(pool__public_key="")
+
+        return self.annotate(
+            worker_pool_owner_id=Coalesce("project__owner_id", "organization_id")
+        ).annotate(
+            is_readable_by_workers=Case(
+                When(
+                    Exists(own_pool),
+                    then=Exists(
+                        readable_sealed_values.filter(
+                            pool__organization_id=OuterRef("worker_pool_owner_id")
+                        )
+                    ),
+                ),
+                When(
+                    Exists(WorkerPool.objects.filter(organization__isnull=True)),
+                    then=Exists(
+                        readable_sealed_values.filter(pool__organization__isnull=True)
+                    ),
+                ),
+                default=V(True),
+                output_field=models.BooleanField(),
+            )
+        )
+
 
 class Secret(models.Model):
     class Type(models.TextChoices):
@@ -1723,27 +1769,33 @@ class Secret(models.Model):
     # encrypted value of the secret.
     value = EncryptedTextField()
 
-    def get_recipient_pool(self) -> WorkerPool | None:
-        """Returns the worker pool the value has to be sealed for, if it can be sealed."""
+    @property
+    def effective_pool(self) -> WorkerPool | None:
+        """Returns the worker pool of the secret's owner."""
         if self.project:
-            pool = WorkerPool.effective_for(self.project.owner)
-        elif self.organization:
-            pool = WorkerPool.effective_for(self.organization)
-        else:
-            return None
+            return WorkerPool.effective_for(self.project.owner)
 
-        if pool and pool.public_key:
-            return pool
+        if self.organization:
+            return WorkerPool.effective_for(self.organization)
 
         return None
 
+    @property
+    def needs_reentering(self) -> bool:
+        """Whether the workers that need the secret cannot read it until its value is entered again."""
+        return not (
+            Secret.objects.with_readability_by_workers()  # type: ignore[attr-defined]
+            .values_list("is_readable_by_workers", flat=True)
+            .get(pk=self.pk)
+        )
+
     def seal_value(self) -> None:
-        """Replaces the sealed value with a new one for the current recipient pool."""
+        """Replaces the sealed value with a new one for the current pool."""
         self.sealed_values.all().delete()
 
-        pool = self.get_recipient_pool()
+        pool = self.effective_pool
 
-        if not pool:
+        if not pool or not pool.public_key:
             return
 
         payload = json.dumps(

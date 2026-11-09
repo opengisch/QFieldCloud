@@ -1,0 +1,12 @@
+{% extends "admin/delete_confirmation.html" %}
+{% load i18n %}
+
+{% block content %}
+    {% if secrets_count %}
+        {% trans 'Jobs of this pool go back to the global pool. The secrets below cannot be read there and must be entered again, until then jobs that need them fail.' as warning %}
+        {% include "unfold/helpers/messages/warning.html" with message=warning %}
+        {% include "admin/worker_pool_affected.html" %}
+    {% endif %}
+
+    {{ block.super }}
+{% endblock %}
