@@ -6,16 +6,17 @@ from typing import IO, Any, NamedTuple
 
 from django.conf import settings
 from django.db import transaction
-from django.db.models import Q, QuerySet
+from django.db.models import Exists, OuterRef, Q, QuerySet
 from django.utils import timezone
 
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.exceptions import (
+    JobDeltafileAlreadyFetchedError,
     JobSecretsAlreadyFetchedError,
     JobSecretsMissingError,
     WorkerJobNotFoundError,
 )
-from qfieldcloud.core.job_results import apply_job_result
+from qfieldcloud.core.job_results import apply_job_result, prepare_deltafile
 from qfieldcloud.core.models import (
     ApplyJob,
     ApplyJobDelta,
@@ -26,9 +27,12 @@ from qfieldcloud.core.models import (
     Secret,
     WorkerPool,
 )
-from qfieldcloud.project.models import Project
+from qfieldcloud.project.models import Project, ProjectSeed
 
 logger = logging.getLogger(__name__)
+
+# The QGIS version of projects that do not have one yet.
+DEFAULT_QGIS_MAJOR_VERSION = 3
 
 # Above this a result can no longer be stored reliably in a database column.
 MAX_JOB_RESULT_BYTES = 200 * 1000 * 1000
@@ -91,12 +95,49 @@ def get_jobs_outside_own_pools() -> QuerySet[Job]:
     return Job.objects.claimable().exclude(project__owner_id__in=own_pool_owners)
 
 
-def claim_job(pool: WorkerPool) -> ClaimedJob | None:
-    """Starts the oldest job `pool` may run and returns it, with the token for its runner."""
+def _filter_jobs_by_qgis_version(
+    jobs: QuerySet[Job], qgis_major_version: int
+) -> QuerySet[Job]:
+    """Keeps the jobs that run on the given QGIS major version, projects without a version run on QGIS 3.
+
+    A project being created takes the version of the project it is cloned from.
+    """
+    prefix = f"{qgis_major_version}."
+    clones_this_version = Exists(
+        ProjectSeed.objects.filter(
+            project=OuterRef("project"),
+            clone_from_project__qgis_version__startswith=prefix,
+        )
+    )
+    clones_any_version = Exists(
+        ProjectSeed.objects.filter(
+            project=OuterRef("project"),
+            clone_from_project__qgis_version__isnull=False,
+        )
+    )
+    no_version = Q(project__qgis_version__isnull=True)
+    is_create_project = Q(type=Job.Type.CREATE_PROJECT)
+
+    matching = Q(project__qgis_version__startswith=prefix) | Q(
+        no_version, is_create_project, clones_this_version
+    )
+
+    if qgis_major_version == DEFAULT_QGIS_MAJOR_VERSION:
+        matching |= Q(no_version) & (Q(~is_create_project) | Q(~clones_any_version))
+
+    return jobs.filter(matching)
+
+
+def claim_job(
+    pool: WorkerPool, qgis_major_version: int = DEFAULT_QGIS_MAJOR_VERSION
+) -> ClaimedJob | None:
+    """Starts the oldest job `pool` may run on its QGIS version and returns it, with the token for its runner."""
     if pool.organization:
         jobs = Job.objects.claimable().filter(project__owner=pool.organization)
     else:
         jobs = get_jobs_outside_own_pools()
+
+    jobs = _filter_jobs_by_qgis_version(jobs, qgis_major_version)
 
     with transaction.atomic():
         # NOTE a job without its creator has no user for the token and would block the queue
@@ -311,3 +352,24 @@ def fetch_job_secrets(job_id: str, pool: WorkerPool) -> list[SealedSecretValue]:
         raise JobSecretsMissingError(detail=missing_secret_names)
 
     return sealed_values
+
+
+def fetch_job_deltafile(job_id: str, pool: WorkerPool) -> dict[str, Any]:
+    """Returns the deltafile of a running delta job of `pool` and marks its deltas as started, once."""
+    with transaction.atomic():
+        job = (
+            ApplyJob.objects.select_for_update()
+            .filter(pk=job_id, worker_pool=pool, status=Job.Status.STARTED)
+            .first()
+        )
+
+        if not job:
+            raise WorkerJobNotFoundError()
+
+        if job.deltafile_fetched_at:
+            raise JobDeltafileAlreadyFetchedError()
+
+        job.deltafile_fetched_at = timezone.now()
+        job.save(update_fields=["deltafile_fetched_at"])
+
+        return prepare_deltafile(job)

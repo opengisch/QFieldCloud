@@ -2,8 +2,6 @@ import json
 import logging
 import shutil
 import tempfile
-import uuid
-from collections.abc import Iterable
 from datetime import timedelta
 from pathlib import Path
 from traceback import TracebackException
@@ -16,7 +14,7 @@ import requests
 import sentry_sdk
 from constance import config
 from django.conf import settings
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError
 from django.forms.models import model_to_dict
 from django.utils import timezone
 from qfieldcloud.authentication.models import AuthToken
@@ -24,6 +22,7 @@ from qfieldcloud.core.job_results import (
     apply_delta_results,
     apply_package_result,
     apply_project_details,
+    prepare_deltafile,
 )
 from qfieldcloud.core.models import (
     ApplyJob,
@@ -556,53 +555,9 @@ class ApplyDeltaJobRun(JobRun):
         if self.job.overwrite_conflicts:
             self.command = [*self.command, "--overwrite-conflicts"]
 
-    def _prepare_deltas(self, deltas: Iterable[Delta]) -> dict[str, Any]:
-        delta_contents = []
-        delta_client_ids = []
-
-        for delta in deltas:
-            delta_contents.append(delta.content)
-
-            if "clientId" in delta.content:
-                delta_client_ids.append(delta.content["clientId"])
-
-        local_to_remote_pk_deltas = Delta.objects.filter(
-            client_id__in=delta_client_ids,
-            last_modified_pk__isnull=False,
-        ).values(
-            "client_id", "content__localLayerId", "content__localPk", "last_modified_pk"
-        )
-
-        client_pks_map = {}
-
-        for delta_with_modified_pk in local_to_remote_pk_deltas:
-            key = f"{delta_with_modified_pk['client_id']}__{delta_with_modified_pk['content__localLayerId']}__{delta_with_modified_pk['content__localPk']}"
-            client_pks_map[key] = delta_with_modified_pk["last_modified_pk"]
-
-        deltafile_contents = {
-            "deltas": delta_contents,
-            "files": [],
-            "id": str(uuid.uuid4()),
-            "project": str(self.job.project.id),
-            "version": "1.0",
-            "clientPks": client_pks_map,
-        }
-
-        return deltafile_contents
-
-    @transaction.atomic()
     def before_docker_run(self) -> None:
-        deltas = self.job.deltas_to_apply.all()
-        deltafile_contents = self._prepare_deltas(deltas)
-
-        self.delta_ids = [d.id for d in deltas]
-
-        ApplyJobDelta.objects.filter(
-            apply_job_id=self.job_id,
-            delta_id__in=self.delta_ids,
-        ).update(status=Delta.Status.STARTED)
-
-        self.job.deltas_to_apply.update(last_status=Delta.Status.STARTED)
+        self.delta_ids = [d.id for d in self.job.deltas_to_apply.all()]
+        deltafile_contents = prepare_deltafile(self.job)
 
         with open(self.shared_tempdir.joinpath("deltafile.json"), "w") as f:
             json.dump(deltafile_contents, f)

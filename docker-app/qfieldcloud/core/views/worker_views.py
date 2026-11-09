@@ -6,9 +6,16 @@ from qfieldcloud.authentication.authentication import (
 )
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.exceptions import WorkerPoolKeyAlreadySetError
+from qfieldcloud.core.job_results import get_job_command
 from qfieldcloud.core.models import WorkerPool
 from qfieldcloud.core.sealed_box import SealedBoxError, validate_public_key
-from qfieldcloud.core.worker_pools import claim_job, complete_job, fetch_job_secrets
+from qfieldcloud.core.worker_pools import (
+    DEFAULT_QGIS_MAJOR_VERSION,
+    claim_job,
+    complete_job,
+    fetch_job_deltafile,
+    fetch_job_secrets,
+)
 from rest_framework import permissions, serializers, status, views
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -68,6 +75,12 @@ class WorkerPoolKeyView(views.APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+class ClaimJobSerializer(serializers.Serializer):
+    """Validates the QGIS major version a worker runs."""
+
+    qgis_major_version = serializers.IntegerField(default=DEFAULT_QGIS_MAJOR_VERSION)
+
+
 @extend_schema_view(
     post=extend_schema(description="Claim the next job of the worker's pool"),
 )
@@ -77,12 +90,19 @@ class ClaimJobView(views.APIView):
     authentication_classes = [WorkerPoolAuthentication]
     permission_classes = [IsWorkerPool]
 
+    serializer_class = ClaimJobSerializer
+
     def post(self, request: Request) -> Response:
         """Starts the next job for the worker's QGIS version.
 
         Returns the job with the command to run and a token that stops working when the job completes, or 204 if there is no job. The token is a secret and must not be logged.
         """
-        claimed_job = claim_job(request.auth)
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        claimed_job = claim_job(
+            request.auth, serializer.validated_data["qgis_major_version"]
+        )
 
         if not claimed_job:
             return Response(status=status.HTTP_204_NO_CONTENT)
@@ -92,6 +112,7 @@ class ClaimJobView(views.APIView):
                 "job_id": claimed_job.job.pk,
                 "job_type": claimed_job.job.type,
                 "project_id": claimed_job.job.project_id,
+                "command": get_job_command(claimed_job.job),
                 "token": claimed_job.token,
             }
         )
@@ -172,3 +193,17 @@ class CompleteJobView(views.APIView):
         )
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@extend_schema_view(
+    post=extend_schema(description="Fetch the deltafile of a delta job, once"),
+)
+class FetchJobDeltafileView(views.APIView):
+    """Gives a worker the deltas of its job."""
+
+    authentication_classes = [WorkerPoolAuthentication]
+    permission_classes = [IsWorkerPool]
+
+    def post(self, request: Request, job_id: str) -> Response:
+        """Returns the deltafile of a running delta job of the pool and marks its deltas as started. Works once per job."""
+        return Response(fetch_job_deltafile(job_id, request.auth))

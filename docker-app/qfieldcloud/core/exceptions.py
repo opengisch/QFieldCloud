@@ -85,6 +85,15 @@ class JobSecretsAlreadyFetchedError(QFieldCloudError):
     log_as_error = False
 
 
+class JobDeltafileAlreadyFetchedError(QFieldCloudError):
+    """Raised when the deltafile of a job is requested a second time."""
+
+    code = "job_deltafile_already_fetched"
+    message = "The deltafile of this job was already fetched"
+    status_code = status.HTTP_409_CONFLICT
+    log_as_error = False
+
+
 class JobSecretsMissingError(QFieldCloudError):
     """Raised when a job needs secrets its worker pool cannot read, which also fails the job."""
 

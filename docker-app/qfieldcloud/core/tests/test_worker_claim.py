@@ -7,7 +7,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from qfieldcloud.authentication.models import AuthToken
-from qfieldcloud.core.models import Job, Organization, Person, WorkerPool
+from qfieldcloud.core.models import ApplyJob, Job, Organization, Person, WorkerPool
 from qfieldcloud.core.tests.utils import set_subscription, setup_subscription_plans
 from qfieldcloud.project.models import Project
 
@@ -81,6 +81,80 @@ class QfcTestCase(APITestCase):
 
         self.global_pool.refresh_from_db()
         self.assertGreater(self.global_pool.last_seen_at, recently)
+
+    def _claim_for_version(self, qgis_major_version):
+        return self.client.post(
+            "/api/v1/worker/jobs/claim/",
+            {"qgis_major_version": qgis_major_version},
+            headers={"authorization": f"WorkerPool {self.global_credential}"},
+            format="json",
+        )
+
+    def test_claim_returns_the_command(self):
+        self._create_job(self.person_project)
+        Job.objects.update(type=Job.Type.CREATE_PROJECT)
+
+        self.assertEqual(
+            self._claim().json()["command"],
+            ["create_project", str(self.person_project.pk)],
+        )
+
+    def test_project_without_version_runs_on_qgis_3(self):
+        self._create_job(self.person_project)
+
+        self.assertEqual(
+            self._claim_for_version(4).status_code, status.HTTP_204_NO_CONTENT
+        )
+        self.assertEqual(self._claim_for_version(3).status_code, status.HTTP_200_OK)
+
+    def test_project_runs_on_its_qgis_version(self):
+        self._create_job(self.person_project)
+        Project.objects.update(qgis_version="4.0.1")
+
+        self.assertEqual(
+            self._claim_for_version(3).status_code, status.HTTP_204_NO_CONTENT
+        )
+        self.assertEqual(self._claim_for_version(4).status_code, status.HTTP_200_OK)
+
+    def _deltafile(self, job):
+        return self.client.post(
+            f"/api/v1/worker/jobs/{job.pk}/deltafile/",
+            headers={"authorization": f"WorkerPool {self.global_credential}"},
+        )
+
+    def _create_running_delta_job(self):
+        job = ApplyJob.objects.create(
+            project=self.person_project,
+            type=Job.Type.DELTA_APPLY,
+            created_by=self.user1,
+            overwrite_conflicts=True,
+        )
+        Job.objects.update(status=Job.Status.STARTED, worker_pool=self.global_pool)
+
+        return job
+
+    def test_deltafile_of_running_delta_job(self):
+        job = self._create_running_delta_job()
+
+        response = self._deltafile(job)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()["deltas"], [])
+        self.assertEqual(response.json()["project"], str(self.person_project.pk))
+        job.refresh_from_db()
+        self.assertIsNotNone(job.deltafile_fetched_at)
+
+    def test_deltafile_can_only_be_fetched_once(self):
+        job = self._create_running_delta_job()
+        self._deltafile(job)
+
+        self.assertEqual(self._deltafile(job).status_code, status.HTTP_409_CONFLICT)
+
+    def test_deltafile_of_other_job_is_not_found(self):
+        job = self._create_job(self.person_project)
+        self._claim()
+
+        self.assertEqual(self._deltafile(job).status_code, status.HTTP_404_NOT_FOUND)
 
     def test_claim_without_jobs(self):
         self.assertEqual(self._claim().status_code, status.HTTP_204_NO_CONTENT)

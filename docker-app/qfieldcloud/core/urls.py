@@ -74,6 +74,10 @@ urlpatterns = [
         worker_views.FetchJobSecretsView.as_view(),
     ),
     path(
+        "worker/jobs/<uuid:job_id>/deltafile/",
+        worker_views.FetchJobDeltafileView.as_view(),
+    ),
+    path(
         "worker/jobs/<uuid:job_id>/complete/",
         worker_views.CompleteJobView.as_view(),
     ),

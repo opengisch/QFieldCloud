@@ -1552,6 +1552,9 @@ class ApplyJob(Job):
         ),
     )
 
+    # When the worker fetched the deltafile of the job, which is allowed only once.
+    deltafile_fetched_at = models.DateTimeField(blank=True, null=True, editable=False)
+
     def save(self, *args, **kwargs):
         self.type = self.Type.DELTA_APPLY
         return super().save(*args, **kwargs)

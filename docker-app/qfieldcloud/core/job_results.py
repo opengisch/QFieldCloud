@@ -1,5 +1,8 @@
+import uuid
 from datetime import datetime
+from typing import Any
 
+from django.db import transaction
 from django.utils import timezone
 
 from qfieldcloud.core.models import ApplyJob, ApplyJobDelta, Delta, Job
@@ -95,3 +98,80 @@ def apply_job_result(job: Job) -> None:
         apply_delta_results(ApplyJob.objects.get(pk=job.pk))
     elif job.type == Job.Type.PROCESS_PROJECTFILE:
         apply_project_details(job)
+
+
+@transaction.atomic()
+def prepare_deltafile(job: ApplyJob) -> dict[str, Any]:
+    """Marks the deltas of `job` as started and returns the contents of its deltafile."""
+    deltas = list(job.deltas_to_apply.all())
+    delta_contents = []
+    delta_client_ids = []
+
+    for delta in deltas:
+        delta_contents.append(delta.content)
+
+        if "clientId" in delta.content:
+            delta_client_ids.append(delta.content["clientId"])
+
+    local_to_remote_pk_deltas = Delta.objects.filter(
+        client_id__in=delta_client_ids,
+        last_modified_pk__isnull=False,
+    ).values(
+        "client_id", "content__localLayerId", "content__localPk", "last_modified_pk"
+    )
+
+    client_pks_map = {}
+
+    for delta_with_modified_pk in local_to_remote_pk_deltas:
+        key = f"{delta_with_modified_pk['client_id']}__{delta_with_modified_pk['content__localLayerId']}__{delta_with_modified_pk['content__localPk']}"
+        client_pks_map[key] = delta_with_modified_pk["last_modified_pk"]
+
+    ApplyJobDelta.objects.filter(
+        apply_job_id=job.pk,
+        delta_id__in=[delta.pk for delta in deltas],
+    ).update(status=Delta.Status.STARTED)
+
+    job.deltas_to_apply.update(last_status=Delta.Status.STARTED)
+
+    return {
+        "deltas": delta_contents,
+        "files": [],
+        "id": str(uuid.uuid4()),
+        "project": str(job.project.id),
+        "version": "1.0",
+        "clientPks": client_pks_map,
+    }
+
+
+def get_job_command(job: Job) -> list[str]:
+    """Returns the arguments of `entrypoint.py` that run `job`."""
+    project = job.project
+
+    if job.type == Job.Type.PACKAGE:
+        return [
+            "package",
+            str(project.id),
+            project.the_qgis_file_name,
+            project.packaging_offliner,
+        ]
+
+    if job.type == Job.Type.DELTA_APPLY:
+        command = [
+            "apply_deltas",
+            str(project.id),
+            project.the_qgis_file_name,
+            project.unique_constraint_delta_behavior,
+        ]
+
+        if ApplyJob.objects.get(pk=job.pk).overwrite_conflicts:
+            command.append("--overwrite-conflicts")
+
+        return command
+
+    if job.type == Job.Type.PROCESS_PROJECTFILE:
+        return ["process_projectfile", str(project.id), project.the_qgis_file_name]
+
+    if job.type == Job.Type.CREATE_PROJECT:
+        return ["create_project", str(project.id)]
+
+    raise NotImplementedError(f"Unknown job type {job.type}")
