@@ -14,7 +14,7 @@ rebuilding them.
 | Push to an ordinary branch | Does not trigger `ci.yml`. If the branch has an open pull request, its `pull_request` event runs the pull-request behavior above. | Not run directly by the branch push. |
 | Push to `release` | Six test images receive `commit-<sha>` tags in GHCR and update their `buildcache` tags. | Pull the commit-tagged images and run with `--no-build`. |
 | Push to `master` | All eight images are built. Six test images and the runtime `app` receive GHCR `commit-<sha>` tags. Seven runtime images receive `edge` tags in GHCR and Docker Hub. | Pull the commit-tagged test images and run with `--no-build`. |
-| Published GitHub Release | Seven runtime images receive `<version>` and `latest` tags in GHCR and Docker Hub. The runtime `app` also receives a GHCR `commit-<sha>` tag. Release builds do not import or update `buildcache`; `app-test` is not published. | Lint and tests are skipped because the released commit was checked before publication. |
+| Published GitHub Release | Seven runtime images receive `<version>` and `latest` tags in GHCR and Docker Hub, plus a `release-commit-<sha>` tag in GHCR. Release builds pull their bases, do not import or update `buildcache`, and re-execute every Dockerfile build step; `app-test` is not published. | Lint and tests are skipped because the released commit was checked before publication. |
 | Manual workflow run | Not available because `ci.yml` has no `workflow_dispatch` trigger. Re-running an existing run repeats its original event behavior. | Depends on the original event. |
 
 ## Image groups
@@ -41,7 +41,9 @@ Runtime images receive `edge`, version, or `latest` tags for deployment:
 ## Tag meanings
 
 - `commit-<sha>` uses the full commit SHA to identify an exact test image or
-  runtime `app` image.
+  runtime `app` image built during normal CI.
+- `release-commit-<sha>` identifies an exact runtime image rebuilt without
+  cache when a GitHub Release was published.
 - `edge` identifies the latest runtime image built from `master`.
 - `<version>` identifies an image from a published GitHub Release.
 - `latest` identifies the most recently published GitHub Release.

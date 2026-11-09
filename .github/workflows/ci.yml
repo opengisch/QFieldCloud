@@ -144,11 +144,13 @@ jobs:
         with:
           images: ghcr.io/opengisch/qfieldcloud-${{ matrix.services.service_name }}
 
-          # Test images receive an exact commit tag. The runtime app also receives
-          # this tag when already built because it is consumed downstream.
+          # Test images receive an exact commit tag. Master builds also tag the
+          # runtime app for downstream consumers. Published releases use a
+          # separate exact tag to identify their clean, cache-free builds.
           tags: |
             type=raw,value=${{ env.DOCKER_IMAGE_TAG }},enable=${{ env.BUILD_FOR_TESTS == 'true' }}
-            type=raw,value=${{ env.DOCKER_IMAGE_TAG }},enable=${{ matrix.services.service_name == 'app' && env.PUBLISH_RUNTIME == 'true' }}
+            type=raw,value=${{ env.DOCKER_IMAGE_TAG }},enable=${{ matrix.services.service_name == 'app' && env.PUBLISH_RUNTIME == 'true' && github.event_name != 'release' }}
+            type=raw,value=release-${{ env.DOCKER_IMAGE_TAG }},enable=${{ env.PUBLISH_RUNTIME == 'true' && github.event_name == 'release' }}
             type=match,pattern=v(.*),group=1,enable=${{ env.PUBLISH_RUNTIME == 'true' && github.event_name == 'release' }}
             type=raw,value=latest,enable=${{ env.PUBLISH_RUNTIME == 'true' && github.event_name == 'release' }}
             type=edge,branch=master,enable=${{ env.PUBLISH_RUNTIME == 'true' && github.event_name == 'push' && github.ref_name == 'master' }}
@@ -223,6 +225,7 @@ jobs:
             ${{ steps.ghcr_metadata.outputs.tags }}
             ${{ steps.dockerhub_metadata.outputs.tags }}
           no-cache: ${{ github.event_name == 'release' }}
+          pull: ${{ github.event_name == 'release' }}
           cache-from: ${{ github.event_name != 'release' && format('type=registry,ref=ghcr.io/opengisch/qfieldcloud-{0}:buildcache', matrix.services.service_name) || '' }}
           cache-to: ${{ github.event_name != 'release' && format('type=registry,ref=ghcr.io/opengisch/qfieldcloud-{0}:buildcache,mode=max', matrix.services.service_name) || '' }}
 
