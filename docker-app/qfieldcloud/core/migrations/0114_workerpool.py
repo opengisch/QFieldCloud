@@ -34,6 +34,10 @@ class Migration(migrations.Migration):
                         unique=True,
                     ),
                 ),
+                (
+                    "last_seen_at",
+                    models.DateTimeField(blank=True, editable=False, null=True),
+                ),
                 ("created_at", models.DateTimeField(auto_now_add=True)),
                 (
                     "organization",
@@ -97,5 +101,26 @@ class Migration(migrations.Migration):
                     )
                 ],
             },
+        ),
+        migrations.AddField(
+            model_name="job",
+            name="worker_pool",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="jobs",
+                to="core.workerpool",
+            ),
+        ),
+        migrations.AddField(
+            model_name="job",
+            name="secrets_fetched_at",
+            field=models.DateTimeField(blank=True, editable=False, null=True),
+        ),
+        migrations.AddField(
+            model_name="applyjob",
+            name="deltafile_fetched_at",
+            field=models.DateTimeField(blank=True, editable=False, null=True),
         ),
     ]
