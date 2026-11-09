@@ -1,0 +1,23 @@
+# Lets the workers of `docker-compose.override.https-workers.yml` connect through nginx on a local instance.
+# Add this file to `COMPOSE_FILE` after that one, a certificate for both the instance and `nginx` is created.
+x-https-worker-local: &https-worker-local
+  environment:
+    QFIELDCLOUD_URL: https://nginx/api/v1/
+    REQUESTS_CA_BUNDLE: /etc/ssl/qfieldcloud-root-ca.pem
+  volumes:
+    - ./conf/nginx/certs/rootCA.pem:/etc/ssl/qfieldcloud-root-ca.pem:ro
+
+services:
+  mkcert:
+    command: /bin/sh -c 'mkcert -install && cd /root/.local/share/mkcert/ && { [ -f ${QFIELDCLOUD_HOST}+1.pem ] || mkcert ${QFIELDCLOUD_HOST} nginx; } && tail -f -n0 /etc/hosts'
+
+  nginx:
+    environment:
+      QFIELDCLOUD_TLS_CERT: /etc/nginx/certs/${QFIELDCLOUD_HOST}+1.pem
+      QFIELDCLOUD_TLS_KEY: /etc/nginx/certs/${QFIELDCLOUD_HOST}+1-key.pem
+
+  https_worker_qgis3:
+    <<: *https-worker-local
+
+  https_worker_qgis4:
+    <<: *https-worker-local

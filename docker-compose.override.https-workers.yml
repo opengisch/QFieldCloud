@@ -1,0 +1,50 @@
+# Workers that only talk to QFieldCloud over HTTPS, without access to the Docker socket.
+# Add this file to `COMPOSE_FILE` to run them next to or instead of `worker_wrapper`.
+x-https-worker: &https-worker
+  # NOTE the launcher must be the first process, a parent process would keep the credential and the private key in its environment
+  entrypoint: ["python3", "-m", "qfc_worker.launcher"]
+  command: []
+  tty: false
+  # One container runs one job, then exits and gets restarted clean.
+  restart: unless-stopped
+  user: "1000:1000"
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+  tmpfs:
+    # Secrets are written here, so they never reach the disk.
+    - /io:uid=1000,gid=1000,mode=700
+  volumes:
+    - transformation_grids:/transformation_grids:ro
+
+x-https-worker-environment: &https-worker-environment
+  QFIELDCLOUD_URL: ${QFIELDCLOUD_WORKER_QFIELDCLOUD_URL}
+  QFIELDCLOUD_WORKER_POOL_CREDENTIAL: ${QFIELDCLOUD_WORKER_POOL_CREDENTIAL:?Create a worker pool first}
+  QFIELDCLOUD_WORKER_PRIVATE_KEY: ${QFIELDCLOUD_WORKER_PRIVATE_KEY:?Register the worker pool first}
+  QFC_SDK_CONNECT_TIMEOUT_S: ${QFIELDCLOUD_WORKER_SDK_CONNECT_TIMEOUT_S}
+  QFC_SDK_READ_TIMEOUT_S: ${QFIELDCLOUD_WORKER_SDK_READ_TIMEOUT_S}
+  PROJ_DOWNLOAD_DIR: /transformation_grids
+  HOME: /io
+  XDG_RUNTIME_DIR: /io
+
+services:
+  https_worker_qgis3:
+    <<: *https-worker
+    extends:
+      file: docker-compose.yml
+      service: qgis3
+    environment:
+      <<: *https-worker-environment
+      QFIELDCLOUD_WORKER_QGIS_MAJOR_VERSION: 3
+    scale: ${QFIELDCLOUD_HTTPS_WORKER_REPLICAS:-1}
+
+  https_worker_qgis4:
+    <<: *https-worker
+    extends:
+      file: docker-compose.yml
+      service: qgis4
+    environment:
+      <<: *https-worker-environment
+      QFIELDCLOUD_WORKER_QGIS_MAJOR_VERSION: 4
+    scale: ${QFIELDCLOUD_HTTPS_WORKER_REPLICAS:-1}
