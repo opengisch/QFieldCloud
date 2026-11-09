@@ -1929,6 +1929,9 @@ class WorkerPool(models.Model):
     # The key secrets are sealed with, empty until the pool's workers provide it. The matching private key only exists on the pool's workers.
     public_key = models.TextField(blank=True)
 
+    # When a worker of the pool last called the API.
+    last_seen_at = models.DateTimeField(blank=True, null=True, editable=False)
+
     # Hash of the credential the pool's workers authenticate with, the credential itself is only shown once.
     credential_hash = models.CharField(
         max_length=64, null=True, blank=True, unique=True, editable=False

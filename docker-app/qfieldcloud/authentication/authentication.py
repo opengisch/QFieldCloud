@@ -1,4 +1,7 @@
+from datetime import timedelta
+
 from django.contrib.auth.models import AnonymousUser
+from django.db.models import Q
 from django.http.request import HttpRequest
 from django.utils import timezone
 from django.utils.translation import gettext as _
@@ -9,6 +12,9 @@ from rest_framework.authentication import (
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.exceptions import AuthenticationViaTokenFailedError
 from qfieldcloud.core.models import User, WorkerPool
+
+# How often the last time a worker pool was seen is stored.
+LAST_SEEN_UPDATE_INTERVAL = timedelta(minutes=1)
 
 
 def invalidate_all_tokens(user: User) -> int:
@@ -84,5 +90,12 @@ class WorkerPoolAuthentication(DjangoRestFrameworkTokenAuthentication):
             )
         except WorkerPool.DoesNotExist:
             raise AuthenticationViaTokenFailedError(_("Invalid token."))
+
+        # NOTE idle workers call every few seconds, writing once per interval is enough to tell they are alive
+        now = timezone.now()
+        WorkerPool.objects.filter(pk=pool.pk).filter(
+            Q(last_seen_at__isnull=True)
+            | Q(last_seen_at__lt=now - LAST_SEEN_UPDATE_INTERVAL)
+        ).update(last_seen_at=now)
 
         return (AnonymousUser(), pool)

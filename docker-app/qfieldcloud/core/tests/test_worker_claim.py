@@ -1,4 +1,5 @@
 import logging
+from datetime import timedelta
 
 from django.urls import reverse
 from django.utils import timezone
@@ -56,6 +57,30 @@ class QfcTestCase(APITestCase):
         response = self.client.post("/api/v1/worker/jobs/claim/")
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_authenticated_call_updates_last_seen(self):
+        self.assertIsNone(self.global_pool.last_seen_at)
+
+        self._claim()
+
+        self.global_pool.refresh_from_db()
+        self.assertIsNotNone(self.global_pool.last_seen_at)
+
+    def test_last_seen_is_written_once_per_interval(self):
+        recently = timezone.now() - timedelta(seconds=10)
+        WorkerPool.objects.update(last_seen_at=recently)
+
+        self._claim()
+
+        self.global_pool.refresh_from_db()
+        self.assertEqual(self.global_pool.last_seen_at, recently)
+
+        WorkerPool.objects.update(last_seen_at=recently - timedelta(minutes=1))
+
+        self._claim()
+
+        self.global_pool.refresh_from_db()
+        self.assertGreater(self.global_pool.last_seen_at, recently)
 
     def test_claim_without_jobs(self):
         self.assertEqual(self._claim().status_code, status.HTTP_204_NO_CONTENT)

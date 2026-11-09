@@ -1120,13 +1120,15 @@ class WorkerPoolAdmin(QFieldCloudModelAdmin):
         "name",
         "organization",
         "public_key",
+        "last_seen_at",
         "last_job",
         "created_at",
     )
-    readonly_fields = ("id", "created_at", "last_job")
+    readonly_fields = ("id", "created_at", "last_seen_at", "last_job")
     list_display = (
         "name",
         "organization",
+        "last_seen_at",
         "created_at",
     )
     autocomplete_fields = ("organization",)
