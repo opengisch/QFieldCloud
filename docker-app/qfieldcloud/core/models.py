@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import logging
 import secrets
 import string
@@ -1796,6 +1797,11 @@ class WorkerPool(models.Model):
     # The key secrets are sealed with, empty until the pool's workers provide it. The matching private key only exists on the pool's workers.
     public_key = models.TextField(blank=True)
 
+    # Hash of the credential the pool's workers authenticate with, the credential itself is only shown once.
+    credential_hash = models.CharField(
+        max_length=64, null=True, blank=True, unique=True, editable=False
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self) -> str:
@@ -1811,6 +1817,18 @@ class WorkerPool(models.Model):
             cls.objects.filter(organization_id=owner.pk).first()
             or cls.objects.filter(organization__isnull=True).first()
         )
+
+    @staticmethod
+    def hash_credential(credential: str) -> str:
+        """Returns the form a credential is stored in. Plain SHA-256 is enough as credentials are long and random."""
+        return hashlib.sha256(credential.encode()).hexdigest()
+
+    def generate_credential(self) -> str:
+        """Replaces the credential without saving and returns the new one."""
+        credential = secrets.token_urlsafe(32)
+        self.credential_hash = self.hash_credential(credential)
+
+        return credential
 
     def clean(self, **kwargs) -> None:
         if self.public_key:

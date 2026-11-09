@@ -1,3 +1,4 @@
+from django.contrib.auth.models import AnonymousUser
 from django.http.request import HttpRequest
 from django.utils import timezone
 from django.utils.translation import gettext as _
@@ -7,7 +8,7 @@ from rest_framework.authentication import (
 
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.exceptions import AuthenticationViaTokenFailedError
-from qfieldcloud.core.models import User
+from qfieldcloud.core.models import User, WorkerPool
 
 
 def invalidate_all_tokens(user: User) -> int:
@@ -66,3 +67,22 @@ class TokenAuthentication(DjangoRestFrameworkTokenAuthentication):
         token.save()
 
         return (token.user, token)
+
+
+class WorkerPoolAuthentication(DjangoRestFrameworkTokenAuthentication):
+    """Authenticates a worker with its pool's credential, the pool is available as `request.auth`.
+
+    Workers pass the credential in the "Authorization" HTTP header, prepended with the string "WorkerPool ".
+    """
+
+    keyword = "WorkerPool"
+
+    def authenticate_credentials(self, key):
+        try:
+            pool = WorkerPool.objects.get(
+                credential_hash=WorkerPool.hash_credential(key)
+            )
+        except WorkerPool.DoesNotExist:
+            raise AuthenticationViaTokenFailedError(_("Invalid token."))
+
+        return (AnonymousUser(), pool)

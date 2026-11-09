@@ -24,6 +24,16 @@ class Migration(migrations.Migration):
                 ),
                 ("name", models.CharField(max_length=255)),
                 ("public_key", models.TextField(blank=True)),
+                (
+                    "credential_hash",
+                    models.CharField(
+                        blank=True,
+                        editable=False,
+                        max_length=64,
+                        null=True,
+                        unique=True,
+                    ),
+                ),
                 ("created_at", models.DateTimeField(auto_now_add=True)),
                 (
                     "organization",

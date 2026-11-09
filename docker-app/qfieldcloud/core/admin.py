@@ -47,6 +47,7 @@ from django.http.response import Http404, HttpResponseRedirect, StreamingHttpRes
 from django.shortcuts import get_object_or_404, render, resolve_url
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
+from django.utils.cache import add_never_cache_headers
 from django.utils.decorators import method_decorator
 from django.utils.html import escape, format_html
 from django.utils.http import urlencode
@@ -1103,11 +1104,63 @@ class WorkerPoolAdmin(QFieldCloudModelAdmin):
         "created_at",
     )
     autocomplete_fields = ("organization",)
+    actions = ("reset_key", "generate_new_credential")
 
     search_fields = (
         "name__icontains",
         "organization__username__icontains",
     )
+
+    def get_readonly_fields(self, request, obj=None):
+        readonly_fields = super().get_readonly_fields(request, obj)
+
+        # NOTE an invalid form has already written the submitted value on `obj`, so check the stored one
+        if obj and WorkerPool.objects.filter(pk=obj.pk).exclude(public_key="").exists():
+            return (*readonly_fields, "public_key")
+
+        return readonly_fields
+
+    def save_model(self, request, obj, form, change):
+        if not change:
+            obj.new_credential = obj.generate_credential()
+
+        super().save_model(request, obj, form, change)
+
+    def response_add(self, request, obj, post_url_continue=None):
+        return self._credentials_response(request, [(obj, obj.new_credential)])
+
+    def _credentials_response(self, request, pool_credentials):
+        response = TemplateResponse(
+            request,
+            "admin/worker_pool_credentials.html",
+            {
+                **self.admin_site.each_context(request),
+                "title": _("Worker pool credentials"),
+                "pool_credentials": pool_credentials,
+            },
+        )
+        # the credentials are only shown once, they should not stay in any cache
+        add_never_cache_headers(response)
+
+        return response
+
+    @admin.action(description="Reset key, secrets must be entered again")
+    def reset_key(self, request, queryset):
+        """Removes the public key of the pools and their sealed values, after confirmation. Secrets must then be entered again."""
+        count = queryset.update(public_key="")
+
+        self.message_user(request, f"Reset the key of {count} worker pool(s).")
+
+    @admin.action(description="Generate new credential, running workers stop working")
+    def generate_new_credential(self, request, queryset):
+        """Replaces the credential of the pools and shows the new ones once. Sealed values stay readable."""
+        pool_credentials = []
+
+        for pool in queryset:
+            pool_credentials.append((pool, pool.generate_credential()))
+            pool.save(update_fields=["credential_hash"])
+
+        return self._credentials_response(request, pool_credentials)
 
 
 class SecretAdmin(QFieldCloudModelAdmin):

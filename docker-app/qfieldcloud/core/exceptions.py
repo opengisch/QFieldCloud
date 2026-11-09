@@ -58,6 +58,15 @@ class AuthenticationViaTokenFailedError(QFieldCloudError):
     log_as_error = False
 
 
+class WorkerPoolKeyAlreadySetError(QFieldCloudError):
+    """Raised when a worker registers a public key on a pool that already has one."""
+
+    code = "worker_pool_key_already_set"
+    message = "The worker pool already has a public key"
+    status_code = status.HTTP_409_CONFLICT
+    log_as_error = False
+
+
 class NotAuthenticatedError(QFieldCloudError):
     """Raised when QFieldCloud unauthenticated request fails the permission checks."""
 

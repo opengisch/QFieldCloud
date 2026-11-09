@@ -440,6 +440,12 @@ Collect the static files:
 docker compose exec app python manage.py collectstatic
 ```
 
+Create the global worker pool and store the printed credential with your deployment's secrets, it is only shown once and the workers need it:
+
+```shell
+docker compose exec app python manage.py createglobalworkerpool
+```
+
 
 ### Using certificate from Let's Encrypt
 

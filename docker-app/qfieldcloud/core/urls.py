@@ -11,6 +11,7 @@ from qfieldcloud.core.views import (
     status_views,
     teams_views,
     users_views,
+    worker_views,
 )
 from qfieldcloud.core.views.accounts_views import resend_confirmation_email
 from qfieldcloud.filestorage.urls import urlpatterns as filestorage_urlpatterns
@@ -66,6 +67,7 @@ urlpatterns = [
         members_views.GetUpdateDestroyMemberView.as_view(),
     ),
     path("status/", status_views.APIStatusView.as_view()),
+    path("worker/key/", worker_views.WorkerPoolKeyView.as_view()),
     path("deltas/<uuid:projectid>/", deltas_views.ListCreateDeltasView.as_view()),
     path(
         "deltas/<uuid:projectid>/<uuid:deltafileid>/",
