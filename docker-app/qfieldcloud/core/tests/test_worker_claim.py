@@ -9,6 +9,7 @@ from rest_framework.test import APITestCase
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import ApplyJob, Job, Organization, Person, WorkerPool
 from qfieldcloud.core.tests.utils import set_subscription, setup_subscription_plans
+from qfieldcloud.core.worker_pools import JOB_REPORT_TIMEOUT
 from qfieldcloud.project.models import Project
 
 logging.disable(logging.CRITICAL)
@@ -94,9 +95,13 @@ class QfcTestCase(APITestCase):
         self._create_job(self.person_project)
         Job.objects.update(type=Job.Type.CREATE_PROJECT)
 
+        response = self._claim().json()
+
         self.assertEqual(
-            self._claim().json()["command"],
-            ["create_project", str(self.person_project.pk)],
+            response["command"], ["create_project", str(self.person_project.pk)]
+        )
+        self.assertEqual(
+            response["report_timeout_s"], JOB_REPORT_TIMEOUT.total_seconds()
         )
 
     def test_project_without_version_runs_on_qgis_3(self):

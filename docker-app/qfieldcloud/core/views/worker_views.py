@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import transaction
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from qfieldcloud.authentication.authentication import (
@@ -11,6 +12,7 @@ from qfieldcloud.core.models import WorkerPool
 from qfieldcloud.core.sealed_box import SealedBoxError, validate_public_key
 from qfieldcloud.core.worker_pools import (
     DEFAULT_QGIS_MAJOR_VERSION,
+    JOB_REPORT_TIMEOUT,
     claim_job,
     complete_job,
     fetch_job_deltafile,
@@ -113,6 +115,8 @@ class ClaimJobView(views.APIView):
                 "job_type": claimed_job.job.type,
                 "project_id": claimed_job.job.project_id,
                 "command": get_job_command(claimed_job.job),
+                "timeout_s": settings.QFIELDCLOUD_WORKER_TIMEOUT_S,
+                "report_timeout_s": int(JOB_REPORT_TIMEOUT.total_seconds()),
                 "token": claimed_job.token,
             }
         )
@@ -161,6 +165,8 @@ class CompleteJobSerializer(serializers.Serializer):
     """Validates the result a job runner reports."""
 
     exit_code = serializers.IntegerField()
+    # NOTE explicit, as the exit code of a stopped job cannot be told apart from one the job chose
+    timed_out = serializers.BooleanField(default=False)
     # NOTE files, because they may be far larger than Django accepts for other request data
     feedback = serializers.FileField(required=False, allow_empty_file=True)
     output = serializers.FileField(required=False, allow_empty_file=True)
@@ -188,6 +194,7 @@ class CompleteJobView(views.APIView):
             job_id,
             request.auth,
             serializer.validated_data["exit_code"],
+            serializer.validated_data["timed_out"],
             serializer.validated_data.get("feedback"),
             serializer.validated_data.get("output"),
         )

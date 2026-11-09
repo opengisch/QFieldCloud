@@ -1,15 +1,19 @@
 import json
 import logging
+from datetime import timedelta
 from unittest import mock
 
+from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
 from qfieldcloud.authentication.models import AuthToken
+from qfieldcloud.core.cron import SetTerminatedWorkersToFinalStatusJob
 from qfieldcloud.core.models import Job, Person, WorkerPool
 from qfieldcloud.core.tests.utils import set_subscription, setup_subscription_plans
-from qfieldcloud.core.worker_pools import claim_job
+from qfieldcloud.core.worker_pools import claim_job, get_job_time_limit
 from qfieldcloud.project.models import Project
 
 logging.disable(logging.CRITICAL)
@@ -30,17 +34,71 @@ class QfcTestCase(APITestCase):
     def _claim(self) -> str:
         return claim_job(self.pool).token
 
-    def _complete(self, token, exit_code=0, feedback=b'{"outputs": {}}', output=b"log"):
+    def _complete(
+        self,
+        token,
+        exit_code=0,
+        feedback=b'{"outputs": {}}',
+        output=b"log",
+        timed_out=False,
+    ):
         return self.client.post(
             f"/api/v1/worker/jobs/{self.job.pk}/complete/",
             {
                 "exit_code": exit_code,
+                "timed_out": timed_out,
                 "feedback": SimpleUploadedFile("feedback.json", feedback),
                 "output": SimpleUploadedFile("output.txt", output),
             },
             format="multipart",
             headers={"authorization": f"Token {token}"},
         )
+
+    def test_timed_out_job_fails_with_a_timeout_error(self):
+        self._complete(self._claim(), exit_code=0, timed_out=True)
+
+        self._assert_job_failed()
+        self.assertEqual(self.job.feedback["error_type"], "TIMEOUT")
+        self.assertIn("Timeout error!", self.job.output)
+
+    def test_exit_code_of_a_timeout_alone_is_no_timeout(self):
+        self._complete(self._claim(), exit_code=124)
+
+        self._assert_job_failed()
+        self.assertNotEqual(self.job.feedback.get("error_type"), "TIMEOUT")
+
+    def test_token_lasts_until_the_job_counts_as_terminated(self):
+        token = AuthToken.objects.get(key=self._claim())
+        self.job.refresh_from_db()
+
+        self.assertEqual(token.expires_at, self.job.started_at + get_job_time_limit())
+
+    def _run_terminated_jobs_cron(self, started_ago):
+        Job.objects.filter(pk=self.job.pk).update(
+            started_at=timezone.now() - started_ago
+        )
+        SetTerminatedWorkersToFinalStatusJob().do()
+        self.job.refresh_from_db()
+
+    def test_cron_waits_for_the_report_of_a_pool_job(self):
+        self._claim()
+
+        self._run_terminated_jobs_cron(
+            timedelta(seconds=settings.QFIELDCLOUD_WORKER_TIMEOUT_S + 60)
+        )
+        self.assertEqual(self.job.status, Job.Status.STARTED)
+
+        self._run_terminated_jobs_cron(get_job_time_limit() + timedelta(seconds=1))
+        self.assertEqual(self.job.status, Job.Status.FAILED)
+
+    def test_cron_keeps_the_timeout_of_wrapper_jobs(self):
+        Job.objects.filter(pk=self.job.pk).update(status=Job.Status.STARTED)
+
+        self._run_terminated_jobs_cron(
+            timedelta(seconds=settings.QFIELDCLOUD_WORKER_TIMEOUT_S + 60)
+        )
+
+        self.assertEqual(self.job.status, Job.Status.FAILED)
 
     def test_success_finishes_the_job(self):
         response = self._complete(self._claim())

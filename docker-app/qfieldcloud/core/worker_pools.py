@@ -37,8 +37,20 @@ DEFAULT_QGIS_MAJOR_VERSION = 3
 # Above this a result can no longer be stored reliably in a database column.
 MAX_JOB_RESULT_BYTES = 200 * 1000 * 1000
 
-# Extra time after the job timeout, so a job that used all of it can still report its result.
-TOKEN_EXPIRATION_TIME_BUFFER = timedelta(seconds=60)
+# Time the launcher has to fetch the secrets and data of a job, before the job timeout starts.
+JOB_SETUP_TIMEOUT = timedelta(minutes=5)
+
+# Time the runner has after the job timeout to report the result, the runner is told with each claim.
+JOB_REPORT_TIMEOUT = timedelta(minutes=10)
+
+
+def get_job_time_limit() -> timedelta:
+    """Returns how long a job claimed by a pool may stay started, until its token expires and the job counts as terminated."""
+    return (
+        JOB_SETUP_TIMEOUT
+        + timedelta(seconds=settings.QFIELDCLOUD_WORKER_TIMEOUT_S)
+        + JOB_REPORT_TIMEOUT
+    )
 
 
 class ClaimedJob(NamedTuple):
@@ -155,9 +167,7 @@ def claim_job(
             user=job.created_by,
             client_type=AuthToken.ClientType.WORKER,
             job=job,
-            expires_at=timezone.now()
-            + timedelta(seconds=settings.QFIELDCLOUD_WORKER_TIMEOUT_S)
-            + TOKEN_EXPIRATION_TIME_BUFFER,
+            expires_at=job.started_at + get_job_time_limit(),
         )
 
     return ClaimedJob(job=job, token=token.key)
@@ -246,10 +256,14 @@ def complete_job(
     job_id: str,
     token: AuthToken,
     exit_code: int,
+    timed_out: bool,
     feedback_file: IO[bytes] | None,
     output_file: IO[bytes] | None,
 ) -> None:
-    """Stores the result of a job that ran on a worker pool and ends the job and its token."""
+    """Stores the result of a job that ran on a worker pool and ends the job and its token.
+
+    A job that timed out fails with a timeout error, whatever feedback it wrote before it was stopped.
+    """
     with transaction.atomic():
         job = (
             Job.objects.select_for_update()
@@ -268,7 +282,13 @@ def complete_job(
             raise WorkerJobNotFoundError()
 
         job.output = _read_job_output(output_file)
-        job.feedback = _read_job_feedback(feedback_file)
+
+        if timed_out:
+            job.output += f"\nTimeout error! The job failed to finish within {settings.QFIELDCLOUD_WORKER_TIMEOUT_S} seconds!\n"
+            job.feedback = _get_error_feedback("Worker timeout error.", "TIMEOUT")
+        else:
+            job.feedback = _read_job_feedback(feedback_file)
+
         job.feedback["container_exit_code"] = exit_code
         job.save(update_fields=["output", "feedback"])
 

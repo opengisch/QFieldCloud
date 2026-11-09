@@ -3,6 +3,7 @@ from datetime import timedelta
 
 from constance import config
 from django.conf import settings
+from django.db.models import Q
 from django.utils import timezone
 from django_cron import CronJobBase, Schedule
 from invitations.utils import get_invitation_model
@@ -11,6 +12,7 @@ from sentry_sdk import capture_message
 from qfieldcloud.core.invitations_utils import send_invitation
 from qfieldcloud.core.models import ApplyJob, ApplyJobDelta, Delta, Job
 from qfieldcloud.core.utils2 import packages
+from qfieldcloud.core.worker_pools import get_job_time_limit
 from qfieldcloud.project.models import Project
 
 logger = logging.getLogger(__name__)
@@ -52,11 +54,17 @@ class SetTerminatedWorkersToFinalStatusJob(CronJobBase):
     code = "qfieldcloud.set_terminated_workers_to_final_status"
 
     def do(self):
+        now = timezone.now()
         jobs = Job.objects.filter(
+            Q(
+                worker_pool__isnull=True,
+                # add extra seconds just to make sure a properly finished job properly updated the status.
+                started_at__lt=now
+                - timedelta(seconds=settings.QFIELDCLOUD_WORKER_TIMEOUT_S + 10),
+            )
+            # NOTE a worker pool runner reports over the network and may retry, so it gets until its token expires
+            | Q(worker_pool__isnull=False, started_at__lt=now - get_job_time_limit()),
             status__in=[Job.Status.QUEUED, Job.Status.STARTED],
-            # add extra seconds just to make sure a properly finished job properly updated the status.
-            started_at__lt=timezone.now()
-            - timedelta(seconds=settings.QFIELDCLOUD_WORKER_TIMEOUT_S + 10),
         )
 
         for job in jobs:
