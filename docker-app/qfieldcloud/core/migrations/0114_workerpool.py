@@ -58,4 +58,44 @@ class Migration(migrations.Migration):
                 ],
             },
         ),
+        migrations.CreateModel(
+            name="SealedSecretValue",
+            fields=[
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("key_id", models.CharField(max_length=64)),
+                ("ciphertext", models.TextField()),
+                (
+                    "pool",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="sealed_values",
+                        to="core.workerpool",
+                    ),
+                ),
+                (
+                    "secret",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="sealed_values",
+                        to="core.secret",
+                    ),
+                ),
+            ],
+            options={
+                "constraints": [
+                    models.UniqueConstraint(
+                        fields=("secret", "pool"),
+                        name="sealedsecretvalue_secret_pool_uniq",
+                    )
+                ],
+            },
+        ),
     ]

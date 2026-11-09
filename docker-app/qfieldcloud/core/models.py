@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
 import secrets
 import string
@@ -36,7 +37,7 @@ from timezone_field import TimeZoneField
 
 from qfieldcloud.core import validators
 from qfieldcloud.core.fields import DynamicStorageFileField, QfcImageField, QfcImageFile
-from qfieldcloud.core.sealed_box import SealedBoxError, validate_public_key
+from qfieldcloud.core.sealed_box import SealedBoxError, seal, validate_public_key
 from qfieldcloud.project.enums import ProjectCollaboratorRole, ProjectRoleOrigins
 from qfieldcloud.subscription.exceptions import ReachedMaxOrganizationMembersError
 
@@ -1661,6 +1662,8 @@ class Secret(models.Model):
 
     objects = SecretQueryset.as_manager()
 
+    sealed_values: models.QuerySet[SealedSecretValue]
+
     name = models.TextField(
         max_length=255,
         validators=[
@@ -1719,6 +1722,50 @@ class Secret(models.Model):
 
     # encrypted value of the secret.
     value = EncryptedTextField()
+
+    def get_recipient_pool(self) -> WorkerPool | None:
+        """Returns the worker pool the value has to be sealed for, if it can be sealed."""
+        if self.project:
+            pool = WorkerPool.effective_for(self.project.owner)
+        elif self.organization:
+            pool = WorkerPool.effective_for(self.organization)
+        else:
+            return None
+
+        if pool and pool.public_key:
+            return pool
+
+        return None
+
+    def seal_value(self) -> None:
+        """Replaces the sealed value with a new one for the current recipient pool."""
+        self.sealed_values.all().delete()
+
+        pool = self.get_recipient_pool()
+
+        if not pool:
+            return
+
+        payload = json.dumps(
+            {
+                "secret_id": str(self.pk),
+                "pool_id": str(pool.pk),
+                "name": self.name,
+                "type": self.type,
+                "value": self.value,
+            }
+        )
+        SealedSecretValue.objects.create(
+            secret=self,
+            pool=pool,
+            key_id=pool.key_id,
+            ciphertext=seal(public_key=pool.public_key, plaintext=payload),
+        )
+
+    def save(self, *args, **kwargs) -> None:
+        with transaction.atomic():
+            super().save(*args, **kwargs)
+            self.seal_value()
 
     def clean(self, **kwargs) -> None:
         # for project secrets assigned to a user,
@@ -1818,6 +1865,11 @@ class WorkerPool(models.Model):
             or cls.objects.filter(organization__isnull=True).first()
         )
 
+    @property
+    def key_id(self) -> str:
+        """Identifies the current public key, values sealed for another key are unreadable."""
+        return hashlib.sha256(self.public_key.encode()).hexdigest()
+
     @staticmethod
     def hash_credential(credential: str) -> str:
         """Returns the form a credential is stored in. Plain SHA-256 is enough as credentials are long and random."""
@@ -1848,6 +1900,31 @@ class WorkerPool(models.Model):
                 condition=Q(organization__isnull=True),
                 nulls_distinct=False,
                 name="workerpool_single_global_pool_uniq",
+            ),
+        ]
+
+
+class SealedSecretValue(models.Model):
+    """The value of a secret, readable only by the workers of one pool."""
+
+    secret = models.ForeignKey(
+        Secret, on_delete=models.CASCADE, related_name="sealed_values"
+    )
+
+    pool = models.ForeignKey(
+        WorkerPool, on_delete=models.CASCADE, related_name="sealed_values"
+    )
+
+    # Identifies the public key the value was sealed with.
+    key_id = models.CharField(max_length=64)
+
+    ciphertext = models.TextField()
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["secret", "pool"],
+                name="sealedsecretvalue_secret_pool_uniq",
             ),
         ]
 
