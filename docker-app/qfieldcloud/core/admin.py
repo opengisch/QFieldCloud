@@ -1120,9 +1120,10 @@ class WorkerPoolAdmin(QFieldCloudModelAdmin):
         "name",
         "organization",
         "public_key",
+        "last_job",
         "created_at",
     )
-    readonly_fields = ("id", "created_at")
+    readonly_fields = ("id", "created_at", "last_job")
     list_display = (
         "name",
         "organization",
@@ -1148,6 +1149,19 @@ class WorkerPoolAdmin(QFieldCloudModelAdmin):
             readonly_fields = (*readonly_fields, "organization")
 
         return readonly_fields
+
+    @admin.display(description=_("Last job"))
+    def last_job(self, instance) -> str:
+        job = instance.jobs.order_by("-started_at").first()
+
+        if not job:
+            return "-"
+
+        return format_html(
+            '<a href="{}" class="text-link">{}</a>',
+            reverse("admin:core_job_change", args=[job.pk]),
+            job.started_at,
+        )
 
     def get_actions(self, request):
         actions = super().get_actions(request)

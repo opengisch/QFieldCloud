@@ -7,8 +7,8 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.management.base import BaseCommand, CommandParser
 from django.db import connection, transaction
-from django.db.models import Q
 from qfieldcloud.core.models import Job
+from qfieldcloud.core.worker_pools import get_jobs_outside_own_pools
 from worker_wrapper.wrapper import (
     ApplyDeltaJobRun,
     CreateProjectJobRun,
@@ -70,24 +70,7 @@ class Command(BaseCommand):
                 with connection.cursor() as cursor:
                     cursor.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ")
 
-                busy_projects_ids_qs = Job.objects.filter(
-                    status__in=[
-                        Job.Status.QUEUED,
-                        Job.Status.STARTED,
-                    ]
-                ).values("project_id")
-
-                # select all the pending jobs, that their project has no other active job or `locked_at` is not null
-                jobs_qs = (
-                    Job.objects.select_for_update(skip_locked=True)
-                    .filter(status=Job.Status.PENDING)
-                    .exclude(
-                        Q(project_id__in=busy_projects_ids_qs)
-                        # skip all projects that are currently locked, most probably because of file transfer
-                        | Q(project__locked_at__isnull=False),
-                    )
-                    .order_by("created_at")
-                )
+                jobs_qs = get_jobs_outside_own_pools()
 
                 # each `worker_wrapper` or `dequeue.py` script can handle only one job and we handle the oldest
                 queued_job = jobs_qs.first()

@@ -1263,6 +1263,27 @@ class Delta(models.Model):
 
 
 class JobQuerySet(InheritanceQuerySet):
+    def claimable(self) -> models.QuerySet[Job]:
+        """Returns the pending jobs that can start now, oldest first, locked for the current transaction.
+
+        NOTE the project rows get locked too, so two workers never start jobs of the same project at once.
+        """
+        busy_projects_ids_qs = Job.objects.filter(
+            status__in=[Job.Status.QUEUED, Job.Status.STARTED]
+        ).values("project_id")
+
+        # select all the pending jobs, that their project has no other active job or `locked_at` is not null
+        return (
+            self.select_for_update(skip_locked=True)
+            .filter(status=Job.Status.PENDING)
+            .exclude(
+                Q(project_id__in=busy_projects_ids_qs)
+                # skip all projects that are currently locked, most probably because of file transfer
+                | Q(project__locked_at__isnull=False),
+            )
+            .order_by("created_at")
+        )
+
     def for_user(self, user: User) -> models.QuerySet[Job]:
         """Returns the jobs applicable to the user. If the user has assigned secrets, only jobs triggered by the user are returned.
 
@@ -1363,6 +1384,15 @@ class Job(models.Model):
     # the docker container ID of the QGIS worker that was executing the job
     container_id = models.CharField(
         max_length=64, default="", blank=True, db_index=True
+    )
+
+    # The pool whose worker claimed the job, empty for jobs run by the docker worker wrapper.
+    worker_pool = models.ForeignKey(
+        "WorkerPool",
+        on_delete=models.SET_NULL,
+        related_name="jobs",
+        null=True,
+        blank=True,
     )
 
     @property
