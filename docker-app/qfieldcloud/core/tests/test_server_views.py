@@ -91,3 +91,20 @@ class QfcTestCase(APITransactionTestCase):
 
         self.assertIn("signup_url", data)
         self.assertIsNone(data["signup_url"])
+
+    def test_server_info_signup_mode_default(self):
+        """Test that signup_mode defaults to 'web'."""
+        response = self.client.get("/api/v1/server/info/")
+        data = response.json()
+
+        self.assertIn("signup_mode", data)
+        self.assertEqual(data["signup_mode"], "web")
+
+    @override_settings(QFIELDCLOUD_SIGNUP_MODE="form")
+    def test_server_info_signup_mode_form(self):
+        """Test that signup_mode can be changed."""
+        response = self.client.get("/api/v1/server/info/")
+        data = response.json()
+
+        self.assertIn("signup_mode", data)
+        self.assertEqual(data["signup_mode"], "form")
