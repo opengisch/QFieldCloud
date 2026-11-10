@@ -624,3 +624,4 @@ class ServerInfoSerializer(serializers.Serializer):
     whitelabel = WhitelabelSerializer()
     auth_providers = AuthProviderSerializer(many=True, required=False, default=list)
     signup_url = serializers.URLField(allow_null=True, required=False)
+    signup_mode = serializers.CharField()

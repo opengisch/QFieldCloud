@@ -531,6 +531,9 @@ QFIELDCLOUD_PASSWORD_LOGIN_IS_ENABLED = parse_string_to_bool(
     os.environ["QFIELDCLOUD_PASSWORD_LOGIN_IS_ENABLED"]
 )
 
+# Signup mode. May be used to indicate that this QFieldCloud instance uses a different signup mechanism.
+QFIELDCLOUD_SIGNUP_MODE = os.environ.get("QFIELDCLOUD_SIGNUP_MODE", "web")
+
 QFIELDCLOUD_SSO_PROVIDER_STYLES = {
     "keycloak": {
         # https://github.com/keycloak/keycloak-misc/tree/main/logo
