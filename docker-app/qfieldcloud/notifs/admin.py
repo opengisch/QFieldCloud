@@ -1,10 +1,11 @@
 from notifications.admin import NotificationAdmin as NotificationAdminBase
 from notifications.models import Notification
+from unfold.admin import ModelAdmin
 
 from qfieldcloud.core.admin import qfc_admin_site
 
 
-class NotificationAdmin(NotificationAdminBase):
+class NotificationAdmin(NotificationAdminBase, ModelAdmin):
     list_display = (
         "actor",
         "verb",

@@ -746,8 +746,10 @@ class QfcTestCase(APITransactionTestCase):
             )
             self.assertTrue(status.is_success(response.status_code))
 
-        jobs = ProcessProjectfileJob.objects.unfinished().filter(
-            project=self.project1,
-        )
+        jobs = ProcessProjectfileJob.objects.filter(project=self.project1)
 
-        self.assertEqual(jobs.count(), 1)
+        # A worker can start a job between two uploads, and the next upload
+        # queues another. The dequeuer runs one job per project at a time, so
+        # we get at most one started job and at most one unstarted job.
+        self.assertLessEqual(jobs.unfinished().count(), 2)
+        self.assertLessEqual(jobs.unstarted().count(), 1)

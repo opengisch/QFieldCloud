@@ -160,7 +160,7 @@ def upload_project_file_version(
                     project.the_qgis_file = file_version.file
                     update_fields.append("the_qgis_file")
 
-                running_jobs = ProcessProjectfileJob.objects.unfinished().filter(
+                running_jobs = ProcessProjectfileJob.objects.unstarted().filter(
                     project=project,
                     created_by=request.user,
                 )

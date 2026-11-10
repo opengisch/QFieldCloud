@@ -142,8 +142,7 @@ class ProjectQueryset(models.QuerySet):
     def with_prefetch(self) -> ProjectQueryset:
         """A heavier version of the `Project` with all common `select_related` and `prefetch_related` in place."""
         return (
-            self.defer("project_details")
-            .select_related(
+            self.select_related(
                 "qgis_project",
                 "owner",
                 "owner__useraccount",
@@ -256,6 +255,12 @@ class Project(models.Model):
         SHARED_DATASETS = "shared_datasets", _("Shared Datasets")
         TEMPLATE = "template", _("Template")
 
+    class UniqueConstraintDeltaBehavior(models.TextChoices):
+        """Needs to be kept in sync with the worker's apply deltas `UniqueConstraintDeltaBehavior` enum mirror."""
+
+        CREATE_CONFLICT = "create_conflict", _("Create a conflict")
+        QGIS_DEFAULT = "qgis_default", _("Let the QGIS default behavior apply")
+
     # Project types configurable from clients
     CONFIGURABLE_PROJECT_TYPES = [
         ProjectType.REGULAR,
@@ -341,7 +346,6 @@ class Project(models.Model):
         on_delete=models.SET_NULL,
         related_name="+",
     )
-    project_details = models.JSONField(blank=True, null=True)
     is_public = models.BooleanField(
         default=False,
         help_text=_(
@@ -360,6 +364,15 @@ class Project(models.Model):
 
     project_type = models.CharField(
         max_length=32, choices=ProjectType.choices, default=ProjectType.REGULAR
+    )
+
+    unique_constraint_delta_behavior = models.CharField(
+        max_length=32,
+        choices=UniqueConstraintDeltaBehavior.choices,
+        default=UniqueConstraintDeltaBehavior.CREATE_CONFLICT,
+        help_text=_(
+            "How the deltas should be handled when they violate field unique constraints."
+        ),
     )
 
     # the Person or Organization id that owns the project
@@ -958,9 +971,12 @@ class Project(models.Model):
                             ),
                         }
                     )
-                # the layer is missing a primary key, warn it is going to be read-only
+                # the layer is missing a primary key, warn it is going to be read-only, unless it is already marked as read-only in QGIS
                 elif layer.layer_type == QgsLayerType.Vector:
-                    if layer.qfs_settings.get("qfc_source_data_pk_name") == "":
+                    if (
+                        layer.qfs_settings.get("qfc_source_data_pk_name") == ""
+                        and not layer.is_readonly
+                    ):
                         problems.append(
                             {
                                 "layer": layer_name,
@@ -1544,6 +1560,7 @@ class QgisLayerQuerySet(models.QuerySet):
                 "file_name": layer_data.get("filename") or "",
                 "is_valid": layer_data.get("is_valid", False),
                 "is_localized": layer_data.get("is_localized", False),
+                "is_readonly": layer_data.get("is_readonly", None),
                 "error_code": layer_data.get("error_code") or LayerErrorCode.NO_ERROR,
                 "error_summary": layer_data.get("error_summary") or "",
                 "error_message": layer_data.get("error_message") or "",
@@ -1664,6 +1681,12 @@ class QgisLayer(models.Model):
 
     is_localized = models.BooleanField(
         default=False, help_text=_("Whether the layer is using a localized dataset.")
+    )
+
+    is_readonly = models.BooleanField(
+        null=True,
+        default=None,
+        help_text=_("Whether the layer is marked as read-only in the QGIS project."),
     )
 
     error_code = models.CharField(

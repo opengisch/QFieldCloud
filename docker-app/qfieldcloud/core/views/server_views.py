@@ -27,6 +27,7 @@ class ServerInfoView(views.APIView):
                 "whitelabel": get_whitelabel_settings(),
                 "auth_providers": get_auth_providers(request),
                 "signup_url": get_signup_url(request),
+                "signup_mode": settings.QFIELDCLOUD_SIGNUP_MODE,
             },
             context={"request": request},
         )

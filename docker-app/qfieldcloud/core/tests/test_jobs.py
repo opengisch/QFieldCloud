@@ -87,7 +87,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
         self.p1.refresh_from_db()
 
-        self.assertIsNotNone(self.p1.project_details)
+        self.assertTrue(hasattr(self.p1, "qgis_project"))
 
         # extract layer data from job
         processfile_layers = processprojectfile_job.get_feedback_step_data(
@@ -381,11 +381,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
         self.p1.refresh_from_db()
 
-        pd = self.p1.project_details
-
-        self.assertIsNotNone(pd)
-
-        self.assertEqual(pd["crs"], "EPSG:3857")
+        self.assertEqual(self.p1.qgis_project.crs, "EPSG:3857")
 
         layers = list(self.p1.qgis_project.layers.all())
         layers.sort(key=lambda layer: layer.name)
@@ -492,10 +488,6 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         wait_for_project_ok_status(self.p1)
 
         self.p1.refresh_from_db()
-
-        pd = self.p1.project_details
-
-        self.assertIsNotNone(pd)
 
         layers = list(self.p1.qgis_project.layers.all())
         layers.sort(key=lambda layer: layer.name)

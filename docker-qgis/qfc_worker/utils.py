@@ -30,12 +30,15 @@ from qgis.core import (
     QgsCoordinateTransform,
     QgsCsException,
     QgsFieldConstraints,
+    QgsFields,
     QgsLayerTree,
+    QgsLayerTreeNode,
     QgsMapLayer,
     QgsMapSettings,
     QgsProject,
     QgsProjectArchive,
     QgsProviderRegistry,
+    QgsReadWriteContext,
     QgsRectangle,
     QgsReferencedRectangle,
     QgsSettings,
@@ -364,6 +367,35 @@ def open_qgis_project_temporarily(
     """
     map_settings = QgsMapSettings()
 
+    def get_canvas_layers(layer_tree: QgsLayerTree):
+        canvas_layers = []
+
+        def visit_layer_tree_node(node: QgsLayerTreeNode):
+            if QgsLayerTree.isLayer(node):
+                if not node.layer():
+                    return
+
+                if node.layer().isSpatial() and node.isVisible():
+                    canvas_layers.append(node.layer())
+
+            children = node.children()
+            for child in children:
+                visit_layer_tree_node(child)
+
+        if layer_tree.hasCustomLayerOrder():
+            layers = layer_tree.customLayerOrder()
+            for layer in layers:
+                node_layer = layer_tree.findLayer(layer.id())
+                if not node_layer or not node_layer.layer():
+                    continue
+
+                if node_layer.layer().isSpatial() and node_layer.isVisible():
+                    canvas_layers.append(node_layer.layer())
+        else:
+            visit_layer_tree_node(layer_tree)
+
+        return canvas_layers
+
     def on_project_read_wrapper(
         tmp_project: QgsProject,
         map_settings: QgsMapSettings,
@@ -397,7 +429,7 @@ def open_qgis_project_temporarily(
 
             layer_tree = settings["layer_tree"]
             if layer_tree:
-                map_settings.setLayers(reversed(list(layer_tree.customLayerOrder())))
+                map_settings.setLayers(get_canvas_layers(layer_tree))
 
             if map_settings.extent().isEmpty():
                 # set to full extent if empty
@@ -854,6 +886,7 @@ def get_layers_data(project: QgsProject) -> dict[str, dict]:
             ),
             "is_valid": layer.isValid(),
             "is_localized": layer_source.is_localized_path,
+            "is_readonly": is_layer_readonly(layer),
             "datasource": data_provider_source,
             "type": layer.type(),
             "type_name": layer.type().name,
@@ -1274,3 +1307,43 @@ def get_qgis_version_from_project_file(filename: str | Path) -> str:
             return version_match.group(1)
     except (zipfile.BadZipFile, ET.ParseError) as err:
         raise ValueError(str(err)) from err
+
+
+def get_unique_field_names(
+    fields: QgsFields, skip_field_idx: int | None = None
+) -> list[str]:
+    """Get the names of fields with unique constraints."""
+    unique_field_names = []
+
+    for idx, field in enumerate(fields):
+        if idx == skip_field_idx:
+            continue
+
+        if (
+            field.constraints().constraints()
+            & QgsFieldConstraints.Constraint.ConstraintUnique
+        ):
+            unique_field_names.append(field.name())
+
+    return unique_field_names
+
+
+def is_layer_readonly(layer: QgsMapLayer) -> bool:
+    """Check if the layer is read-only in the QGIS project.
+
+    We can't use `layer.readOnly()`, because it is `True` for every layer when the project is opened as read-only.
+    Instead, we load the layer again from its XML and check if it is read-only.
+    """
+    layer_xml = QDomDocument()
+    layer_xml.setContent(layer.originalXmlProperties())
+
+    # Reuse the same class as the `layer` param, as we may get any type of `QgsMapLayer`, e.g. vector, raster, etc.
+    layer = layer.__class__()
+    layer.readLayerXml(
+        layer_xml.documentElement(),
+        QgsReadWriteContext(),
+        # `FlagDontResolveLayers` stops QGIS from opening the data source
+        QgsMapLayer.ReadFlag.FlagDontResolveLayers,
+    )
+
+    return layer.readOnly()

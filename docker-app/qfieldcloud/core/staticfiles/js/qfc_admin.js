@@ -1,4 +1,5 @@
-(() => {
+// Unfold loads `UNFOLD["SCRIPTS"]` in `<head>`, so wait for the page content
+document.addEventListener('DOMContentLoaded', () => {
     function jsonSyntaxHighlight(json) {
         json = json
             .replace(/&/g, '&amp;')
@@ -66,4 +67,4 @@
         });
     });
 
-})();
+});

@@ -13,7 +13,10 @@ import os
 from datetime import datetime, timedelta
 
 import sentry_sdk
+from django.templatetags.static import static
+from django.urls import reverse_lazy
 from sentry_sdk.integrations.django import DjangoIntegration
+from unfold.contrib.constance.settings import UNFOLD_CONSTANCE_ADDITIONAL_FIELDS
 
 from qfieldcloud.settings_utils import (
     ConfigValidationError,
@@ -94,7 +97,8 @@ CACHES = {
 # Application definition
 INSTALLED_APPS = [
     # admin theme
-    "jazzmin",
+    "unfold",
+    "unfold.contrib.constance",
     # django contrib
     "django.contrib.admin",
     "django.contrib.contenttypes",
@@ -384,8 +388,6 @@ REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": DEFAULT_RENDERER_CLASSES,
 }
 
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-
 SITE_ID = 1
 
 LOGIN_URL = "account_login"
@@ -528,6 +530,9 @@ QFIELDCLOUD_ID_TOKEN_HEADER_NAME = "X-QFC-ID-Token"
 QFIELDCLOUD_PASSWORD_LOGIN_IS_ENABLED = parse_string_to_bool(
     os.environ["QFIELDCLOUD_PASSWORD_LOGIN_IS_ENABLED"]
 )
+
+# Signup mode. May be used to indicate that this QFieldCloud instance uses a different signup mechanism.
+QFIELDCLOUD_SIGNUP_MODE = os.environ.get("QFIELDCLOUD_SIGNUP_MODE", "web")
 
 QFIELDCLOUD_SSO_PROVIDER_STYLES = {
     "keycloak": {
@@ -693,7 +698,7 @@ QFIELDCLOUD_TEST_SKIP_VIEW_ADMIN_URLS = (
     "/admin/axes/accessfailurelog/add/",
     "/admin/axes/accesslog/add/",
     "/admin/auditlog/logentry/add/",
-    "/admin/account/emailaddress/admin/export_emails_to_csv/",
+    "/admin/account/emailaddress/export-emails-to-csv/",
     "/admin/filestorage/file/add/",
     "/admin/filestorage/fileversion/add/",
     "/admin/project/qgislayer/add/",
@@ -704,6 +709,10 @@ QFIELDCLOUD_TEST_SKIP_SORT_ADMIN_URLS = ("/admin/django_cron/cronjoblog/?o=4",)
 
 # Sets the default admin list view per page, the Django default is 100
 QFIELDCLOUD_ADMIN_LIST_PER_PAGE = 20
+
+# Sets the admin inlines per page, Unfold paginates an inline only if its `per_page` is set
+# NOTE keep the number of inlines per page small, as each inline is a form of it's own and must fit in `django.forms.formsets.BaseFormSet.absolute_max`. What is more, all inlines on a page are submitted together and must fit in `DATA_UPLOAD_MAX_NUMBER_FIELDS`.
+QFIELDCLOUD_ADMIN_INLINE_PER_PAGE = 10
 
 # Use pg meta table estimate for pagination and display above n entries
 QFIELDCLOUD_ADMIN_EXACT_COUNT_LIMIT = 10000
@@ -800,12 +809,20 @@ CONSTANCE_CONFIG = {
     ),
 }
 CONSTANCE_ADDITIONAL_FIELDS = {
+    # Unfold widgets for the builtin types (`str`, `int`, `bool`, `datetime` etc.)
+    **UNFOLD_CONSTANCE_ADDITIONAL_FIELDS,
+    datetime: [
+        "django.forms.SplitDateTimeField",
+        {
+            "widget": "unfold.widgets.UnfoldAdminSplitDateTimeWidget",
+        },
+    ],
     "textarea": [
         "django.forms.CharField",
         {
-            "widget": "django.forms.Textarea",
+            "widget": "unfold.widgets.UnfoldAdminTextareaWidget",
         },
-    ]
+    ],
 }
 CONSTANCE_CONFIG_FIELDSETS = {
     "Incidents": (
@@ -973,35 +990,61 @@ SPECTACULAR_SETTINGS = {
     "REDOC_DIST": "https://cdn.jsdelivr.net/npm/redoc@2.5.4",
 }
 
-JAZZMIN_SETTINGS = {
-    # Page title. Defaults to `current_admin_site.site_title` if empty.
-    "site_title": "QFieldCloud: Admin",
-    # Site header title (max 19 chars). Defaults to  `current_admin_site.site_header` if empty.
-    "site_header": "QFieldCloud",
-    # Brand name (max 19 chars). Defaults to  `current_admin_site.site_header` if empty.
-    "site_brand": "QFieldCloud admin",
-    # Favicon filename. Defaults to `site_logo` if empty.
-    "site_icon": "favicon.ico",
-    # Logo filename.
-    "site_logo": "logo_notext.svg",
-    # CSS classes that are applied to the logo above, emptied to avoid class "img-circle"
-    "site_logo_classes": "",
-    # Sign-in form logo filename. Defaults to `site_logo` if empty.
-    "login_logo": "img/opengis_powering_qfc.png",
-    # Sign-in form welcome text.
-    "welcome_sign": "Welcome to QFieldCloud",
-    # Copyright on the footer.
-    "copyright": "OPENGIS.ch",
-    # Additional custom CSS file for the Django Admin pages.
-    "custom_css": "css/qfc_admin.css",
-    "custom_js": "js/qfc_admin.js",
-    # Top menu links
-    "topmenu_links": [
+# Django Unfold admin theme, see https://unfoldadmin.com/docs/configuration/settings/
+UNFOLD = {
+    "SITE_TITLE": "QFieldCloud: Admin",
+    "SITE_HEADER": "QFieldCloud",
+    "SITE_VERSION": SENTRY_RELEASE,
+    "SITE_ICON": {
+        "light": lambda request: static("logo_notext.svg"),
+        "dark": lambda request: static("logo_notext.svg"),
+    },
+    "SITE_FAVICONS": [
         {
-            "name": "Global Search",
-            "url": "admin:global_search",
+            "rel": "icon",
+            "sizes": "32x32",
+            "type": "image/x-icon",
+            "href": lambda request: static("favicon.ico"),
         },
     ],
+    "ENVIRONMENT": [ENVIRONMENT.capitalize(), "info"],
+    "ENVIRONMENT_TITLE_PREFIX": "qfieldcloud.core.admin.get_admin_environment_title_prefix",
+    "STYLES": [
+        lambda request: static("css/qfc_admin.css"),
+    ],
+    "SCRIPTS": [
+        lambda request: static("js/qfc_admin.js"),
+    ],
+    "SITE_DROPDOWN": [
+        # Unfold drops the logo's home link once a dropdown is set
+        {
+            "icon": "home",
+            "title": "Admin home",
+            "link": reverse_lazy("admin:index"),
+        },
+        {
+            "icon": "copyright",
+            "title": f"{datetime.now().year} OPENGIS.ch",
+            "link": "https://www.opengis.ch",
+            "attrs": {"target": "_blank"},
+        },
+    ],
+    "COLORS": {
+        "primary": {
+            "50": "#f6f8fb",
+            "100": "#edf1f7",
+            "200": "#d2dbeb",
+            "300": "#b7c5df",
+            "400": "#92a9ce",
+            "500": "#6e8cbe",
+            "600": "#4a6fae",
+            "700": "#3f5e93",
+            "800": "#304871",
+            "900": "#253857",
+            "950": "#1a273d",
+        },
+    },
+    "COMMAND": {"show_history": True},
 }
 
 # Whitelabel configuration
@@ -1026,7 +1069,7 @@ JAZZMIN_SETTINGS = {
 VALIDATE_TEMPLATES_IGNORE_APPS = [
     "allauth",
     "django_filters",
-    "jazzmin",
+    "unfold",
 ]
 
 

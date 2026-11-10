@@ -1199,11 +1199,11 @@ class AbstractSubscription(models.Model):
 
     def __str__(self):
         if hasattr(self, "packages"):
-            active_storage_total_mb = int(
-                self.active_storage_package_bytes / 1000 / 1000
-            )
+            storage_bytes = self.active_storage_total_bytes
         else:
-            active_storage_total_mb = 0
+            storage_bytes = self.included_storage_bytes
+
+        active_storage_total_mb = int(storage_bytes / 1000 / 1000)
 
         return f"{self.__class__.__name__} #{self.id} user:{self.account.user.username} plan:{self.plan.code} total:{active_storage_total_mb}MB"
 

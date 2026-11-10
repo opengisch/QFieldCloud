@@ -1,0 +1,502 @@
+# Workflow behavior: https://github.com/opengisch/QFieldCloud/blob/master/.github/workflows/README.md
+name: CI
+
+permissions:
+  contents: read
+
+env:
+  # Tie every commit-tagged image to the exact commit under test.
+  DOCKER_IMAGE_TAG: commit-${{ github.sha }}
+  # Fork and Dependabot PR tokens cannot push commit images to GHCR.
+  # For those PRs, each test job builds its images on the GitHub Actions runner.
+  USE_PREBUILT_IMAGES: ${{ github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]') }}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches:
+      - master
+      - release
+  pull_request:
+  release:
+    types: [published]
+
+jobs:
+  lint:
+    name: Lint code base
+    # Publishing a GitHub Release only publishes images. Tests already ran when
+    # its commit was pushed to the `release` branch.
+    if: github.event_name != 'release'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Pre-commit
+        env:
+          # set the `no-commit-to-branch` to be skipped, otherwise the check fails when we merge to `master` branch
+          SKIP: no-commit-to-branch
+        uses: pre-commit/action@v3.0.1
+
+  build_images:
+    name: Build image (${{ matrix.services.service_name }})
+    # PRs opened from branches in this repository can use GITHUB_TOKEN to push
+    # commit-tagged test images to GHCR. Fork and Dependabot PRs skip this job,
+    # which sends downstream jobs to their local-build fallback.
+    if: github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    env:
+      # A push to the `release` branch runs tests; publishing a GitHub Release does not.
+      BUILD_FOR_TESTS: ${{ matrix.services.required_for_tests && github.event_name != 'release' }}
+      # Runtime tags are published only by a master push or a published GitHub Release.
+      PUBLISH_RUNTIME: ${{ matrix.services.publish_runtime && (github.event_name == 'release' || (github.event_name == 'push' && github.ref_name == 'master')) }}
+    strategy:
+      fail-fast: true
+      matrix:
+        services:
+          -
+            service_name: app
+            dockerfile: docker-app/Dockerfile
+            docker_context: docker-app
+            docker_target: webserver_runtime
+            # Whether to publish an exact commit tag for CI consumers.
+            required_for_tests: false
+            # Whether to publish edge or version tags for deployments.
+            publish_runtime: true
+
+          -
+            service_name: app-test
+            dockerfile: docker-app/Dockerfile
+            docker_context: docker-app
+            docker_target: webserver_test
+            required_for_tests: true
+            publish_runtime: false
+
+          -
+            service_name: worker-wrapper
+            dockerfile: docker-app/Dockerfile
+            docker_context: docker-app
+            docker_target: worker_wrapper_runtime
+            required_for_tests: true
+            publish_runtime: true
+
+          -
+            # Keep the existing QGIS image for backwards compatibility,
+            # using the qgis3 build definition from docker-compose.yml.
+            service_name: qgis
+            compose_service: qgis3
+            dockerfile: docker-qgis/Dockerfile
+            docker_context: docker-qgis
+            required_for_tests: false
+            publish_runtime: true
+
+          -
+            service_name: qgis3
+            compose_service: qgis3
+            dockerfile: docker-qgis/Dockerfile
+            docker_context: docker-qgis
+            required_for_tests: true
+            publish_runtime: true
+
+          -
+            service_name: qgis4
+            compose_service: qgis4
+            dockerfile: docker-qgis/Dockerfile
+            docker_context: docker-qgis
+            required_for_tests: true
+            publish_runtime: true
+
+          -
+            service_name: nginx
+            dockerfile: docker-nginx/Dockerfile
+            docker_context: docker-nginx
+            required_for_tests: true
+            publish_runtime: true
+
+          -
+            service_name: createbuckets
+            dockerfile: docker-createbuckets/Dockerfile
+            docker_context: docker-createbuckets
+            required_for_tests: true
+            publish_runtime: true
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+
+      - name: Docker Metadata (GHCR)
+        id: ghcr_metadata
+        # GHCR stores both commit-scoped images for tests and runtime images.
+        if: env.BUILD_FOR_TESTS == 'true' || env.PUBLISH_RUNTIME == 'true'
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/opengisch/qfieldcloud-${{ matrix.services.service_name }}
+
+          # Test images receive an exact commit tag. Master builds also tag the
+          # runtime app for downstream consumers. Published releases use a
+          # separate exact tag to identify their clean, cache-free builds.
+          tags: |
+            type=raw,value=${{ env.DOCKER_IMAGE_TAG }},enable=${{ env.BUILD_FOR_TESTS == 'true' }}
+            type=raw,value=${{ env.DOCKER_IMAGE_TAG }},enable=${{ matrix.services.service_name == 'app' && env.PUBLISH_RUNTIME == 'true' && github.event_name != 'release' }}
+            type=raw,value=release-${{ env.DOCKER_IMAGE_TAG }},enable=${{ env.PUBLISH_RUNTIME == 'true' && github.event_name == 'release' }}
+            type=match,pattern=v(.*),group=1,enable=${{ env.PUBLISH_RUNTIME == 'true' && github.event_name == 'release' }}
+            type=raw,value=latest,enable=${{ env.PUBLISH_RUNTIME == 'true' && github.event_name == 'release' }}
+            type=edge,branch=master,enable=${{ env.PUBLISH_RUNTIME == 'true' && github.event_name == 'push' && github.ref_name == 'master' }}
+
+      - name: Docker Metadata (Docker Hub)
+        id: dockerhub_metadata
+        # Docker Hub remains deployment-only; PR and release-branch test images
+        # are published exclusively to GHCR.
+        if: env.PUBLISH_RUNTIME == 'true'
+        uses: docker/metadata-action@v6
+        with:
+          images: opengisch/qfieldcloud-${{ matrix.services.service_name }}
+
+          tags: |
+            type=match,pattern=v(.*),group=1,enable=${{ github.event_name == 'release' }}
+            type=raw,value=latest,enable=${{ github.event_name == 'release' }}
+            type=edge,branch=master,enable=${{ github.event_name == 'push' && github.ref_name == 'master' }}
+
+      - name: Login to GitHub Container Repository (ghcr.io)
+        if: env.BUILD_FOR_TESTS == 'true' || env.PUBLISH_RUNTIME == 'true'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login to Docker Hub
+        if: env.PUBLISH_RUNTIME == 'true'
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      - name: Set up Docker Buildx
+        if: env.BUILD_FOR_TESTS == 'true' || env.PUBLISH_RUNTIME == 'true'
+        uses: docker/setup-buildx-action@v4
+
+      - name: Resolve docker-compose.yml build args
+        id: compose_build
+        # build-push-action does not read Compose files. Here we extract DEBUG_BUILD,
+        # UBUNTU_VERSION, QGIS_REPOSITORY, and QGIS_VERSION from the selected QGIS
+        # service instead of defining them again in this workflow.
+        if: matrix.services.compose_service && (env.BUILD_FOR_TESTS == 'true' || env.PUBLISH_RUNTIME == 'true')
+        env:
+          COMPOSE_SERVICE: ${{ matrix.services.compose_service }}
+          DEBUG: "0"
+          # Compose validates the entire project before jq selects the QGIS service,
+          # so the required worker settings must also have valid values.
+          QFIELDCLOUD_WORKER_REPLICAS: "1"
+          TMP_DIRECTORY: /tmp
+        run: |
+          {
+            echo 'build_args<<EOF'
+            docker compose -f docker-compose.yml config --format json \
+              | jq -r --arg service "$COMPOSE_SERVICE" '.services[$service].build.args // {} | to_entries[] | "\(.key)=\(.value)"'
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Docker Build ${{ matrix.services.service_name }}
+        # Build and push only images needed for this event: commit-tagged test images
+        # or edge/version-tagged runtime images. Published releases are clean builds
+        # and do not read or update the mutable cache.
+        if: env.BUILD_FOR_TESTS == 'true' || env.PUBLISH_RUNTIME == 'true'
+        uses: docker/build-push-action@v7
+        with:
+          file: ${{ matrix.services.dockerfile }}
+          context: ${{ matrix.services.docker_context }}
+          push: true
+          target: ${{ matrix.services.docker_target }}
+          build-args: ${{ steps.compose_build.outputs.build_args }}
+          tags: |
+            ${{ steps.ghcr_metadata.outputs.tags }}
+            ${{ steps.dockerhub_metadata.outputs.tags }}
+          no-cache: ${{ github.event_name == 'release' }}
+          pull: ${{ github.event_name == 'release' }}
+          cache-from: ${{ github.event_name != 'release' && format('type=registry,ref=ghcr.io/opengisch/qfieldcloud-{0}:buildcache', matrix.services.service_name) || '' }}
+          cache-to: ${{ github.event_name != 'release' && format('type=registry,ref=ghcr.io/opengisch/qfieldcloud-{0}:buildcache,mode=max', matrix.services.service_name) || '' }}
+
+  test:
+    name: Run tests
+    needs: build_images
+    # The image-build job is intentionally skipped for fork and Dependabot PRs,
+    # so allow tests to continue using their per-runner local-build fallback.
+    # Do not start tests for published GitHub Release events, failed builds, or
+    # cancellations. A push to the `release` branch still runs these tests.
+    if: github.event_name != 'release' && !cancelled() && (needs.build_images.result == 'success' || needs.build_images.result == 'skipped')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: read
+    strategy:
+      fail-fast: false
+      matrix:
+        django_app:
+          - authentication
+          - notifs
+          - subscription
+          - core
+          - project
+          - filestorage
+          - __flaky__
+    continue-on-error: true
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Check env vars configuration
+        run: |
+          scripts/check_envvars.sh
+
+      - name: Export the env variables file
+        run: |
+          cp .env.example .env
+          sed -ri 's/^ENVIRONMENT=(.*)/ENVIRONMENT=test/g' .env
+          if [[ "$USE_PREBUILT_IMAGES" == "true" ]]; then
+            # Remove the developer override and add the CI override, which maps
+            # every repository-built service to its exact GHCR commit tag.
+            sed -ri 's|^COMPOSE_FILE=.*|COMPOSE_FILE=docker-compose.yml:docker-compose.override.standalone.yml:docker-compose.override.test.yml:docker-compose.override.ci.yml|g' .env
+            {
+              echo "DOCKER_IMAGE_TAG=${DOCKER_IMAGE_TAG}"
+              echo "QFIELDCLOUD_QGIS3_IMAGE_NAME=ghcr.io/opengisch/qfieldcloud-qgis3:${DOCKER_IMAGE_TAG}"
+              echo "QFIELDCLOUD_QGIS4_IMAGE_NAME=ghcr.io/opengisch/qfieldcloud-qgis4:${DOCKER_IMAGE_TAG}"
+            } >> .env
+          else
+            # Untrusted PRs cannot push to GHCR, so preserve the original local
+            # development override and build the test services on this runner.
+            sed -ri 's/^COMPOSE_FILE=(.*)/COMPOSE_FILE=\1:docker-compose.override.test.yml/g' .env
+          fi
+          eval $(egrep "^[^#;]" .env | xargs -d'\n' -n1 | sed -E 's/(\w+)=(.*)/export \1='"'"'\2'"'"'/g')
+
+          cat <<EOF >> .env
+          STORAGES='{
+              "webdav": {
+                  "BACKEND": "qfieldcloud.filestorage.backend.QfcWebDavStorage",
+                  "OPTIONS": {
+                      "webdav_url": "http://webdav",
+                      "public_url": "http://webdav",
+                      "basic_auth": "qfc_webdav_user:qfc_webdav_pwd"
+                  }
+              },
+              "default": {
+                  "BACKEND": "qfieldcloud.filestorage.backend.QfcS3Boto3Storage",
+                  "OPTIONS": {
+                      "access_key": "rustfsadmin",
+                      "secret_key": "rustfsadmin",
+                      "bucket_name": "qfieldcloud-local",
+                      "region_name": "",
+                      "endpoint_url": "http://172.17.0.1:8009"
+                  }
+              }
+          }'
+          EOF
+          sed -ri 's/^QFIELDCLOUD_WORKER_DEQUEUE_INTERVAL_S=(.*)/QFIELDCLOUD_WORKER_DEQUEUE_INTERVAL_S=1/g' .env
+
+      - name: Login to GitHub Container Repository (ghcr.io)
+        if: env.USE_PREBUILT_IMAGES == 'true'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull docker containers
+        run: docker compose pull
+
+      - name: Build and run docker containers
+        run: |
+          if [[ "$USE_PREBUILT_IMAGES" == "true" ]]; then
+            # Fail if an expected image is missing instead of silently rebuilding it.
+            docker compose up -d --no-build
+          else
+            docker compose up -d --build
+          fi
+
+      - name: Initial manage.py commands
+        run: |
+          docker compose run --rm app python manage.py makemigrations --no-input --check
+          docker compose run --rm app python manage.py migrate
+          docker compose run --rm app python manage.py collectstatic --no-input
+
+      - name: Run mandatory unit and integration tests
+        if: matrix.django_app != '__flaky__'
+        run: |
+          docker compose run --rm app python manage.py test --keepdb -v2 --exclude-tag="flaky" qfieldcloud.${{ matrix.django_app }}
+
+      - name: Run flaky unit and integration tests
+        if: matrix.django_app == '__flaky__'
+        run: |
+          docker compose run --rm app python manage.py test --keepdb -v2 --tag="flaky" qfieldcloud
+
+      - name: Run Object Storage Cleaner tests
+        if: matrix.django_app == 'filestorage'
+        run: |
+          docker compose run --rm \
+            -e AWS_ACCESS_KEY_ID=rustfsadmin \
+            -e AWS_SECRET_ACCESS_KEY=rustfsadmin \
+            -e AWS_ENDPOINT_URL=http://172.17.0.1:8009 \
+            -v ${{ github.workspace }}/scripts:/usr/src/scripts \
+            app python /usr/src/scripts/object_storage_cleaner/test.py
+
+      - name: "failure logs"
+        if: failure()
+        run: |
+          docker compose logs
+
+      - name: Post Google Chat message on failure
+        if: failure() && matrix.django_app != '__flaky__'
+        uses: julb/action-post-googlechat-message@v1
+        with:
+          message: |
+            Failed job run for branch `${{ github.head_ref || github.ref_name }}`, check ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} .
+          gchat_webhook_url: ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}
+
+      # - name: Setup tmate session
+      #   if: ${{ failure() }}
+      #   uses: mxschmitt/action-tmate@v3
+      #   timeout-minutes: 30
+      #   with:
+      #     limit-access-to-actor: true
+
+  qgis_worker_tests:
+    name: Run QGIS worker tests (${{ matrix.qgis_service }})
+    needs: build_images
+    # Fork and Dependabot PRs skip build_images because their token cannot push to GHCR.
+    # Let QGIS tests continue by building the selected image on the runner instead.
+    if: github.event_name != 'release' && !cancelled() && (needs.build_images.result == 'success' || needs.build_images.result == 'skipped')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: read
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        qgis_service:
+          - qgis3
+          - qgis4
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Export the env variables file
+        run: |
+          cp .env.example .env
+          if [[ "$USE_PREBUILT_IMAGES" == "true" ]]; then
+            # Exclude the developer override so its local build/command settings
+            # cannot replace the prebuilt QGIS image selected by the CI override.
+            sed -ri 's|^COMPOSE_FILE=.*|COMPOSE_FILE=docker-compose.yml:docker-compose.override.standalone.yml:docker-compose.override.ci.yml|g' .env
+            echo "DOCKER_IMAGE_TAG=${DOCKER_IMAGE_TAG}" >> .env
+          fi
+
+      - name: Login to GitHub Container Repository (ghcr.io)
+        if: env.USE_PREBUILT_IMAGES == 'true'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prepare QGIS image
+        run: |
+          if [[ "$USE_PREBUILT_IMAGES" == "true" ]]; then
+            docker compose pull ${{ matrix.qgis_service }}
+          else
+            docker compose build ${{ matrix.qgis_service }}
+          fi
+
+      - name: Run QGIS worker unit tests
+        run: |
+          docker compose run --rm \
+            ${{ matrix.qgis_service }} python3 -m unittest discover -s qfc_worker/tests -v
+
+  django_checks:
+    name: Run Django checks
+    needs: build_images
+    # Run checks against the same app-test image used by the test jobs.
+    # Fork and Dependabot PRs build that image on the runner instead.
+    if: github.event_name != 'release' && !cancelled() && (needs.build_images.result == 'success' || needs.build_images.result == 'skipped')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: read
+    continue-on-error: true
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Export the env variables file
+        run: |
+          cp .env.example .env
+          sed -ri 's/^ENVIRONMENT=(.*)/ENVIRONMENT=test/g' .env
+          if [[ "$USE_PREBUILT_IMAGES" == "true" ]]; then
+            # Select immutable CI images and remove developer-only commands such
+            # as debugpy from the effective Compose configuration.
+            sed -ri 's|^COMPOSE_FILE=.*|COMPOSE_FILE=docker-compose.yml:docker-compose.override.standalone.yml:docker-compose.override.test.yml:docker-compose.override.ci.yml|g' .env
+            {
+              echo "DOCKER_IMAGE_TAG=${DOCKER_IMAGE_TAG}"
+              echo "QFIELDCLOUD_QGIS3_IMAGE_NAME=ghcr.io/opengisch/qfieldcloud-qgis3:${DOCKER_IMAGE_TAG}"
+              echo "QFIELDCLOUD_QGIS4_IMAGE_NAME=ghcr.io/opengisch/qfieldcloud-qgis4:${DOCKER_IMAGE_TAG}"
+            } >> .env
+          else
+            sed -ri 's/^COMPOSE_FILE=(.*)/COMPOSE_FILE=\1:docker-compose.override.test.yml/g' .env
+          fi
+          eval $(egrep "^[^#;]" .env | xargs -d'\n' -n1 | sed -E 's/(\w+)=(.*)/export \1='"'"'\2'"'"'/g')
+
+      - name: Login to GitHub Container Repository (ghcr.io)
+        if: env.USE_PREBUILT_IMAGES == 'true'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull docker containers
+        run: docker compose pull
+
+      - name: Build and run docker containers
+        run: |
+          if [[ "$USE_PREBUILT_IMAGES" == "true" ]]; then
+            # The shared build job is the only allowed image builder on this path.
+            docker compose up -d --no-build
+          else
+            docker compose up -d --build
+          fi
+
+      - name: Initial manage.py commands
+        run: |
+          docker compose run --rm app python manage.py makemigrations --no-input --check
+          docker compose run --rm app python manage.py migrate
+          docker compose run --rm app python manage.py collectstatic --no-input
+
+      - name: Django check
+        run: |
+          docker compose run --rm app python manage.py check --deploy --fail-level=ERROR
+
+      - name: Validate templates
+        run: |
+          docker compose run --rm app python manage.py validate_templates
+
+      - name: "failure logs"
+        if: failure()
+        run: |
+          docker compose logs

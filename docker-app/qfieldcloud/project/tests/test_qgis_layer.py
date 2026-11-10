@@ -137,3 +137,41 @@ class QfcTestCase(TestCase):
         self.assertTrue(
             self.qgis_project.layers.filter(qgis_layer_id="layer3").exists()
         )
+
+    def test_missing_primary_key_warning_skipped_for_readonly_layer(self):
+        project = self.qgis_project.project
+        project.the_qgis_file = self.qgis_project.file_version.file
+        project.save(update_fields=["the_qgis_file"])
+
+        with self.subTest(
+            "Test problems skips the primary key warning for a read-only layer"
+        ):
+            self._create_layer(
+                "readonly_layer",
+                is_readonly=True,
+                qfs_settings={"qfc_source_data_pk_name": ""},
+            )
+
+            self.assertEqual(project.problems, [])
+
+        with self.subTest(
+            "Test problems warns about the missing primary key of an editable layer"
+        ):
+            self._create_layer(
+                "editable_layer",
+                ordering=1,
+                qfs_settings={"qfc_source_data_pk_name": ""},
+            )
+
+            self.assertEqual(
+                project.problems,
+                [
+                    {
+                        "layer": "editable_layer",
+                        "level": "warning",
+                        "code": "layer_problem",
+                        "description": 'Layer "editable_layer" does not support the `primary key` attribute. The layer will be read-only on QField.',
+                        "solution": "To make the layer editable on QField, store the layer data in a GeoPackage or PostGIS layer, using a single column for the primary key.",
+                    }
+                ],
+            )

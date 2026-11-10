@@ -111,16 +111,18 @@ class DeleteObsoleteProjectPackagesJob(CronJobBase):
         packages.delete_obsolete_packages(projects)
 
 
-class ClearJobOutputsAfterRetentionPeriodJob(CronJobBase):
+class ClearJobLogsAfterRetentionPeriodJob(CronJobBase):
     # runs every night at 02:00
     schedule = Schedule(run_every_mins=1440, run_at_times=["02:00"])
-    code = "qfieldcloud.clear_jobs_outputs_after_retention_period"
+    code = "qfieldcloud.clear_jobs_logs_after_retention_period"
 
     def do(self):
+        assert config.JOBS_LOGS_RETENTION_PERIOD_DAYS >= 90
+
         jobs = Job.objects.filter(
             created_at__lt=timezone.now()
-            - timedelta(days=config.JOB_OUTPUT_RETENTION_DAYS),
+            - timedelta(days=config.JOBS_LOGS_RETENTION_PERIOD_DAYS),
             output__isnull=False,
         )
 
-        jobs.update(output=None)
+        jobs.update(output=None, feedback=None)
