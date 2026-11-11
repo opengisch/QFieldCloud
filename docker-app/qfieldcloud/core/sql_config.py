@@ -254,6 +254,7 @@ sql_items = [
         r"""
             DROP FUNCTION IF EXISTS core_delta_geom_trigger_func()
         """,
+        replace=True,
     ),
     SQLItem(
         "core_delta_geom_update_trigger",
