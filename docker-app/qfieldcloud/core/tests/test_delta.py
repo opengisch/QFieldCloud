@@ -858,6 +858,54 @@ class QfcTestCase(APITransactionTestCase):
             b'fid,col1\n"1",new_value\n',
         )
 
+    def test_push_delta_with_invalid_geometry_wkt_stores_null_geom(self):
+        """Pushing deltas whose WKT PostGIS can't parse must not fail the upload.
+
+        The `core_delta` insert trigger converts each delta's WKT to `old_geom`/`new_geom`.
+        If PostGIS raises there, the whole insert fails with a 500 and the client is
+        left with a deltafile that can never be uploaded.
+        """
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+        project = self.upload_project_files(self.project1)
+
+        response = self.client.post(
+            f"/api/v1/deltas/{project.id}/",
+            {
+                "file": self.get_delta_file_with_project_id(
+                    project,
+                    testdata_path(
+                        "delta/deltas/singlelayer_multidelta_invalid_geometry.json"
+                    ),
+                )
+            },
+            format="multipart",
+        )
+
+        with self.subTest("Test the API accepts the deltafile"):
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        with self.subTest("Test a valid WKT is reprojected to EPSG:4326"):
+            delta = Delta.objects.get(id="0b6a2a3e-5c1f-4c3e-9a51-0f6a1d6b1a01")
+            self.assertEqual(delta.new_geom.srid, 4326)
+            self.assertAlmostEqual(delta.new_geom.x, 7.43863, places=4)
+            self.assertAlmostEqual(delta.new_geom.y, 46.95108, places=4)
+
+        with self.subTest("Test an unparsable WKT stores a null geometry"):
+            delta = Delta.objects.get(id="0b6a2a3e-5c1f-4c3e-9a51-0f6a1d6b1a02")
+            self.assertIsNone(delta.new_geom)
+
+        with self.subTest(
+            "Test a polygon with an unclosed ring stores a null geometry"
+        ):
+            delta = Delta.objects.get(id="0b6a2a3e-5c1f-4c3e-9a51-0f6a1d6b1a03")
+            self.assertIsNone(delta.new_geom)
+
+        with self.subTest(
+            "Test a point outside the source CRS projection domain stores a null geometry"
+        ):
+            delta = Delta.objects.get(id="0b6a2a3e-5c1f-4c3e-9a51-0f6a1d6b1a04")
+            self.assertIsNone(delta.new_geom)
+
     def test_special_data_types(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
         project = self.upload_project_files(self.project1)
