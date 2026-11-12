@@ -221,8 +221,16 @@ sql_items = [
                                 AND auth_srid = delta_srid
                         )
                     THEN
-                        NEW.old_geom := ST_Transform( ST_SetSRID( ST_Force2D( ST_GeomFromText( REPLACE( old_geom_wkt, 'nan', '0' ) ) ), delta_srid ), 4326 );
-                        NEW.new_geom := ST_Transform( ST_SetSRID( ST_Force2D( ST_GeomFromText( REPLACE( new_geom_wkt, 'nan', '0' ) ) ), delta_srid ), 4326 );
+                        BEGIN
+                            NEW.old_geom := ST_Transform( ST_SetSRID( ST_Force2D( ST_GeomFromText( REPLACE( old_geom_wkt, 'nan', '0' ) ) ), delta_srid ), 4326 );
+                        EXCEPTION WHEN OTHERS THEN
+                            NEW.old_geom := NULL;
+                        END;
+                        BEGIN
+                            NEW.new_geom := ST_Transform( ST_SetSRID( ST_Force2D( ST_GeomFromText( REPLACE( new_geom_wkt, 'nan', '0' ) ) ), delta_srid ), 4326 );
+                        EXCEPTION WHEN OTHERS THEN
+                            NEW.new_geom := NULL;
+                        END;
                     ELSE
                         NEW.old_geom := NULL;
                         NEW.new_geom := NULL;
@@ -246,6 +254,7 @@ sql_items = [
         r"""
             DROP FUNCTION IF EXISTS core_delta_geom_trigger_func()
         """,
+        replace=True,
     ),
     SQLItem(
         "core_delta_geom_update_trigger",
