@@ -4,4 +4,11 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "monthly"
+      interval: "weekly"
+
+  - package-ecosystem: "pip"
+    directories:
+      - "/docker-app/requirements"
+      - "/docker-qgis"
+    schedule:
+      interval: "weekly"
