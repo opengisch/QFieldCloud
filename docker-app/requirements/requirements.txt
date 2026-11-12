@@ -179,7 +179,7 @@ pillow==13.0.0
     # via
     #   -r requirements.in
     #   django-simple-captcha
-psycopg2==2.9.12
+psycopg2==2.9.13
     # via -r requirements.in
 pycparser==3.0
     # via cffi
