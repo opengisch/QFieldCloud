@@ -133,7 +133,7 @@ django-stubs==6.1.0
     # via
     #   -r requirements.in
     #   djangorestframework-stubs
-django-stubs-ext==6.1.0
+django-stubs-ext==6.1.2
     # via
     #   -r requirements.in
     #   django-stubs

@@ -34,7 +34,7 @@ django-timezone-field==7.2.2
 django-unfold==0.110.0
 django==5.2.17
 django-stubs==6.1.0
-django-stubs-ext==6.1.0
+django-stubs-ext==6.1.2
 djangorestframework==3.18.3
 djangorestframework-stubs==3.18.1
 drf-spectacular==0.30.0
