@@ -204,7 +204,7 @@ services:
       ofelia.enabled: "false"
 
   ofelia:
-    image: mcuadros/ofelia:0.3.18
+    image: mcuadros/ofelia:0.3.22
     restart: unless-stopped
     depends_on:
       - app
