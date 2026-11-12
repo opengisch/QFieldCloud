@@ -13,11 +13,11 @@ attrs==26.1.0
     #   referencing
 beautifulsoup4==4.15.0
     # via django-bootstrap4
-boto3==1.43.106
+boto3==1.43.126
     # via -r requirements.in
 boto3-stubs==1.43.126
     # via -r requirements.in
-botocore==1.43.106
+botocore==1.43.127
     # via
     #   boto3
     #   s3transfer
