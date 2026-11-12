@@ -141,7 +141,7 @@ django-tables2==3.0.1
     # via -r requirements.in
 django-timezone-field==7.2.2
     # via -r requirements.in
-django-unfold==0.110.0
+django-unfold==0.110.1
     # via -r requirements.in
 djangorestframework==3.18.3
     # via
