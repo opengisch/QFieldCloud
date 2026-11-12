@@ -221,7 +221,7 @@ sqlparse==0.6.0
     # via
     #   django
     #   django-debug-toolbar
-stripe==4.2.0
+stripe==16.1.0
     # via -r requirements.in
 swapper==1.5.0
     # via django-notifications-hq
@@ -238,6 +238,7 @@ typing-extensions==4.16.0
     #   django-stubs
     #   django-stubs-ext
     #   djangorestframework-stubs
+    #   stripe
 uritemplate==4.2.0
     # via drf-spectacular
 urllib3==2.8.0

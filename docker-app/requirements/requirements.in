@@ -46,4 +46,4 @@ psycopg2==2.9.12
 pymemcache==4.0.0
 pyproj==3.8.0
 sentry-sdk==2.71.0
-stripe==4.2.0
+stripe==16.1.0
