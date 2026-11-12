@@ -99,6 +99,7 @@ INSTALLED_APPS = [
     # admin theme
     "unfold",
     "unfold.contrib.constance",
+    "unfold.contrib.filters",
     # django contrib
     "django.contrib.admin",
     "django.contrib.contenttypes",
