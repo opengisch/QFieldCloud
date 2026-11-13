@@ -215,7 +215,7 @@ sentry-sdk==2.74.0
     # via -r requirements.in
 six==1.17.0
     # via python-dateutil
-soupsieve==2.9.2
+soupsieve==4.0
     # via beautifulsoup4
 sqlparse==0.6.0
     # via
