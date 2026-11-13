@@ -17,7 +17,6 @@ from allauth.socialaccount.admin import SocialAppAdmin as SocialAppAdminBase
 from allauth.socialaccount.admin import SocialTokenAdmin as SocialTokenAdminBase
 from allauth.socialaccount.models import SocialAccount, SocialApp, SocialToken
 from auditlog.admin import LogEntryAdmin as BaseLogEntryAdmin
-from auditlog.filters import ResourceTypeFilter
 from auditlog.models import ContentType, LogEntry
 from axes.admin import AccessAttemptAdmin as AccessAttemptAdminBase
 from axes.admin import AccessFailureLogAdmin as AccessFailureLogAdminBase
@@ -40,7 +39,7 @@ from django.core.validators import validate_email
 from django.db import models
 from django.db.models import Q, QuerySet
 from django.db.models.fields.json import JSONField
-from django.db.models.functions import Lower
+from django.db.models.functions import Concat, Lower
 from django.forms import ModelForm, fields, widgets
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.http.response import Http404, HttpResponseRedirect, StreamingHttpResponse
@@ -59,6 +58,7 @@ from invitations.admin import InvitationAdmin as InvitationAdminBase
 from invitations.utils import get_invitation_model
 from rest_framework.authtoken.models import TokenProxy
 from unfold.admin import ModelAdmin, StackedInline, TabularInline
+from unfold.contrib.filters.admin import MultipleDropdownFilter, RangeDateTimeFilter
 from unfold.decorators import action
 from unfold.sites import UnfoldAdminSite
 from unfold.views import ChangeList
@@ -1799,11 +1799,29 @@ class UserAdmin(QFieldCloudModelAdmin):
         return False
 
 
-class QFieldCloudResourceTypeFilter(ResourceTypeFilter):
-    def lookups(self, request, model_admin):
-        qs = ContentType.objects.all().order_by("model")
-        types = qs.values_list("id", "model")
-        return types
+class ContentTypeFilter(MultipleDropdownFilter):
+    title = "Content Types"
+    parameter_name = "content_types"
+
+    def lookups(self, request: HttpRequest, model_admin) -> list[tuple[int, str]]:
+        qs = (
+            ContentType.objects.annotate(
+                label=Concat("app_label", models.Value("."), "model")
+            )
+            .order_by("model", "app_label")
+            .values_list("id", "label")
+        )
+        return list(qs)
+
+    def queryset(
+        self, request: HttpRequest, queryset: QuerySet[LogEntry]
+    ) -> QuerySet[LogEntry]:
+        values = self.value()
+
+        if values:
+            return queryset.filter(content_type_id__in=values)
+
+        return queryset
 
 
 class LogEntryAdmin(
@@ -1813,7 +1831,14 @@ class LogEntryAdmin(
     BaseLogEntryAdmin,
     ModelAdmin,
 ):
-    list_filter = ("action", QFieldCloudResourceTypeFilter)
+    date_hierarchy = None
+
+    list_filter = (
+        ("timestamp", RangeDateTimeFilter),
+        "action",
+        ContentTypeFilter,
+    )
+    list_filter_submit = True
 
     search_parser_config = {
         "user": {
