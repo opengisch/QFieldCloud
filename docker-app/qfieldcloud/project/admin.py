@@ -284,6 +284,7 @@ class LayerAdmin(QFieldCloudModelAdmin):
     search_fields = (
         "name__icontains",
         "qgis_project__name__icontains",
+        "qgis_project__project__id__iexact",
     )
     ordering = ("qgis_project", "ordering")
     list_select_related = (OWNER_LOOKUP,)
@@ -580,7 +581,11 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         {
             "title": _("Related"),
             "icon": "link",
-            "items": ["related_jobs", "related_faulty_deltafiles"],
+            "items": [
+                "related_jobs",
+                "related_layers",
+                "related_faulty_deltafiles",
+            ],
         },
     )
 
@@ -654,6 +659,14 @@ class ProjectAdmin(QFieldCloudModelAdmin):
     )
     def related_jobs(self, request: HttpRequest, object_id: str) -> HttpResponse:
         return redirect_to_changelist("admin:core_job_changelist", object_id)
+
+    @action(
+        description=_("Project layers"),
+        url_path="related-layers",
+        icon="layers",
+    )
+    def related_layers(self, request: HttpRequest, object_id: str) -> HttpResponse:
+        return redirect_to_changelist("admin:project_qgislayer_changelist", object_id)
 
     @action(
         description=_("Faulty deltafiles"),
