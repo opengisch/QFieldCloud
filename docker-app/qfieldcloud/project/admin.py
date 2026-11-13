@@ -4,12 +4,14 @@ from django import forms
 from django.contrib import admin
 from django.core.exceptions import ValidationError
 from django.core.files.storage import storages
+from django.db.models import QuerySet
 from django.forms import ModelForm, fields, widgets
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.urls import reverse
 from django.utils.safestring import SafeText
 from django.utils.translation import gettext_lazy as _
 from unfold.decorators import action
+from unfold.sections import TableSection
 from unfold.widgets import SELECT_CLASSES
 
 from qfieldcloud.core.admin import (
@@ -34,6 +36,7 @@ from qfieldcloud.project.models import (
     Project,
     ProjectSeed,
     QgisLayer,
+    QgisLayerField,
     QgisProject,
 )
 
@@ -210,8 +213,53 @@ class QgisProjectInline(QfcStackedInline):
         return False
 
 
+class QgisLayerFieldInline(QfcTabularInline):
+    model = QgisLayerField
+    tab = True
+    ordering = ("ordering",)
+    show_title = False
+
+    fields = (
+        "name__link",
+        "type_display",
+        "alias",
+        "comment",
+    )
+    readonly_fields = fields
+
+    @admin.display(description=_("Name"))
+    def name__link(self, instance: QgisLayerField) -> SafeText:
+        return model_admin_url(instance, instance.name)
+
+    def has_add_permission(self, request, obj=None) -> bool:
+        return False
+
+    def has_change_permission(self, request, obj=None) -> bool:
+        return False
+
+    def has_delete_permission(self, request, obj=None) -> bool:
+        return False
+
+
+class QgisLayerFieldsSection(TableSection):
+    verbose_name = _("Fields")
+    related_name = "fields"
+    fields = (
+        "name__link",
+        "type_display",
+        "alias",
+        "comment",
+    )
+
+    @admin.display(description=_("Name"))
+    def name__link(self, instance: QgisLayerField) -> SafeText:
+        return model_admin_url(instance, instance.name)
+
+
 class LayerAdmin(QFieldCloudModelAdmin):
     has_direct_delete_permission = False
+    inlines = (QgisLayerFieldInline,)
+    list_sections = (QgisLayerFieldsSection,)
 
     OWNER_LOOKUP = "qgis_project__project__owner"
 
@@ -279,6 +327,88 @@ class LayerAdmin(QFieldCloudModelAdmin):
     @admin.display(description=_("QFieldSync settings"))
     def qfs_settings__pre(self, instance: QgisLayer) -> SafeText:
         return format_text(instance.qfs_settings, "json")
+
+    def get_queryset(self, request: HttpRequest) -> QuerySet[QgisLayer]:
+        # `QgisLayerFieldsSection` reads `fields` of every changelist row.
+        return super().get_queryset(request).prefetch_related("fields")
+
+    def has_add_permission(self, request, obj=None) -> bool:
+        return False
+
+    def has_change_permission(self, request, obj=None) -> bool:
+        return False
+
+
+class LayerFieldAdmin(QFieldCloudModelAdmin):
+    has_direct_delete_permission = False
+
+    OWNER_LOOKUP = "layer__qgis_project__project__owner"
+
+    list_display = (
+        "name",
+        "layer__link",
+        "project__link",
+        "owner__link",
+        "ordering",
+        "type",
+        "type_display",
+        "is_not_null_strength",
+        "is_unique_strength",
+    )
+    list_filter = (
+        "type",
+        "type_display",
+        "is_not_null_strength",
+        "is_unique_strength",
+        (OWNER_LOOKUP, admin.RelatedOnlyFieldListFilter),
+    )
+    search_fields = (
+        "name__icontains",
+        "layer__name__icontains",
+        "layer__qgis_project__project__name__icontains",
+    )
+    ordering = ("layer", "ordering")
+    list_select_related = (OWNER_LOOKUP,)
+
+    fields = (
+        "project__link",
+        "layer__link",
+        "name",
+        "ordering",
+        "alias",
+        "comment",
+        "type",
+        "type_display",
+        "length",
+        "precision",
+        "is_not_null_strength",
+        "constraint_expression",
+        "constraint_expression_description",
+        "constraint_expression_strength",
+        "is_unique_strength",
+        "default_value",
+        "set_default_value_on_update",
+        "widget_type",
+        "widget_config__pre",
+    )
+    readonly_fields = fields
+
+    @admin.display(description=_("Layer"))
+    def layer__link(self, instance: QgisLayerField) -> SafeText:
+        return model_admin_url(instance.layer, instance.layer.name)
+
+    @admin.display(description=_("Project"))
+    def project__link(self, instance: QgisLayerField) -> SafeText:
+        project = instance.layer.qgis_project.project
+        return model_admin_url(project, project.name)
+
+    @admin.display(description=_("Owner"), ordering=OWNER_LOOKUP)
+    def owner__link(self, instance: QgisLayerField) -> SafeText:
+        return model_admin_url(instance.layer.qgis_project.project.owner)
+
+    @admin.display(description=_("Widget config"))
+    def widget_config__pre(self, instance: QgisLayerField) -> SafeText:
+        return format_text(instance.widget_config, "json")
 
     def has_add_permission(self, request, obj=None) -> bool:
         return False
@@ -540,3 +670,4 @@ class ProjectAdmin(QFieldCloudModelAdmin):
 
 qfc_admin_site.register(Project, ProjectAdmin)
 qfc_admin_site.register(QgisLayer, LayerAdmin)
+qfc_admin_site.register(QgisLayerField, LayerFieldAdmin)
