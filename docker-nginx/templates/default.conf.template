@@ -46,7 +46,7 @@ upstream django {
 }
 
 # If environment specifies allowing plain http not to be redirected to https.
-map $host $allow_internal_http {
+map $host $should_allow_internal_http {
     default "${NGINX_ALLOW_INTERNAL_HTTP}";
 }
 
@@ -57,15 +57,34 @@ geo $is_docker_internal {
 }
 
 # Determine if we should redirect to https
-map "$allow_internal_http:$is_docker_internal" $base_redirect_to_https {
+map "$should_allow_internal_http:$is_docker_internal" $base_should_redirect_to_https {
     "1:1"   0; # If we explicitly allow plain http and the request is coming from docker internal network, don't redirect to https.
     default 1; # Default is to redirect to https.
 }
 
 # Exclude https redirect for the following URIs
-map $request_uri $redirect_to_https {
+map $request_uri $should_redirect_to_https {
     "~^/.well-known/acme-challenge/" 0; # Letsencrypt Challenge
-    default $base_redirect_to_https;
+    default $base_should_redirect_to_https;
+}
+
+# Check and extract the hostname part of the `Host` header
+map $http_host $http_host_name {
+    "~^(?<http_host_name_without_port>[^:]+)(:\d+)?$" $http_host_name_without_port;
+    default "";
+}
+
+# Detect if the request targets the main QFieldCloud hostname
+map $http_host_name $is_qfieldcloud_host {
+    "${QFIELDCLOUD_HOST}" 1;
+    default 0;
+}
+
+# Determine if the request should be rejected, to prevent access by IP or unknown hostnames.
+map "$is_qfieldcloud_host:$should_allow_internal_http:$is_docker_internal:$http_host_name" $should_reject_host {
+    "~^1:"        0; # main QFieldCloud hostname is always allowed
+    "0:1:1:nginx" 0; # if we explicitly allow plain http, requests from docker internal network may use the `nginx` host name
+    default       1; # default is to reject
 }
 
 server {
@@ -77,12 +96,12 @@ server {
     root /var/www/certbot;
   }
 
-  # prevent access by IP
-  if ($http_host !~ "${QFIELDCLOUD_HOST}(:${WEB_HTTP_PORT})?") {
+  # prevent access based on host validation
+  if ($should_reject_host = "1") {
     return 444;
   }
 
-  if ($redirect_to_https = "1") {
+  if ($should_redirect_to_https = "1") {
     return 302 https://$host:${WEB_HTTPS_PORT}$request_uri;
   }
 
@@ -118,8 +137,8 @@ server {
   # upgrade to https
   error_page 497 https://$host:${WEB_HTTPS_PORT}$request_uri;
 
-  # prevent access by IP
-  if ($http_host !~ "${QFIELDCLOUD_HOST}(:${WEB_HTTPS_PORT})?") {
+  # prevent access based on host validation
+  if ($should_reject_host = "1") {
     return 444;
   }
 
