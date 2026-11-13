@@ -1619,7 +1619,14 @@ class QgisLayerQuerySet(models.QuerySet):
 
             qgis_layer_ids_to_keep.add(qgis_layer_id)
 
-        qgis_project.layers.exclude(qgis_layer_id__in=qgis_layer_ids_to_keep).delete()
+        # Delete by primary key the layers that were not present in this update.
+        layer_ids_to_delete = []
+        for qgis_layer_id, existing_layer in existing_layers_by_qgis_layer_id.items():
+            if qgis_layer_id not in qgis_layer_ids_to_keep:
+                layer_ids_to_delete.append(existing_layer.id)
+
+        if layer_ids_to_delete:
+            qgis_project.layers.filter(id__in=layer_ids_to_delete).delete()
 
 
 class QgisLayer(models.Model):
@@ -1849,7 +1856,14 @@ class QgisLayerFieldQuerySet(models.QuerySet):
 
             field_names_to_keep.add(name)
 
-        layer.fields.exclude(name__in=field_names_to_keep).delete()
+        # Delete by primary key the fields that were not present in this update.
+        field_ids_to_delete = []
+        for name, existing_field in existing_fields_by_name.items():
+            if name not in field_names_to_keep:
+                field_ids_to_delete.append(existing_field.id)
+
+        if field_ids_to_delete:
+            layer.fields.filter(id__in=field_ids_to_delete).delete()
 
 
 class QgisLayerField(models.Model):
