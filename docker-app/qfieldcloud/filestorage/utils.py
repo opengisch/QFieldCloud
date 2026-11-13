@@ -83,6 +83,8 @@ def is_admin_restricted_file(filename: str, projectfile_filename: str | None) ->
 
     NOTE If no `projectfile_filename` is passed, then the function always returns `False`.
 
+    NOTE Keep in sync with QFieldSync (`qfieldsync/utils/permissions.py`).
+
     Args:
         filename: the filename being checked
         projectfile_filename: the filename of the QGIS projectfile. If not provided, the function always returns `False`.
