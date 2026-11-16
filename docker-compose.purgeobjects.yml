@@ -1,0 +1,22 @@
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "100m"
+    max-file: "10"
+    tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
+
+services:
+  purgeobjects:
+    build:
+      context: ./docker-purgeobjects
+    restart: unless-stopped
+    environment:
+      STORAGES: ${STORAGES}
+    logging: *default-logging
+    labels:
+      ofelia.enabled: "true"
+      ofelia.job-exec.purgeobjects.no-overlap: "true"
+      ofelia.job-exec.purgeobjects.schedule: "@monthly"
+      ofelia.job-exec.purgeobjects.command: >-
+        python /purgeobjects.py
+        --retention-period "90 days" --force

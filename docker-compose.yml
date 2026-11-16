@@ -220,21 +220,6 @@ services:
     volumes:
       - transformation_grids:/transformation_grids
 
-  purgeobjects:
-    build:
-      context: ./docker-purgeobjects
-    restart: unless-stopped
-    environment:
-      STORAGES: ${STORAGES}
-    logging: *default-logging
-    labels:
-      ofelia.enabled: "true"
-      ofelia.job-exec.purgeobjects.no-overlap: "true"
-      ofelia.job-exec.purgeobjects.schedule: "@weekly"
-      ofelia.job-exec.purgeobjects.command: >-
-        python /purgeobjects.py
-        --retention-period "90 days" --force
-
   memcached:
     image: memcached:1
     restart: unless-stopped
