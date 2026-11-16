@@ -9,7 +9,7 @@ COPY ./requirements.txt /requirements.txt
 RUN uv pip install --system --no-cache -r /requirements.txt \
     && rm /requirements.txt
 
-COPY ./purge_deleted_objects.py /purge_deleted_objects.py
+COPY ./purgeobjects.py /purgeobjects.py
 
 # Keep container running to allow ofelia to exec into it.
 CMD ["tail", "-f", "/dev/null"]

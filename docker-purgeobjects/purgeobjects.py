@@ -5,7 +5,7 @@ latest version is a Delete Marker) and optionally permanently deletes all versio
 of those objects to reclaim storage space.
 
 Usage:
-    python purge_deleted_objects.py [storage_name] --retention-period "30 days" [options]
+    python purgeobjects.py [storage_name] --retention-period "30 days" [options]
 """
 
 from __future__ import annotations

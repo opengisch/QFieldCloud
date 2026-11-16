@@ -56,7 +56,7 @@ Set `STORAGES` to the same JSON structure used by QFieldCloud's Django settings,
 By default, the script purges **every** entry in `STORAGES` whose `BACKEND` is `qfieldcloud.filestorage.backend.QfcS3Boto3Storage`, one after another. Pass a storage name as the positional `storage_name` argument to restrict it to a single entry (the entry must exist and be of that backend type):
 
 ```bash
-python purge_deleted_objects.py my-storage-name --retention-period "30 days"
+python purgeobjects.py my-storage-name --retention-period "30 days"
 ```
 
 ### Option B: `AWS_*` environment variables
@@ -78,7 +78,7 @@ Run the script directly from the command line.
 ### Basic Syntax
 
 ```bash
-python purge_deleted_objects.py [storage_name] --retention-period "30 days" [options]
+python purgeobjects.py [storage_name] --retention-period "30 days" [options]
 ```
 
 `storage_name` is optional and only used to select a single entry from `STORAGES` (see "Storage Configuration" above). If omitted, all matching `STORAGES` entries are purged.
@@ -92,19 +92,19 @@ Run the script with `--help` to see all available options.
 **1. Scan all configured storages to see how much space can be freed:**
 
 ```bash
-python purge_deleted_objects.py --retention-period "30 days" --dry-run
+python purgeobjects.py --retention-period "30 days" --dry-run
 ```
 
 **2. Scan only one named storage from `STORAGES`:**
 
 ```bash
-python purge_deleted_objects.py my-production-storage --retention-period "30 days" --dry-run
+python purgeobjects.py my-production-storage --retention-period "30 days" --dry-run
 ```
 
 **3. Scan a specific folder:**
 
 ```bash
-python purge_deleted_objects.py my-production-storage --retention-period "30 days" --dry-run --prefix "logs/2023/"
+python purgeobjects.py my-production-storage --retention-period "30 days" --dry-run --prefix "logs/2023/"
 ```
 
 **4. Cleanup objects deleted more than 30 days ago (Retention Policy):**
@@ -113,14 +113,14 @@ python purge_deleted_objects.py my-production-storage --retention-period "30 day
 
 ```bash
 # Clean objects deleted OLDER than 30 days, across every eligible storage
-python purge_deleted_objects.py --retention-period '30 days'
+python purgeobjects.py --retention-period '30 days'
 ```
 
 **5. Permanently delete objects:**
 
 ```bash
 # You will be prompted to confirm once, covering all storages to be purged.
-python purge_deleted_objects.py --retention-period "30 days"
+python purgeobjects.py --retention-period "30 days"
 ```
 
 **6. Automated cleanup for RustFS (local/custom endpoint) using `AWS_*` env vars:**
@@ -131,7 +131,7 @@ export AWS_ACCESS_KEY_ID=rustfsadmin
 export AWS_SECRET_ACCESS_KEY=rustfsadmin
 export AWS_ENDPOINT_URL=http://localhost:8009
 
-python purge_deleted_objects.py --retention-period "30 days" --force
+python purgeobjects.py --retention-period "30 days" --force
 ```
 
 ## Running Tests

@@ -11,7 +11,7 @@ from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, cast
 
 import boto3
-from purge_deleted_objects import parse_retention_period
+from purgeobjects import parse_retention_period
 
 if TYPE_CHECKING:
     from mypy_boto3_s3.client import S3Client
@@ -83,11 +83,9 @@ class TestObjectStorageCleaner(unittest.TestCase):
         self.unique_prefix = f"test-run-{uuid.uuid4()}/"
 
     def run_script(self, args):
-        """Runs the purge_deleted_objects.py script as a subprocess."""
+        """Runs the purgeobjects.py script as a subprocess."""
         # Assume script is in the same directory as this test file
-        script_path = os.path.join(
-            os.path.dirname(__file__), "purge_deleted_objects.py"
-        )
+        script_path = os.path.join(os.path.dirname(__file__), "purgeobjects.py")
 
         # Set up environment for the subprocess
         env = os.environ.copy()
