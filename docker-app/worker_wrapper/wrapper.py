@@ -3,7 +3,7 @@ import logging
 import shutil
 import tempfile
 import uuid
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from datetime import timedelta
 from pathlib import Path
 from traceback import TracebackException
@@ -459,42 +459,6 @@ class JobRun:
             },
         )
 
-        self.job.container_id = container.id
-        self.job.save(update_fields=["docker_started_at", "container_id"])
-        logger.info(f"Starting worker {container.id} ...")
-
-        response = {"StatusCode": TIMEOUT_ERROR_EXIT_CODE}
-
-        try:
-            # will throw an `requests.exceptions.ConnectionError`, but the container is still alive
-            response = container.wait(timeout=self.container_timeout_secs)
-
-            if response["StatusCode"] == DOCKER_SIGKILL_EXIT_CODE:
-                logger.info(
-                    "Job canceled, probably due to deleted Project and Jobs.",
-                )
-
-                # No further action required, received by wrapper's autoclean mechanism when the `Project` is deleted
-                return (
-                    response["StatusCode"],
-                    b"Job has been cancelled by parent process!",
-                )
-
-        except requests.exceptions.ConnectionError as err:
-            logger.exception("Timeout error.", exc_info=err)
-
-        # `docker_started_at`/`docker_finished_at` tracks the time spent on docker only
-        self.job.docker_finished_at = timezone.now()
-        self.job.save(update_fields=["docker_finished_at"])
-
-        logs = b""
-        # Retry reading the logs, as it may fail
-        # NOTE when reading the logs of a finished container, it might timeout with an ``.
-        # This leads to exception and prevents the container to be removed few lines below.
-        # Therefore try reading the logs, as they are important, and if it fails, just use a
-        # generic "failed to read logs" message.
-        # Similar issue here: https://github.com/docker/docker-py/issues/2266
-
         retriable = retry(
             wait=wait_random_exponential(max=10),
             stop=stop_after_attempt(RETRY_COUNT),
@@ -502,13 +466,50 @@ class JobRun:
             reraise=True,
         )
 
+        # NOTE: here the container exists: whatever happens - e.g. the db is down and `save()` raises,
+        # the container must be stopped and removed, otherwise it may stay dangling forever.
         try:
-            logs = retriable(lambda: container.logs())()
-        except requests.exceptions.ConnectionError:
-            logs = b"[QFC/Worker/1001] Failed to read logs."
+            self.job.container_id = container.id
+            self.job.save(update_fields=["docker_started_at", "container_id"])
+            logger.info(f"Starting worker {container.id} ...")
 
-        retriable(lambda: container.stop())()
-        retriable(lambda: container.remove())()
+            response = {"StatusCode": TIMEOUT_ERROR_EXIT_CODE}
+
+            try:
+                # will throw an `requests.exceptions.ConnectionError`, but the container is still alive
+                response = container.wait(timeout=self.container_timeout_secs)
+
+                if response["StatusCode"] == DOCKER_SIGKILL_EXIT_CODE:
+                    logger.info(
+                        "Job canceled, probably due to deleted Project and Jobs.",
+                    )
+
+                    # No further action required, received by wrapper's autoclean mechanism when the `Project` is deleted
+                    return (
+                        response["StatusCode"],
+                        b"Job has been cancelled by parent process!",
+                    )
+
+            except requests.exceptions.ConnectionError as err:
+                logger.exception("Timeout error.", exc_info=err)
+
+            # `docker_started_at`/`docker_finished_at` tracks the time spent on docker only
+            self.job.docker_finished_at = timezone.now()
+            self.job.save(update_fields=["docker_finished_at"])
+
+            logs = b""
+            # Retry reading the logs, as it may fail
+            # NOTE when reading the logs of a finished container, it might timeout with an ``.
+            # This leads to exception and prevents the container to be removed few lines below.
+            # Therefore try reading the logs, as they are important, and if it fails, just use a
+            # generic "failed to read logs" message.
+            # Similar issue here: https://github.com/docker/docker-py/issues/2266
+            try:
+                logs = retriable(lambda: container.logs())()
+            except requests.exceptions.ConnectionError:
+                logs = b"[QFC/Worker/1001] Failed to read logs."
+        finally:
+            self._cleanup_container(container, retriable)
 
         logger.info(
             f"Finished execution with code {response['StatusCode']}, logs:\n{logs.decode()}"
@@ -518,6 +519,38 @@ class JobRun:
             logs += f"\nTimeout error! The job failed to finish within {self.container_timeout_secs} seconds!\n".encode()
 
         return response["StatusCode"], logs
+
+    def _cleanup_container(
+        self,
+        container: "Container",
+        retriable: Callable,
+    ) -> None:
+        """Stops and removes the worker docker container without raising.
+
+        Args:
+            container: The Docker container to stop and remove.
+            retriable: A callable that retries the given callable on failure.
+        """
+        try:
+            retriable(lambda: container.stop())()
+        except docker.errors.NotFound:
+            # already removed, e.g. by the `cancel_orphaned_workers` function
+            return
+        except Exception as err:
+            logger.error(
+                f"Failed to stop worker container {container.id}.", exc_info=err
+            )
+
+        try:
+            # `force=True` kills the container if `stop()` above failed and it is still running
+            retriable(lambda: container.remove(force=True))()
+        except docker.errors.NotFound:
+            # do nothing in case the container was already removed.
+            return
+        except Exception as err:
+            logger.error(
+                f"Failed to remove worker container {container.id}.", exc_info=err
+            )
 
 
 class PackageJobRun(JobRun):
