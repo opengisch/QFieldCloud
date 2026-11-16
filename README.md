@@ -510,6 +510,15 @@ docker compose logs nginx -f --no-log-prefix | grep ':"nginx"' | jq -r $QFC_JQ
 
 You can use either the integrated `rustfs` object storage, or use an external provider (e.g. S3) with versioning enabled. Check the corresponding `STORAGE_*` environment variables for more info.
 
+#### Purging deleted objects (optional)
+
+With bucket versioning enabled, deleting a file in QFieldCloud only causes the storage to add a *delete marker*; the old versions stay in the bucket and keep using storage. The optional `purgeobjects` service permanently removes all versions of objects that are currently deleted, once they have been deleted for longer than the retention period (90 days by default). Objects that are still active are never touched.
+
+To enable it, customize `docker-compose.purgeobjects.yml` as needed, and append it to the end of `COMPOSE_FILE` in `.env`.
+
+A job is then scheduled via `ofelia` to run regularly, and purge every S3 entry in `STORAGES`.
+See [docker-purgeobjects/README.MD](docker-purgeobjects/README.MD) for manual and dry-run usage.
+
 ### Database
 
 QFieldCloud requires a PostgreSQL/PostGIS database persisting its own data.
