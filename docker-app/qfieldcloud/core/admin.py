@@ -1783,6 +1783,16 @@ class UserAccountAdmin(QFieldCloudModelAdmin):
     search_fields = ("user__username__icontains",)
     list_select_related = ("user",)
 
+    def get_search_results(
+        self, request: HttpRequest, queryset: QuerySet, search_term: str
+    ) -> tuple[QuerySet, bool]:
+        queryset, may_have_duplicates = super().get_search_results(
+            request, queryset, search_term
+        )
+
+        # Exclude teams from the autocomplete results
+        return queryset.exclude(user__type=User.Type.TEAM), may_have_duplicates
+
     def has_module_permission(self, request: HttpRequest) -> bool:
         # hide this module from Django admin, it is accessible via "Person" and "Organization" as inline edit
         return False
