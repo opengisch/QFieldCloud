@@ -3,7 +3,7 @@
 ##########################
 
 # pull a builder image, the same as the base
-FROM python:3.14-slim-trixie AS build
+FROM python:3.15-slim-trixie AS build
 
 COPY --from=ghcr.io/astral-sh/uv:0.13.4 /uv /uvx /bin/
 
@@ -26,14 +26,14 @@ RUN uv pip install --system --no-cache -r requirements/requirements.txt \
     && rm requirements/requirements.txt
 
 # save 60 MB of data... Safe to delete according to botocore contributor https://github.com/boto/botocore/issues/1629#issuecomment-451309885
-RUN ls -Q /usr/local/lib/python3.14/site-packages/botocore/data | grep -xv "endpoints.json" | xargs rm -rf
+RUN ls -Q /usr/local/lib/python3.15/site-packages/botocore/data | grep -xv "endpoints.json" | xargs rm -rf
 
 ##########################
 # BASE                   #
 ##########################
 
 # pull official base image
-FROM python:3.14-slim-trixie AS base
+FROM python:3.15-slim-trixie AS base
 
 COPY --from=ghcr.io/astral-sh/uv:0.13.4 /uv /uvx /bin/
 
@@ -60,7 +60,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # copy the dependencies
-COPY --from=build /usr/local/lib/python3.14/site-packages/ /usr/local/lib/python3.14/site-packages/
+COPY --from=build /usr/local/lib/python3.15/site-packages/ /usr/local/lib/python3.15/site-packages/
 
 # install debug dependencies
 ARG DEBUG_BUILD
