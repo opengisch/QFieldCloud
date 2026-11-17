@@ -62,6 +62,7 @@ from unfold.contrib.filters.admin import MultipleDropdownFilter, RangeDateTimeFi
 from unfold.decorators import action
 from unfold.sites import UnfoldAdminSite
 from unfold.views import ChangeList
+from unfold.widgets import UnfoldAdminSelect2Widget, UnfoldAdminSelectWidget
 
 from qfieldcloud.core.models import (
     ApplyJob,
@@ -459,7 +460,27 @@ class ModelAdminListDisplayAutoFkeyFields:
         return link
 
 
+class ModelAdminSearchableForeignKeySelectMixin:
+    """Render plain foreign key dropdowns as searchable select2 widgets.
+
+    By default Unfold renders foreign keys as a plain, non-searchable `<select>`.
+    Make them searchable using the Select2 widget.
+    """
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        formfield = super().formfield_for_foreignkey(db_field, request, **kwargs)  # type: ignore[misc]
+
+        if formfield is not None and type(formfield.widget) is UnfoldAdminSelectWidget:
+            widget = UnfoldAdminSelect2Widget()
+            widget.choices = formfield.widget.choices
+            widget.is_required = formfield.widget.is_required
+            formfield.widget = widget
+
+        return formfield
+
+
 class QFieldCloudModelAdmin(  # type: ignore
+    ModelAdminSearchableForeignKeySelectMixin,
     ModelAdminNoPkOrderChangeListMixin,
     ModelAdminEstimateCountMixin,
     ModelAdminSearchParserMixin,
@@ -483,7 +504,7 @@ class QFieldCloudModelAdmin(  # type: ignore
         return super().has_delete_permission(request, obj)
 
 
-class QfcInlineMixin:
+class QfcInlineMixin(ModelAdminSearchableForeignKeySelectMixin):
     """Shared settings of `QfcTabularInline` and `QfcStackedInline`."""
 
     # NOTE: A custom `formset` must subclass Unfold's `PaginationFormSetMixin`, a plain formset will fail.
