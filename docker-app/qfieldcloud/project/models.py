@@ -358,7 +358,7 @@ class Project(models.Model):
     is_public = models.BooleanField(
         default=False,
         help_text=_(
-            "Projects marked as public are visible to (but not editable by) anyone."
+            "Projects marked as public are accessible to all users. Their access level is set by the public collaborator role."
         ),
     )
 
