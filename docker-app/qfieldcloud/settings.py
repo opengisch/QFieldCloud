@@ -1149,9 +1149,15 @@ QFIELDCLOUD_CUSTOM_CA_FILENAME = f"{QFIELDCLOUD_CUSTOM_CA_DIR}/custom_ca.crt"
 # Maximum number of GET/POST parameters, avoids `TooManyFieldsSent` error.
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 5000
 
-# Enable Django Debug Toolbar only in development environment, see https://django-debug-toolbar.readthedocs.io/en/latest/installation.html#disable-the-toolbar-when-running-tests-optional
+# Enable development-only apps.
 if DEBUG and ENVIRONMENT == "development":
-    INSTALLED_APPS.insert(0, "debug_toolbar")
+    INSTALLED_APPS = [
+        # Django Debug Toolbar at `/__debug__/`, see https://django-debug-toolbar.readthedocs.io/en/latest/installation.html#disable-the-toolbar-when-running-tests-optional
+        "debug_toolbar",
+        # Django Schema Viewer at `/schema-viewer/`, visualizes the DB schema from the Django models, see https://pypi.org/project/django-schema-viewer/
+        "schema_viewer",
+        *INSTALLED_APPS,
+    ]
     MIDDLEWARE.insert(0, "debug_toolbar.middleware.DebugToolbarMiddleware")
 
     DEBUG_TOOLBAR_CONFIG = {
