@@ -100,25 +100,23 @@ class ProjectSerializer(serializers.ModelSerializer):
         return internal_data
 
     def validate(self, data):
-        if data.get("name") is not None:
-            if self.instance:
-                owner = self.instance.owner
-            else:
-                owner = data["owner"]
+        # Both a rename and a transfer to another owner may clash with an existing project name.
+        if data.get("name") is not None or data.get("owner") is not None:
+            name = data.get("name") or self.instance.name
+            owner = data.get("owner") or self.instance.owner
 
             projects_qs = Project.objects.filter(
                 owner=owner,
-                name=data["name"],
+                name__iexact=name,
             )
 
             if self.instance:
                 projects_qs = projects_qs.exclude(id=self.instance.id)
 
-            matching_projects = projects_qs.count()
-
-            if matching_projects != 0:
+            if projects_qs.exists():
                 raise exceptions.ProjectAlreadyExistsError()
 
+        if data.get("name") is not None:
             if data["name"].lower() == SHARED_DATASETS_PROJECT_NAME:
                 if (
                     self.instance

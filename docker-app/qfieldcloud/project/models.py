@@ -22,7 +22,7 @@ from django.db import transaction
 from django.db.models import Case, Exists, F, OuterRef, Prefetch, Q, When
 from django.db.models import Value as V
 from django.db.models.aggregates import Count, Sum
-from django.db.models.functions import MD5
+from django.db.models.functions import MD5, Upper
 from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
@@ -309,7 +309,10 @@ class Project(models.Model):
         ordering = ["-is_featured", "owner__username", "name"]
         constraints = [
             models.UniqueConstraint(
-                fields=["owner", "name"], name="project_owner_name_uniq"
+                "owner",
+                Upper("name"),
+                name="project_owner_name_uniq",
+                violation_error_message="Project with the same name already exists.",
             )
         ]
 
