@@ -9,6 +9,8 @@ from django.contrib.gis.geos import Polygon
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import IntegrityError, transaction
+from django.test import override_settings
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
@@ -1862,7 +1864,7 @@ class QfcTestCase(APITransactionTestCase):
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("already owns a project with the same name", str(response.json()))
+        self.assertEqual(response.json()["code"], "project_already_exists")
 
         # Cloning a shared datasets project is not allowed
         shared_project = Project.objects.create(
@@ -2137,3 +2139,96 @@ class QfcTestCase(APITransactionTestCase):
             response = self.client.patch(org_url, {"description": "new desc"})
             self.assertTrue(status.is_success(response.status_code))
             self.assertNotIn("teams", response.json())
+
+    def test_project_name_is_unique_case_insensitive_per_owner(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+        Project.objects.create(name="survey", owner=self.user1)
+        Project.objects.create(name="plan", owner=self.user2)
+        project = Project.objects.create(name="other", owner=self.user1)
+        project_url = f"/api/v1/projects/{project.id}/"
+
+        def get_user1_project_names() -> list[str]:
+            return sorted(
+                Project.objects.filter(owner=self.user1).values_list("name", flat=True)
+            )
+
+        with self.subTest(
+            "Test the API rejects creating a project with a name in another case"
+        ):
+            response = self.client.post(
+                "/api/v1/projects/", {"name": "Survey", "owner": "user1"}
+            )
+
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(response.json()["code"], "project_already_exists")
+            self.assertEqual(get_user1_project_names(), ["other", "survey"])
+
+        with self.subTest(
+            "Test the API rejects renaming a project to a name in another case"
+        ):
+            response = self.client.patch(project_url, {"name": "SURVEY"})
+
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(response.json()["code"], "project_already_exists")
+            self.assertEqual(get_user1_project_names(), ["other", "survey"])
+
+        with self.subTest("Test the API creates a project named like another owner's"):
+            response = self.client.post(
+                "/api/v1/projects/", {"name": "Plan", "owner": "user1"}
+            )
+
+            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+            self.assertEqual(response.json()["name"], "Plan")
+
+        with self.subTest(
+            "Test the API renames a project to its own name in another case"
+        ):
+            response = self.client.patch(project_url, {"name": "Other"})
+
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(response.json()["name"], "Other")
+
+        with self.subTest(
+            "Test the API updates a project resubmitting its unchanged name"
+        ):
+            response = self.client.patch(
+                project_url, {"name": "Other", "description": "new description"}
+            )
+
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(response.json()["description"], "new description")
+
+    def test_transfer_project_rejects_owner_with_name_differing_only_by_case(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+        organization = Organization.objects.create(
+            username="org1", organization_owner=self.user1
+        )
+        Project.objects.create(name="survey", owner=organization)
+        project = Project.objects.create(name="Survey", owner=self.user1)
+
+        response = self.client.patch(
+            f"/api/v1/projects/{project.id}/", {"owner": "org1"}
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json()["code"], "project_already_exists")
+        project.refresh_from_db(fields=["owner"])
+        self.assertEqual(project.owner_id, self.user1.id)
+
+    def test_database_rejects_name_differing_only_by_case(self):
+        Project.objects.create(name="survey", owner=self.user1)
+
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            Project.objects.create(name="SURVEY", owner=self.user1)
+
+    @override_settings(ROOT_URLCONF="qfieldcloud.urls")
+    def test_admin_redirect_finds_project_by_name_differing_only_by_case(self):
+        project = Project.objects.create(name="survey", owner=self.user1)
+
+        response = self.client.get("/a/user1/SURVEY/")
+
+        self.assertRedirects(
+            response,
+            f"/admin/project/project/{project.id}/change/",
+            fetch_redirect_response=False,
+        )
