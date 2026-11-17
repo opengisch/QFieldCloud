@@ -108,9 +108,16 @@ urlpatterns = [
     path("a/<str:username>/<str:project_name>/", redirect_to_admin_project_view),
 ]
 
+additional_urlpatterns = []
+
 if "debug_toolbar" in settings.INSTALLED_APPS:
-    urlpatterns = [
-        *urlpatterns[:-1],
-        path("__debug__/", include("debug_toolbar.urls")),
-        *urlpatterns[-1:],
-    ]
+    additional_urlpatterns.append(path("__debug__/", include("debug_toolbar.urls")))
+
+if "schema_viewer" in settings.INSTALLED_APPS:
+    additional_urlpatterns.append(path("schema-viewer/", include("schema_viewer.urls")))
+
+urlpatterns = [
+    *urlpatterns[:-1],
+    *additional_urlpatterns,
+    *urlpatterns[-1:],
+]
