@@ -337,7 +337,9 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
             self.assertTrue(status.is_success(resp_get.status_code))
             self.assertGreaterEqual(len(resp_get.data), 1)
-            self.assertEqual(resp_get.data[-1]["id"], job_id)
+            ordered_jobs = sorted(resp_get.data, key=lambda j: j["created_at"])
+
+            self.assertEqual(ordered_jobs[-1]["id"], job_id)
 
             resp_get = self.client.get(
                 f"/api/v1/jobs/{job_id}/",
