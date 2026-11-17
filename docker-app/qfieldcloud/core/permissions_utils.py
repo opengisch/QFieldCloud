@@ -609,10 +609,29 @@ def can_delete_user(user: QfcUser, account: QfcUser) -> bool:
     if user_eq(user, account):
         return True
 
-    if user_has_organization_roles(user, account, [OrganizationMember.Roles.ADMIN]):
-        return True
+    if account.is_organization:
+        return user_has_organization_role_origins(
+            user,
+            account,
+            [
+                OrganizationQueryset.RoleOrigins.ORGANIZATIONOWNER,
+            ],
+        )
 
     return False
+
+
+def can_transfer_organization(user: QfcUser, organization: QfcUser) -> bool:
+    if not organization.is_organization:
+        return False
+
+    return user_has_organization_role_origins(
+        user,
+        organization,
+        [
+            OrganizationQueryset.RoleOrigins.ORGANIZATIONOWNER,
+        ],
+    )
 
 
 def can_create_collaborators(user: QfcUser, project: Project) -> bool:
