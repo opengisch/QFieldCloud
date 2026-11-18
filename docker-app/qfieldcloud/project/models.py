@@ -26,6 +26,7 @@ from django.db.models.functions import MD5, Upper
 from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
 from django.utils.html import format_html
+from django.utils import timezone
 from django.utils.translation import gettext as _
 
 from qfieldcloud.core import validators
@@ -600,6 +601,50 @@ class Project(models.Model):
         editable=False,
         help_text=_("Whether the project lock was explicitly acquired."),
     )
+
+    def is_locked(self, update_if_expired: bool = True) -> bool:
+        """Returns whether the project is currently locked.
+
+        Args:
+            update_if_expired: whether to update the lock status if it has expired.
+        """
+        if not self.lock_acquired_by:
+            return False
+
+        # if the lock has expired, potentially clear it and return False
+        if self.lock_expires_at and self.lock_expires_at < timezone.now():
+            if update_if_expired:
+                self.lock_expires_at = None
+                self.save()
+
+            return False
+
+        return True
+
+    @transaction.atomic
+    def lock(self, acquired_by: Person, is_explicit: bool) -> None:
+        """Acquires the project lock.
+
+        Args:
+            acquired_by: The person acquiring the lock.
+            is_explicit: Whether the lock is explicit.
+        """
+        self.lock_acquired_by = acquired_by
+        self.lock_is_explicit = is_explicit
+        if not is_explicit:
+            self.lock_expires_at = timezone.now() + timedelta(
+                seconds=settings.QFIELDCLOUD_WORKER_TIMEOUT_S
+            )
+
+        self.save()
+
+    @transaction.atomic
+    def unlock(self) -> None:
+        """Releases the project lock."""
+        self.lock_acquired_by = None
+        self.lock_expires_at = None
+        self.lock_is_explicit = False
+        self.save()
 
     @cached_property
     def shared_datasets_project(self) -> Project | None:
