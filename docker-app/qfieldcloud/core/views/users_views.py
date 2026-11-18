@@ -90,7 +90,7 @@ class ListCreateUsersView(generics.ListCreateAPIView):
 
 class RetrieveUpdateUserViewPermissions(permissions.BasePermission):
     def has_permission(self, request, view):
-        username = permissions_utils.get_param_from_request(request, "username")
+        username = permissions_utils.get_url_kwarg(request, "username")
 
         try:
             user = User.objects.get(username=username)
@@ -148,7 +148,7 @@ class RetrieveUpdateUserView(generics.RetrieveUpdateAPIView):
 
 class ListUserOrganizationsViewPermissions(permissions.BasePermission):
     def has_permission(self, request, view):
-        username = permissions_utils.get_param_from_request(request, "username")
+        username = permissions_utils.get_url_kwarg(request, "username")
 
         if request.user.username != username:
             return False

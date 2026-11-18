@@ -20,9 +20,7 @@ from rest_framework.views import APIView
 class TeamMemberDeleteViewPermissions(permissions.BasePermission):
     def has_permission(self, request: Request, view: APIView) -> bool:
         user = request.user
-        organization_name = permissions_utils.get_param_from_request(
-            request, "organization"
-        )
+        organization_name = permissions_utils.get_url_kwarg(request, "organization")
 
         try:
             organization = Organization.objects.get(username=organization_name)

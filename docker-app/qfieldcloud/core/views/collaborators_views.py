@@ -14,7 +14,7 @@ User = get_user_model()
 class ListCreateCollaboratorsViewPermissions(permissions.BasePermission):
     def has_permission(self, request, view):
         user = request.user
-        projectid = permissions_utils.get_param_from_request(request, "projectid")
+        projectid = permissions_utils.get_url_kwarg(request, "projectid")
         project = get_slim_project_or_raise(projectid)
 
         if request.method == "GET":
@@ -70,7 +70,7 @@ class ListCreateCollaboratorsView(generics.ListCreateAPIView):
 class GetUpdateDestroyCollaboratorViewPermissions(permissions.BasePermission):
     def has_permission(self, request, view):
         user = request.user
-        projectid = permissions_utils.get_param_from_request(request, "projectid")
+        projectid = permissions_utils.get_url_kwarg(request, "projectid")
 
         project = get_slim_project_or_raise(projectid)
 

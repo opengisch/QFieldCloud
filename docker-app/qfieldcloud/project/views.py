@@ -56,16 +56,18 @@ class ProjectViewSetPermissions(permissions.BasePermission):
             return True
 
         user = request.user
-        owner = permissions_utils.get_param_from_request(request, "owner")
-
-        if owner:
-            owner_obj = User.objects.get(username=owner)
-        else:
-            # If the owner is not in the request, means that the owner
-            # should be the user that made the request
-            owner_obj = user
 
         if view.action == "create":
+            # The owner of a new project comes from the body, the same place the serializer reads it from.
+            owner = request.data.get("owner")
+
+            if owner:
+                owner_obj = User.objects.get(username=owner)
+            else:
+                # If the owner is not in the request, means that the owner
+                # should be the user that made the request
+                owner_obj = user
+
             if not permissions_utils.can_create_project(user, owner_obj):
                 return False
 
@@ -78,7 +80,7 @@ class ProjectViewSetPermissions(permissions.BasePermission):
 
             return True
 
-        projectid = permissions_utils.get_param_from_request(request, "projectid")
+        projectid = permissions_utils.get_url_kwarg(request, "projectid")
         project = get_slim_project_or_raise(projectid)
 
         if view.action == "retrieve":
