@@ -419,7 +419,12 @@ def configure_qgis_project(project_seed: ProjectSeed, project_filename: str) -> 
 
     logger.info(f"Saving QGIS project to {project_filename}...")
 
-    save_project(project, project_extent)
+    # Cloned projects keep the area of interest of the source project.
+    save_project(
+        project,
+        project_extent,
+        set_area_of_interest=not project_seed.clone_from_project,
+    )
 
     return str(project_filename)
 

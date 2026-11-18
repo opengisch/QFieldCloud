@@ -95,6 +95,80 @@ class QfcTestCase(APITransactionTestCase):
 
         return project
 
+    def _create_seeded_project(
+        self,
+        name: str,
+        extent: Polygon,
+        clone_from_project: Project | None = None,
+    ) -> Project:
+        project = Project.objects.create(
+            name=name,
+            owner=self.user1,
+            is_public=False,
+        )
+
+        ProjectSeed.objects.create(
+            project=project,
+            extent=extent,
+            clone_from_project=clone_from_project,
+            settings={
+                "schemaId": ProjectSeed.SETTINGS_SCHEMA_ID,
+                "basemaps": [],
+                "xlsform": None,
+            },
+        )
+
+        Job.objects.create(
+            project=project,
+            type=Job.Type.CREATE_PROJECT,
+            created_by=self.user1,
+        )
+
+        wait_for_project_ok_status(project)
+        project.refresh_from_db()
+
+        return project
+
+    def test_create_project_sets_area_of_interest_from_seed_extent(self):
+        with self.subTest(
+            "Test the seed extent becomes the project's area of interest"
+        ):
+            project = self._create_seeded_project(
+                "aoi_from_extent",
+                Polygon.from_bbox((22, 41, 29, 45.67)),
+            )
+
+            self.assertEqual(
+                project.qgis_project.area_of_interest.extent,
+                (22.0, 41.0, 29.0, 45.67),
+            )
+
+        with self.subTest(
+            "Test the default world extent becomes the project's area of interest"
+        ):
+            project = self._create_seeded_project(
+                "aoi_world_extent",
+                Polygon.from_bbox(projectseed_utils.DEFAULT_PROJECT_EXTENT),
+            )
+
+            self.assertEqual(
+                project.qgis_project.area_of_interest.extent,
+                (-180.0, -90.0, 180.0, 90.0),
+            )
+
+        with self.subTest(
+            "Test cloning ignores the seed extent and keeps the source's unset area of interest"
+        ):
+            source_project = self._create_clonable_project()
+
+            project = self._create_seeded_project(
+                "aoi_cloned",
+                Polygon.from_bbox((22, 41, 29, 45.67)),
+                clone_from_project=source_project,
+            )
+
+            self.assertIsNone(project.qgis_project.area_of_interest)
+
     def test_create_project(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
         response = self.client.post(
