@@ -29,7 +29,7 @@ from django.utils.html import format_html
 from django.utils import timezone
 from django.utils.translation import gettext as _
 
-from qfieldcloud.core import validators
+from qfieldcloud.core import exceptions, validators
 from qfieldcloud.core.fields import DynamicStorageFileField
 from qfieldcloud.core.models import (
     Job,
@@ -615,7 +615,7 @@ class Project(models.Model):
             is_explicit: Whether the lock is explicit.
         """
         if self.is_locked():
-            raise ValueError("Can not lock a project which is already locked.")
+            raise exceptions.ProjectAlreadyLockedError()
 
         self.lock_acquired_by = acquired_by
         self.lock_expires_at = timezone.now() + timedelta(
