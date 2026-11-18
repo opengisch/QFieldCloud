@@ -6,6 +6,7 @@ from django.test import override_settings
 from django.utils import timezone
 from rest_framework.test import APITransactionTestCase
 
+from qfieldcloud.core import exceptions
 from qfieldcloud.core.models import (
     Person,
 )
@@ -69,5 +70,5 @@ class QfcTestCase(APITransactionTestCase):
 
         self.assertTrue(self.project.is_locked())
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(exceptions.ProjectAlreadyLockedError):
             self.project.lock(self.user1, is_explicit=False)
