@@ -60,9 +60,14 @@ from rest_framework.authtoken.models import TokenProxy
 from unfold.admin import ModelAdmin, StackedInline, TabularInline
 from unfold.contrib.filters.admin import MultipleDropdownFilter, RangeDateTimeFilter
 from unfold.decorators import action
+from unfold.forms import BaseDialogForm
 from unfold.sites import UnfoldAdminSite
 from unfold.views import ChangeList
-from unfold.widgets import UnfoldAdminSelect2Widget, UnfoldAdminSelectWidget
+from unfold.widgets import (
+    UnfoldAdminIntegerFieldWidget,
+    UnfoldAdminSelect2Widget,
+    UnfoldAdminSelectWidget,
+)
 
 from qfieldcloud.core.models import (
     ApplyJob,
@@ -78,6 +83,7 @@ from qfieldcloud.core.models import (
     TeamMember,
     User,
     UserAccount,
+    get_default_remaining_invitations,
 )
 from qfieldcloud.core.paginators import LargeTablePaginator
 from qfieldcloud.core.utils2 import delta_utils, jobs, pg_service_file
@@ -815,6 +821,17 @@ class ProjectInline(QfcTabularInline):
         return False
 
 
+class SetRemainingInvitationsForm(BaseDialogForm):
+    remaining_invitations = fields.IntegerField(
+        label=_("Remaining invitations"),
+        initial=get_default_remaining_invitations,
+        min_value=0,
+        max_value=10000,
+        widget=UnfoldAdminIntegerFieldWidget,
+        help_text=_("0 disables invitations. N allows N invitations"),
+    )
+
+
 class PersonAdmin(QFieldCloudModelAdmin):
     list_display = (
         "username",
@@ -863,6 +880,16 @@ class PersonAdmin(QFieldCloudModelAdmin):
 
     inlines = (UserAccountInline,)
 
+    actions_list = (
+        {
+            "title": _("Actions"),
+            "icon": "bolt",
+            "items": [
+                "set_remaining_invitations",
+            ],
+        },
+    )
+
     actions_detail = (
         "password_reset_url",
         {
@@ -896,6 +923,39 @@ class PersonAdmin(QFieldCloudModelAdmin):
 
         obj.clean()
         obj.save()
+
+    @action(
+        description=_("Set remaining invitations"),
+        url_path="set-remaining-invitations",
+        icon="mail",
+        permissions=["change"],
+        dialog={
+            "title": _("Set remaining invitations"),
+            "description": _("Set the number of remaining invitations for all users."),
+            "form_class": SetRemainingInvitationsForm,
+            "form_submit_text": _("Apply"),
+        },
+    )
+    def set_remaining_invitations(
+        self, request: HttpRequest, form: SetRemainingInvitationsForm
+    ) -> HttpResponse:
+        remaining_invitations = form.cleaned_data["remaining_invitations"]
+        updated_count = Person.objects.update(
+            remaining_invitations=remaining_invitations
+        )
+
+        self.message_user(
+            request,
+            _("Remaining invitations set to {} for {} user(s).").format(
+                remaining_invitations, updated_count
+            ),
+            messages.SUCCESS,
+        )
+
+        # the dialog form is submitted via htmx, so ask htmx to reload the whole page
+        return HttpResponse(
+            headers={"HX-Redirect": reverse("admin:core_person_changelist")}
+        )
 
     def _get_username(self, request: HttpRequest, object_id: str) -> str:
         return get_object_or_404(self.get_queryset(request), pk=object_id).username

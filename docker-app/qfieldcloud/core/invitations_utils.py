@@ -78,11 +78,15 @@ def invite_user_by_email(
             ),
         )
 
+    # checked after the duplicate checks above, so their more specific messages still show
+    if send and inviter.remaining_invitations == 0:
+        return False, _("You have no invitations left.")
+
     invite = Invitation.create(email, inviter=inviter)
 
     # TODO see if we can "pre-attach" this future user to this project, probably to be done
     # at the same time as TODO below about actual invitation
-    if send and inviter.remaining_invitations > 0:
+    if send:
         inviter.remaining_invitations -= 1
         inviter.save()
         send_invitation(invite)

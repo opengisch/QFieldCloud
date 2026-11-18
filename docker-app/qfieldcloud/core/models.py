@@ -10,6 +10,7 @@ from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
+from constance import config
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.models import UserManager as DjangoUserManager
@@ -357,6 +358,10 @@ class User(AbstractUser):
     #     ]
 
 
+def get_default_remaining_invitations() -> int:
+    return config.DEFAULT_REMAINING_INVITATIONS
+
+
 class Person(User):
     """Individual users in QFieldCloud."""
 
@@ -365,7 +370,7 @@ class Person(User):
     # The number of invitations the user can send.
     # NOTE the limit was developed during the beta phase and to prevent going over the email quota per hour.
     remaining_invitations = models.PositiveIntegerField(
-        default=3,
+        default=get_default_remaining_invitations,
         help_text=_("Remaining invitations that can be sent by the user himself."),
     )
 
