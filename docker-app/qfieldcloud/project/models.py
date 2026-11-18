@@ -602,9 +602,9 @@ class Project(models.Model):
         help_text=_("Whether the project lock was explicitly acquired."),
     )
 
-    def is_locked(self, update_if_expired: bool = True) -> bool:
+    def is_locked(self) -> bool:
         """Returns whether the project is currently locked."""
-        return self.lock_acquired_by and self.lock_expires_at >= timezone.now():
+        return self.lock_acquired_by and self.lock_expires_at >= timezone.now()
 
     @transaction.atomic
     def lock(self, acquired_by: Person, is_explicit: bool) -> None:
@@ -614,17 +614,18 @@ class Project(models.Model):
             acquired_by: The person acquiring the lock.
             is_explicit: Whether the lock is explicit.
         """
-        if self.is_locked(update_if_expired=False):
+        if self.is_locked():
             raise ValueError("Can not lock a project which is already locked.")
 
         self.lock_acquired_by = acquired_by
+        self.lock_expires_at = timezone.now() + timedelta(
+            seconds=settings.QFIELDCLOUD_WORKER_TIMEOUT_S
+        )
         self.lock_is_explicit = is_explicit
-        if not is_explicit:
-            self.lock_expires_at = timezone.now() + timedelta(
-                seconds=settings.QFIELDCLOUD_WORKER_TIMEOUT_S
-            )
 
-        self.save()
+        self.save(
+            update_fields=["lock_acquired_by", "lock_expires_at", "lock_is_explicit"]
+        )
 
     @transaction.atomic
     def unlock(self) -> None:
@@ -632,7 +633,9 @@ class Project(models.Model):
         self.lock_acquired_by = None
         self.lock_expires_at = None
         self.lock_is_explicit = False
-        self.save()
+        self.save(
+            update_fields=["lock_acquired_by", "lock_expires_at", "lock_is_explicit"]
+        )
 
     @cached_property
     def shared_datasets_project(self) -> Project | None:
