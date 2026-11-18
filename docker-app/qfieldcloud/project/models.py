@@ -579,6 +579,28 @@ class Project(models.Model):
         editable=False,
     )
 
+    lock_acquired_by = models.ForeignKey(
+        Person,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        editable=False,
+        help_text=_("The person who has acquired the project lock, if any."),
+    )
+
+    lock_expires_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        editable=False,
+        help_text=_("The time at which the project lock expires, if any."),
+    )
+
+    lock_is_explicit = models.BooleanField(
+        default=False,
+        editable=False,
+        help_text=_("Whether the project lock was explicitly acquired."),
+    )
+
     @cached_property
     def shared_datasets_project(self) -> Project | None:
         """Returns the localized datasets project for the same owner, or `None` if no such project exists."""
