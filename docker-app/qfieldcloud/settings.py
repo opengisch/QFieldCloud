@@ -799,6 +799,11 @@ CONSTANCE_CONFIG = {
         "Days in which the trial period expires.",
         int,
     ),
+    "DEFAULT_REMAINING_INVITATIONS": (
+        3,
+        "Number of invitations a newly created user can send. 0 disables invitations. Existing users can be updated in bulk via the `Set remaining invitations` action in the users admin.",
+        int,
+    ),
     "STATUS_PAGE_URL": (
         "https://status.qfield.cloud/",
         "Status page URL",
@@ -845,6 +850,7 @@ CONSTANCE_CONFIG_FIELDSETS = {
     ),
     "Debug": ("SENTRY_REQUEST_MAX_SIZE_TO_SEND",),
     "Subscription": ("TRIAL_PERIOD_DAYS",),
+    "Invitations": ("DEFAULT_REMAINING_INVITATIONS",),
     "Web": (
         "STATUS_PAGE_URL",
         "WEB_USER_INACTIVITY_THRESHOLD_DAYS",
