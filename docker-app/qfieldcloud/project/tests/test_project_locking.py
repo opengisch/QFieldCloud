@@ -62,3 +62,12 @@ class QfcTestCase(APITransactionTestCase):
         self.project.refresh_from_db()
 
         self.assertFalse(self.project.is_locked())
+
+    def test_can_not_lock_a_project_twice(self):
+        self.project.lock(self.user1, is_explicit=False)
+        self.project.refresh_from_db()
+
+        self.assertTrue(self.project.is_locked())
+
+        with self.assertRaises(ValueError):
+            self.project.lock(self.user1, is_explicit=False)

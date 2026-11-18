@@ -629,6 +629,9 @@ class Project(models.Model):
             acquired_by: The person acquiring the lock.
             is_explicit: Whether the lock is explicit.
         """
+        if self.is_locked(update_if_expired=False):
+            raise ValueError("Can not lock a project which is already locked.")
+
         self.lock_acquired_by = acquired_by
         self.lock_is_explicit = is_explicit
         if not is_explicit:
