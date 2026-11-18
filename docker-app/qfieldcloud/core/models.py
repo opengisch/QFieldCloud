@@ -624,6 +624,15 @@ class OrganizationQueryset(models.QuerySet):
 
         return qs
 
+    def where_user_can_create_projects(self, user):
+        """Filter only the organizations where the `user` is allowed to create projects, i.e. where they are an admin or a creator."""
+        return self.of_user(user).filter(
+            membership_role__in=[
+                OrganizationMember.Roles.ADMIN,
+                OrganizationMember.Roles.CREATOR,
+            ]
+        )
+
 
 class OrganizationManager(UserManager):
     def get_queryset(self):
@@ -631,6 +640,13 @@ class OrganizationManager(UserManager):
 
     def of_user(self, user):
         return self.get_queryset().select_related("useraccount").of_user(user)
+
+    def where_user_can_create_projects(self, user):
+        return (
+            self.get_queryset()
+            .select_related("useraccount")
+            .where_user_can_create_projects(user)
+        )
 
 
 class Organization(User):
