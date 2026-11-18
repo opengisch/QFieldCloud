@@ -615,6 +615,32 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(collaborators[0].collaborator, self.user2)
         self.assertEqual(collaborators[0].role, ProjectCollaboratorRole.EDITOR)
 
+    def test_create_collaborator_on_project_of_another_user(self):
+        project1 = Project.objects.create(
+            name="project1", is_public=False, owner=self.user1
+        )
+        project2 = Project.objects.create(
+            name="project2", is_public=False, owner=self.user2
+        )
+
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token2.key)
+        response = self.client.post(
+            f"/api/v1/collaborators/{project1.id}/",
+            {
+                "projectid": str(project2.id),
+                "collaborator": "user2",
+                "role": "admin",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertFalse(
+            ProjectCollaborator.objects.filter(
+                project=project1, collaborator=self.user2
+            ).exists()
+        )
+
     def test_get_collaborator(self):
         # Create a project of user1
         self.project1 = Project.objects.create(
@@ -702,6 +728,43 @@ class QfcTestCase(APITransactionTestCase):
 
         # The project should not exist anymore
         self.assertFalse(Project.objects.filter(id=project1.id).exists())
+
+    def test_update_project_of_another_user(self):
+        project1 = Project.objects.create(
+            name="project1", is_public=False, owner=self.user1, description="desc"
+        )
+        project2 = Project.objects.create(
+            name="project2", is_public=False, owner=self.user2
+        )
+
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token2.key)
+        response = self.client.patch(
+            f"/api/v1/projects/{project1.id}/",
+            {"projectid": str(project2.id), "description": "changed"},
+            format="json",
+        )
+
+        self.assertFalse(status.is_success(response.status_code))
+        project1.refresh_from_db()
+        self.assertEqual(project1.description, "desc")
+
+    def test_delete_project_of_another_user(self):
+        project1 = Project.objects.create(
+            name="project1", is_public=False, owner=self.user1
+        )
+        project2 = Project.objects.create(
+            name="project2", is_public=False, owner=self.user2
+        )
+
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token2.key)
+        response = self.client.delete(
+            f"/api/v1/projects/{project1.id}/",
+            {"projectid": str(project2.id)},
+            format="json",
+        )
+
+        self.assertFalse(status.is_success(response.status_code))
+        self.assertTrue(Project.objects.filter(id=project1.id).exists())
 
     def test_error_responses(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
