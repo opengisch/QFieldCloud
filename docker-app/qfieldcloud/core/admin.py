@@ -1915,6 +1915,25 @@ class ContentTypeFilter(MultipleDropdownFilter):
         return queryset
 
 
+class TzAwareRangeDateTimeFilter(RangeDateTimeFilter):
+    """Range filter that reads the entered datetimes in the user's timezone."""
+
+    def queryset(self, request: HttpRequest, queryset: QuerySet) -> QuerySet:
+        form = self.form_class(name=self.parameter_name, data=self.used_parameters)
+        form.is_valid()
+
+        value_from = form.cleaned_data.get(f"{self.parameter_name}_from")
+        value_to = form.cleaned_data.get(f"{self.parameter_name}_to")
+
+        if value_from:
+            queryset = queryset.filter(**{f"{self.parameter_name}__gte": value_from})
+
+        if value_to:
+            queryset = queryset.filter(**{f"{self.parameter_name}__lte": value_to})
+
+        return queryset
+
+
 class LogEntryAdmin(
     ModelAdminNoPkOrderChangeListMixin,
     ModelAdminEstimateCountMixin,
@@ -1925,7 +1944,7 @@ class LogEntryAdmin(
     date_hierarchy = None
 
     list_filter = (
-        ("timestamp", RangeDateTimeFilter),
+        ("timestamp", TzAwareRangeDateTimeFilter),
         "action",
         ContentTypeFilter,
     )
