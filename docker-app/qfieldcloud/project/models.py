@@ -603,23 +603,8 @@ class Project(models.Model):
     )
 
     def is_locked(self, update_if_expired: bool = True) -> bool:
-        """Returns whether the project is currently locked.
-
-        Args:
-            update_if_expired: whether to update the lock status if it has expired.
-        """
-        if not self.lock_acquired_by:
-            return False
-
-        # if the lock has expired, potentially clear it and return False
-        if self.lock_expires_at and self.lock_expires_at < timezone.now():
-            if update_if_expired:
-                self.lock_expires_at = None
-                self.save()
-
-            return False
-
-        return True
+        """Returns whether the project is currently locked."""
+        return self.lock_acquired_by and self.lock_expires_at >= timezone.now():
 
     @transaction.atomic
     def lock(self, acquired_by: Person, is_explicit: bool) -> None:
