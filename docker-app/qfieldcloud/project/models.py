@@ -315,7 +315,16 @@ class Project(models.Model):
                 Upper("name"),
                 name="project_owner_name_uniq",
                 violation_error_message="Project with the same name already exists.",
-            )
+            ),
+            models.CheckConstraint(
+                condition=(
+                    Q(lock_acquired_by__isnull=True) & Q(lock_expires_at__isnull=True)
+                    | Q(lock_acquired_by__isnull=False)
+                    & Q(lock_expires_at__isnull=False)
+                ),
+                name="project_locking_fields_integrity",
+                violation_error_message="Project lock fields must be all null or all set.",
+            ),
         ]
 
     # All files related to the project, including both the `PROJECT_FILE` and `PACKAGE_FILE` file types.

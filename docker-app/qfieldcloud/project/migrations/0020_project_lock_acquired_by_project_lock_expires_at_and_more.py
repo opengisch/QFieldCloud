@@ -42,4 +42,22 @@ class Migration(migrations.Migration):
                 help_text="Whether the project lock was explicitly acquired.",
             ),
         ),
+        migrations.AddConstraint(
+            model_name="project",
+            constraint=models.CheckConstraint(
+                condition=models.Q(
+                    models.Q(
+                        ("lock_acquired_by__isnull", True),
+                        ("lock_expires_at__isnull", True),
+                    ),
+                    models.Q(
+                        ("lock_acquired_by__isnull", False),
+                        ("lock_expires_at__isnull", False),
+                    ),
+                    _connector="OR",
+                ),
+                name="project_locking_fields_integrity",
+                violation_error_message="Project lock fields must be all null or all set.",
+            ),
+        ),
     ]
