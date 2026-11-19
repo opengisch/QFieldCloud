@@ -1,4 +1,3 @@
-from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import QuerySet
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema, extend_schema_view
@@ -15,22 +14,6 @@ from qfieldcloud.core.serializers import (
 from rest_framework import exceptions, generics, permissions
 from rest_framework.request import Request
 from rest_framework.views import APIView
-
-
-class TeamMemberDeleteViewPermissions(permissions.BasePermission):
-    def has_permission(self, request: Request, view: APIView) -> bool:
-        user = request.user
-        organization_name = permissions_utils.get_url_kwarg(request, "organization")
-
-        try:
-            organization = Organization.objects.get(username=organization_name)
-        except ObjectDoesNotExist:
-            return False
-
-        if request.method == "DELETE":
-            return permissions_utils.can_delete_members(user, organization)
-
-        return False
 
 
 class TeamMemberPermission(permissions.BasePermission):
