@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 class DeltaFilePermissions(permissions.BasePermission):
     def has_permission(self, request, view):
-        projectid = permissions_utils.get_param_from_request(request, "projectid")
+        projectid = permissions_utils.get_url_kwarg(request, "projectid")
         project = get_slim_project_or_raise(projectid)
         user = request.user
 

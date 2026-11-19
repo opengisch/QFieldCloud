@@ -263,6 +263,16 @@ class QfcTestCase(APITestCase):
 
         self.assertEqual(response.status_code, 403)
 
+        response = self.client.patch(
+            "/api/v1/users/user2/",
+            {"username": "user1", "first_name": "Sasha"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.user2.refresh_from_db()
+        self.assertNotEqual(self.user2.first_name, "Sasha")
+
     def test_logout(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
         response = self.client.post("/api/v1/auth/logout/")

@@ -15,9 +15,7 @@ User = get_user_model()
 class ListCreateMembersViewPermissions(permissions.BasePermission):
     def has_permission(self, request, view):
         user = request.user
-        organization_name = permissions_utils.get_param_from_request(
-            request, "organization"
-        )
+        organization_name = permissions_utils.get_url_kwarg(request, "organization")
 
         try:
             organization = User.objects.get(username=organization_name)
@@ -76,9 +74,7 @@ class ListCreateMembersView(generics.ListCreateAPIView):
 class GetUpdateDestroyMemberViewPermissions(permissions.BasePermission):
     def has_permission(self, request, view):
         user = request.user
-        organization_name = permissions_utils.get_param_from_request(
-            request, "organization"
-        )
+        organization_name = permissions_utils.get_url_kwarg(request, "organization")
 
         try:
             organization = Organization.objects.get(username=organization_name)

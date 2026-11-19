@@ -30,7 +30,7 @@ class JobPermissions(permissions.BasePermission):
         if should_expect_project_id:
             project = get_slim_project_or_raise(project_id)
         else:
-            job_id = permissions_utils.get_param_from_request(request, "job_id")
+            job_id = permissions_utils.get_url_kwarg(request, "job_id")
 
             try:
                 job = Job.objects.select_related("project").get(id=job_id)

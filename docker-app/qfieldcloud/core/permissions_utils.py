@@ -1,6 +1,7 @@
-from typing import Literal
+from typing import Any, Literal
 
 from django.utils.translation import gettext as _
+from rest_framework.request import Request
 
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
@@ -169,17 +170,14 @@ def user_has_organization_role_origins(
     )
 
 
-def get_param_from_request(request, param):
-    """Try to get the param from the request data or the request context, returns None otherwise."""
-    if isinstance(request.data, dict):
-        result = request.data.get(param, None)
-    else:
-        result = None
+def get_url_kwarg(request: Request, param: str) -> Any:
+    """Return the `param` URL kwarg of the request, or `None` if it is missing.
 
-    if not result:
-        result = request.parser_context["kwargs"].get(param, None)
-
-    return result
+    NOTE never read resource identifiers for permission checks from the request body.
+    The views act on the resource from the URL, so a body value would make the
+    permission check run against a different resource than the one being modified.
+    """
+    return request.parser_context["kwargs"].get(param)
 
 
 def can_create_project(
@@ -301,6 +299,27 @@ def can_update_project(user: QfcUser, project: Project) -> bool:
             ProjectCollaboratorRole.MANAGER,
         ],
     )
+
+
+def can_transfer_project(user: QfcUser, project: Project, new_owner: QfcUser) -> bool:
+    """Return True if the `user` can transfer the `project` to `new_owner`.
+
+    Only the project owner, or the owner or an admin of the organization owning the project,
+    can give the project away. Collaborators cannot, regardless of their role.
+    The `new_owner` must be an account the `user` can create projects for.
+    """
+    if not user_has_project_role_origins(
+        user,
+        project,
+        [
+            ProjectRoleOrigins.PROJECTOWNER,
+            ProjectRoleOrigins.ORGANIZATIONOWNER,
+            ProjectRoleOrigins.ORGANIZATIONADMIN,
+        ],
+    ):
+        return False
+
+    return can_create_project(user, new_owner)
 
 
 def can_delete_project(user: QfcUser, project: Project) -> bool:
@@ -609,10 +628,29 @@ def can_delete_user(user: QfcUser, account: QfcUser) -> bool:
     if user_eq(user, account):
         return True
 
-    if user_has_organization_roles(user, account, [OrganizationMember.Roles.ADMIN]):
-        return True
+    if account.is_organization:
+        return user_has_organization_role_origins(
+            user,
+            account,
+            [
+                OrganizationQueryset.RoleOrigins.ORGANIZATIONOWNER,
+            ],
+        )
 
     return False
+
+
+def can_transfer_organization(user: QfcUser, organization: QfcUser) -> bool:
+    if not organization.is_organization:
+        return False
+
+    return user_has_organization_role_origins(
+        user,
+        organization,
+        [
+            OrganizationQueryset.RoleOrigins.ORGANIZATIONOWNER,
+        ],
+    )
 
 
 def can_create_collaborators(user: QfcUser, project: Project) -> bool:

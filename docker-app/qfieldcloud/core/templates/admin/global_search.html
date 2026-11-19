@@ -17,7 +17,7 @@
         {% endcomponent %}
     </form>
 
-    {% trans 'Tip: Enter an exact username or email address to search across all models.' as tip %}
+    {% trans 'Enter an exact username or email address to find matching records across Person, Organization, Project, and Subscription models.' as tip %}
     {% include "unfold/helpers/messages/info.html" with message=tip %}
 
     {% if query %}
@@ -138,9 +138,6 @@
             {% blocktrans with query=query asvar no_match %}No results found for "{{ query }}". Please ensure you're using an exact username or email address.{% endblocktrans %}
             {% include "unfold/helpers/messages/info.html" with message=no_match %}
         {% endif %}
-    {% else %}
-        {% trans 'Enter a username or email address in the search box above to find matching records across Person, Organization, Project, and Subscription models.' as hint %}
-        {% include "unfold/helpers/messages/info.html" with message=hint %}
     {% endif %}
 </div>
 {% endblock %}

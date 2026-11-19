@@ -27,6 +27,7 @@ services:
     build:
       context: ./docker-app
       target: build
+    working_dir: /requirements
     profiles:
       - donotstart
     volumes:
@@ -34,7 +35,7 @@ services:
       - ./docker-app/requirements:/requirements
     environment:
       UV_CACHE_DIR: /tmp/uv-cache
-    command: bash -c 'apt update && apt install -y git && for f in /requirements/*.in; do uv pip compile --no-strip-extras -q -o "$${f%.in}.txt" "$$f"; done'
+    command: bash -c 'apt update && apt install -y git && for f in *.in; do uv pip compile --no-strip-extras -q -o "$${f%.in}.txt" "$$f"; done'
 
   worker_wrapper:
     scale: ${QFIELDCLOUD_WORKER_REPLICAS}

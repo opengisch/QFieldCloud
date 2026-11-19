@@ -8,8 +8,9 @@ from datetime import datetime, timedelta
 from enum import Enum
 from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Self, cast
 
+from constance import config
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.models import UserManager as DjangoUserManager
@@ -357,6 +358,10 @@ class User(AbstractUser):
     #     ]
 
 
+def get_default_remaining_invitations() -> int:
+    return config.DEFAULT_REMAINING_INVITATIONS
+
+
 class Person(User):
     """Individual users in QFieldCloud."""
 
@@ -365,7 +370,7 @@ class Person(User):
     # The number of invitations the user can send.
     # NOTE the limit was developed during the beta phase and to prevent going over the email quota per hour.
     remaining_invitations = models.PositiveIntegerField(
-        default=3,
+        default=get_default_remaining_invitations,
         help_text=_("Remaining invitations that can be sent by the user himself."),
     )
 
@@ -604,7 +609,7 @@ class OrganizationQueryset(models.QuerySet):
         ORGANIZATIONOWNER = "organization_owner", _("Organization owner")
         ORGANIZATIONMEMBER = "organization_member", _("Organization member")
 
-    def of_user(self, user):
+    def of_user(self, user: Person) -> Self:
         qs = (
             self.defer("membership_roles__user_id", "membership_roles__organization_id")
             .filter(
@@ -619,13 +624,29 @@ class OrganizationQueryset(models.QuerySet):
 
         return qs
 
+    def where_user_can_create_projects(self, user: Person) -> Self:
+        """Filter only the organizations where the `user` is allowed to create projects, i.e. where they are an admin or a creator."""
+        return self.of_user(user).filter(
+            membership_role__in=[
+                OrganizationMember.Roles.ADMIN,
+                OrganizationMember.Roles.CREATOR,
+            ]
+        )
+
 
 class OrganizationManager(UserManager):
-    def get_queryset(self):
+    def get_queryset(self) -> OrganizationQueryset:
         return OrganizationQueryset(self.model, using=self._db)
 
-    def of_user(self, user):
+    def of_user(self, user: Person) -> OrganizationQueryset:
         return self.get_queryset().select_related("useraccount").of_user(user)
+
+    def where_user_can_create_projects(self, user: Person) -> OrganizationQueryset:
+        return (
+            self.get_queryset()
+            .select_related("useraccount")
+            .where_user_can_create_projects(user)
+        )
 
 
 class Organization(User):

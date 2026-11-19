@@ -1,0 +1,76 @@
+{
+  "deltas": [
+    {
+      "uuid": "0b6a2a3e-5c1f-4c3e-9a51-0f6a1d6b1a01",
+      "clientId": "cd517e24-a520-4021-8850-e5af70e3a612",
+      "exportId": "f70c7286-fcec-4dbe-85b5-63d4735dac47",
+      "localPk": "10",
+      "sourcePk": "",
+      "localLayerId": "points_xy_897d5ed7_b810_4624_abe3_9f7c0a93d6a1",
+      "sourceLayerId": "points_xy_897d5ed7_b810_4624_abe3_9f7c0a93d6a1",
+      "localLayerCrs": "EPSG:2056",
+      "method": "create",
+      "new": {
+        "geometry": "POINT (2600000 1200000)",
+        "attributes": {
+          "int": 10
+        }
+      }
+    },
+    {
+      "uuid": "0b6a2a3e-5c1f-4c3e-9a51-0f6a1d6b1a02",
+      "clientId": "cd517e24-a520-4021-8850-e5af70e3a612",
+      "exportId": "f70c7286-fcec-4dbe-85b5-63d4735dac47",
+      "localPk": "11",
+      "sourcePk": "",
+      "localLayerId": "points_xy_897d5ed7_b810_4624_abe3_9f7c0a93d6a1",
+      "sourceLayerId": "points_xy_897d5ed7_b810_4624_abe3_9f7c0a93d6a1",
+      "localLayerCrs": "EPSG:2056",
+      "method": "create",
+      "new": {
+        "geometry": "POINT (abc def)",
+        "attributes": {
+          "int": 11
+        }
+      }
+    },
+    {
+      "uuid": "0b6a2a3e-5c1f-4c3e-9a51-0f6a1d6b1a03",
+      "clientId": "cd517e24-a520-4021-8850-e5af70e3a612",
+      "exportId": "f70c7286-fcec-4dbe-85b5-63d4735dac47",
+      "localPk": "12",
+      "sourcePk": "",
+      "localLayerId": "points_xy_897d5ed7_b810_4624_abe3_9f7c0a93d6a1",
+      "sourceLayerId": "points_xy_897d5ed7_b810_4624_abe3_9f7c0a93d6a1",
+      "localLayerCrs": "EPSG:2056",
+      "method": "create",
+      "new": {
+        "geometry": "POLYGON ((2600000 1200000, 2600001 1200000, 2600001 1200001))",
+        "attributes": {
+          "int": 12
+        }
+      }
+    },
+    {
+      "uuid": "0b6a2a3e-5c1f-4c3e-9a51-0f6a1d6b1a04",
+      "clientId": "cd517e24-a520-4021-8850-e5af70e3a612",
+      "exportId": "f70c7286-fcec-4dbe-85b5-63d4735dac47",
+      "localPk": "13",
+      "sourcePk": "",
+      "localLayerId": "points_xy_897d5ed7_b810_4624_abe3_9f7c0a93d6a1",
+      "sourceLayerId": "points_xy_897d5ed7_b810_4624_abe3_9f7c0a93d6a1",
+      "localLayerCrs": "EPSG:32632",
+      "method": "create",
+      "new": {
+        "geometry": "POINT (1e12 1e12)",
+        "attributes": {
+          "int": 13
+        }
+      }
+    }
+  ],
+  "files": [],
+  "id": "3c1f5e0a-7a7d-4b8e-8d0f-2f4b8a6d9c11",
+  "project": "e02d02cc-af1b-414c-a14c-e2ed5dfee52f",
+  "version": "1.0"
+}

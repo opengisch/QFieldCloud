@@ -19,7 +19,7 @@ from rest_framework.parsers import MultiPartParser
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from qfieldcloud.core import pagination, permissions_utils
+from qfieldcloud.core import exceptions, pagination, permissions_utils
 from qfieldcloud.core.drf_utils import QfcOrderingFilter
 from qfieldcloud.core.models import Job
 from qfieldcloud.project.enums import ProjectRoleOrigins
@@ -56,16 +56,18 @@ class ProjectViewSetPermissions(permissions.BasePermission):
             return True
 
         user = request.user
-        owner = permissions_utils.get_param_from_request(request, "owner")
-
-        if owner:
-            owner_obj = User.objects.get(username=owner)
-        else:
-            # If the owner is not in the request, means that the owner
-            # should be the user that made the request
-            owner_obj = user
 
         if view.action == "create":
+            # The owner of a new project comes from the body, the same place the serializer reads it from.
+            owner = request.data.get("owner")
+
+            if owner:
+                owner_obj = User.objects.get(username=owner)
+            else:
+                # If the owner is not in the request, means that the owner
+                # should be the user that made the request
+                owner_obj = user
+
             if not permissions_utils.can_create_project(user, owner_obj):
                 return False
 
@@ -78,7 +80,7 @@ class ProjectViewSetPermissions(permissions.BasePermission):
 
             return True
 
-        projectid = permissions_utils.get_param_from_request(request, "projectid")
+        projectid = permissions_utils.get_url_kwarg(request, "projectid")
         project = get_slim_project_or_raise(projectid)
 
         if view.action == "retrieve":
@@ -290,6 +292,19 @@ class ProjectViewSet(viewsets.ModelViewSet):
         # But then it would also be enforced by admin, which we don't want I guess...
 
         old_owner = serializer.instance.owner
+        requested_owner = serializer.validated_data.get("owner")
+
+        if (
+            requested_owner is not None
+            and requested_owner != old_owner
+            and not permissions_utils.can_transfer_project(
+                self.request.user, serializer.instance, requested_owner
+            )
+        ):
+            raise exceptions.PermissionDeniedError(
+                "Not allowed to transfer the project to the given owner."
+            )
+
         super().perform_update(serializer)
         new_owner = serializer.instance.owner
 

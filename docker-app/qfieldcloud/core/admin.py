@@ -17,7 +17,6 @@ from allauth.socialaccount.admin import SocialAppAdmin as SocialAppAdminBase
 from allauth.socialaccount.admin import SocialTokenAdmin as SocialTokenAdminBase
 from allauth.socialaccount.models import SocialAccount, SocialApp, SocialToken
 from auditlog.admin import LogEntryAdmin as BaseLogEntryAdmin
-from auditlog.filters import ResourceTypeFilter
 from auditlog.models import ContentType, LogEntry
 from axes.admin import AccessAttemptAdmin as AccessAttemptAdminBase
 from axes.admin import AccessFailureLogAdmin as AccessFailureLogAdminBase
@@ -40,7 +39,7 @@ from django.core.validators import validate_email
 from django.db import models
 from django.db.models import Q, QuerySet
 from django.db.models.fields.json import JSONField
-from django.db.models.functions import Lower
+from django.db.models.functions import Concat, Lower
 from django.forms import ModelForm, fields, widgets
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.http.response import Http404, HttpResponseRedirect, StreamingHttpResponse
@@ -59,9 +58,16 @@ from invitations.admin import InvitationAdmin as InvitationAdminBase
 from invitations.utils import get_invitation_model
 from rest_framework.authtoken.models import TokenProxy
 from unfold.admin import ModelAdmin, StackedInline, TabularInline
+from unfold.contrib.filters.admin import MultipleDropdownFilter, RangeDateTimeFilter
 from unfold.decorators import action
+from unfold.forms import BaseDialogForm
 from unfold.sites import UnfoldAdminSite
 from unfold.views import ChangeList
+from unfold.widgets import (
+    UnfoldAdminIntegerFieldWidget,
+    UnfoldAdminSelect2Widget,
+    UnfoldAdminSelectWidget,
+)
 
 from qfieldcloud.core.models import (
     ApplyJob,
@@ -77,6 +83,7 @@ from qfieldcloud.core.models import (
     TeamMember,
     User,
     UserAccount,
+    get_default_remaining_invitations,
 )
 from qfieldcloud.core.paginators import LargeTablePaginator
 from qfieldcloud.core.utils2 import delta_utils, jobs, pg_service_file
@@ -459,7 +466,27 @@ class ModelAdminListDisplayAutoFkeyFields:
         return link
 
 
+class ModelAdminSearchableForeignKeySelectMixin:
+    """Render plain foreign key dropdowns as searchable select2 widgets.
+
+    By default Unfold renders foreign keys as a plain, non-searchable `<select>`.
+    Make them searchable using the Select2 widget.
+    """
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        formfield = super().formfield_for_foreignkey(db_field, request, **kwargs)  # type: ignore[misc]
+
+        if formfield is not None and type(formfield.widget) is UnfoldAdminSelectWidget:
+            widget = UnfoldAdminSelect2Widget()
+            widget.choices = formfield.widget.choices
+            widget.is_required = formfield.widget.is_required
+            formfield.widget = widget
+
+        return formfield
+
+
 class QFieldCloudModelAdmin(  # type: ignore
+    ModelAdminSearchableForeignKeySelectMixin,
     ModelAdminNoPkOrderChangeListMixin,
     ModelAdminEstimateCountMixin,
     ModelAdminSearchParserMixin,
@@ -483,7 +510,7 @@ class QFieldCloudModelAdmin(  # type: ignore
         return super().has_delete_permission(request, obj)
 
 
-class QfcInlineMixin:
+class QfcInlineMixin(ModelAdminSearchableForeignKeySelectMixin):
     """Shared settings of `QfcTabularInline` and `QfcStackedInline`."""
 
     # NOTE: A custom `formset` must subclass Unfold's `PaginationFormSetMixin`, a plain formset will fail.
@@ -794,6 +821,17 @@ class ProjectInline(QfcTabularInline):
         return False
 
 
+class SetRemainingInvitationsForm(BaseDialogForm):
+    remaining_invitations = fields.IntegerField(
+        label=_("Remaining invitations"),
+        initial=get_default_remaining_invitations,
+        min_value=0,
+        max_value=10000,
+        widget=UnfoldAdminIntegerFieldWidget,
+        help_text=_("0 disables invitations. N allows N invitations"),
+    )
+
+
 class PersonAdmin(QFieldCloudModelAdmin):
     list_display = (
         "username",
@@ -842,6 +880,16 @@ class PersonAdmin(QFieldCloudModelAdmin):
 
     inlines = (UserAccountInline,)
 
+    actions_list = (
+        {
+            "title": _("Actions"),
+            "icon": "bolt",
+            "items": [
+                "set_remaining_invitations",
+            ],
+        },
+    )
+
     actions_detail = (
         "password_reset_url",
         {
@@ -875,6 +923,39 @@ class PersonAdmin(QFieldCloudModelAdmin):
 
         obj.clean()
         obj.save()
+
+    @action(
+        description=_("Set remaining invitations"),
+        url_path="set-remaining-invitations",
+        icon="mail",
+        permissions=["change"],
+        dialog={
+            "title": _("Set remaining invitations"),
+            "description": _("Set the number of remaining invitations for all users."),
+            "form_class": SetRemainingInvitationsForm,
+            "form_submit_text": _("Apply"),
+        },
+    )
+    def set_remaining_invitations(
+        self, request: HttpRequest, form: SetRemainingInvitationsForm
+    ) -> HttpResponse:
+        remaining_invitations = form.cleaned_data["remaining_invitations"]
+        updated_count = Person.objects.update(
+            remaining_invitations=remaining_invitations
+        )
+
+        self.message_user(
+            request,
+            _("Remaining invitations set to {} for {} user(s).").format(
+                remaining_invitations, updated_count
+            ),
+            messages.SUCCESS,
+        )
+
+        # the dialog form is submitted via htmx, so ask htmx to reload the whole page
+        return HttpResponse(
+            headers={"HX-Redirect": reverse("admin:core_person_changelist")}
+        )
 
     def _get_username(self, request: HttpRequest, object_id: str) -> str:
         return get_object_or_404(self.get_queryset(request), pk=object_id).username
@@ -1783,6 +1864,16 @@ class UserAccountAdmin(QFieldCloudModelAdmin):
     search_fields = ("user__username__icontains",)
     list_select_related = ("user",)
 
+    def get_search_results(
+        self, request: HttpRequest, queryset: QuerySet, search_term: str
+    ) -> tuple[QuerySet, bool]:
+        queryset, may_have_duplicates = super().get_search_results(
+            request, queryset, search_term
+        )
+
+        # Exclude teams from the autocomplete results
+        return queryset.exclude(user__type=User.Type.TEAM), may_have_duplicates
+
     def has_module_permission(self, request: HttpRequest) -> bool:
         # hide this module from Django admin, it is accessible via "Person" and "Organization" as inline edit
         return False
@@ -1799,11 +1890,48 @@ class UserAdmin(QFieldCloudModelAdmin):
         return False
 
 
-class QFieldCloudResourceTypeFilter(ResourceTypeFilter):
-    def lookups(self, request, model_admin):
-        qs = ContentType.objects.all().order_by("model")
-        types = qs.values_list("id", "model")
-        return types
+class ContentTypeFilter(MultipleDropdownFilter):
+    title = "Content Types"
+    parameter_name = "content_types"
+
+    def lookups(self, request: HttpRequest, model_admin) -> list[tuple[int, str]]:
+        qs = (
+            ContentType.objects.annotate(
+                label=Concat("app_label", models.Value("."), "model")
+            )
+            .order_by("model", "app_label")
+            .values_list("id", "label")
+        )
+        return list(qs)
+
+    def queryset(
+        self, request: HttpRequest, queryset: QuerySet[LogEntry]
+    ) -> QuerySet[LogEntry]:
+        values = self.value()
+
+        if values:
+            return queryset.filter(content_type_id__in=values)
+
+        return queryset
+
+
+class TzAwareRangeDateTimeFilter(RangeDateTimeFilter):
+    """Range filter that reads the entered datetimes in the user's timezone."""
+
+    def queryset(self, request: HttpRequest, queryset: QuerySet) -> QuerySet:
+        form = self.form_class(name=self.parameter_name, data=self.used_parameters)
+        form.is_valid()
+
+        value_from = form.cleaned_data.get(f"{self.parameter_name}_from")
+        value_to = form.cleaned_data.get(f"{self.parameter_name}_to")
+
+        if value_from:
+            queryset = queryset.filter(**{f"{self.parameter_name}__gte": value_from})
+
+        if value_to:
+            queryset = queryset.filter(**{f"{self.parameter_name}__lte": value_to})
+
+        return queryset
 
 
 class LogEntryAdmin(
@@ -1813,7 +1941,14 @@ class LogEntryAdmin(
     BaseLogEntryAdmin,
     ModelAdmin,
 ):
-    list_filter = ("action", QFieldCloudResourceTypeFilter)
+    date_hierarchy = None
+
+    list_filter = (
+        ("timestamp", TzAwareRangeDateTimeFilter),
+        "action",
+        ContentTypeFilter,
+    )
+    list_filter_submit = True
 
     search_parser_config = {
         "user": {

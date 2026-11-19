@@ -99,6 +99,7 @@ INSTALLED_APPS = [
     # admin theme
     "unfold",
     "unfold.contrib.constance",
+    "unfold.contrib.filters",
     # django contrib
     "django.contrib.admin",
     "django.contrib.contenttypes",
@@ -702,6 +703,7 @@ QFIELDCLOUD_TEST_SKIP_VIEW_ADMIN_URLS = (
     "/admin/filestorage/file/add/",
     "/admin/filestorage/fileversion/add/",
     "/admin/project/qgislayer/add/",
+    "/admin/project/qgislayerfield/add/",
 )
 
 # Admin sort URLs which will be skipped from checking if they return HTTP 200
@@ -797,6 +799,11 @@ CONSTANCE_CONFIG = {
         "Days in which the trial period expires.",
         int,
     ),
+    "DEFAULT_REMAINING_INVITATIONS": (
+        3,
+        "Number of invitations a newly created user can send. 0 disables invitations. Existing users can be updated in bulk via the `Set remaining invitations` action in the users admin.",
+        int,
+    ),
     "STATUS_PAGE_URL": (
         "https://status.qfield.cloud/",
         "Status page URL",
@@ -843,6 +850,7 @@ CONSTANCE_CONFIG_FIELDSETS = {
     ),
     "Debug": ("SENTRY_REQUEST_MAX_SIZE_TO_SEND",),
     "Subscription": ("TRIAL_PERIOD_DAYS",),
+    "Invitations": ("DEFAULT_REMAINING_INVITATIONS",),
     "Web": (
         "STATUS_PAGE_URL",
         "WEB_USER_INACTIVITY_THRESHOLD_DAYS",
@@ -1147,9 +1155,15 @@ QFIELDCLOUD_CUSTOM_CA_FILENAME = f"{QFIELDCLOUD_CUSTOM_CA_DIR}/custom_ca.crt"
 # Maximum number of GET/POST parameters, avoids `TooManyFieldsSent` error.
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 5000
 
-# Enable Django Debug Toolbar only in development environment, see https://django-debug-toolbar.readthedocs.io/en/latest/installation.html#disable-the-toolbar-when-running-tests-optional
+# Enable development-only apps.
 if DEBUG and ENVIRONMENT == "development":
-    INSTALLED_APPS.insert(0, "debug_toolbar")
+    INSTALLED_APPS = [
+        # Django Debug Toolbar at `/__debug__/`, see https://django-debug-toolbar.readthedocs.io/en/latest/installation.html#disable-the-toolbar-when-running-tests-optional
+        "debug_toolbar",
+        # Django Schema Viewer at `/schema-viewer/`, visualizes the DB schema from the Django models, see https://pypi.org/project/django-schema-viewer/
+        "schema_viewer",
+        *INSTALLED_APPS,
+    ]
     MIDDLEWARE.insert(0, "debug_toolbar.middleware.DebugToolbarMiddleware")
 
     DEBUG_TOOLBAR_CONFIG = {

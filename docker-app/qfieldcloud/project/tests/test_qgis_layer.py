@@ -7,14 +7,24 @@ from django.test import TestCase
 from qfieldcloud.core.models import Person
 from qfieldcloud.core.tests.utils import setup_subscription_plans
 from qfieldcloud.filestorage.models import File, FileVersion
-from qfieldcloud.project.enums import QgsGeometryType, QgsLayerType
-from qfieldcloud.project.models import Project, QgisLayer, QgisProject
+from qfieldcloud.project.enums import (
+    QgsFieldConstraintStrength,
+    QgsGeometryType,
+    QgsLayerType,
+    QtType,
+)
+from qfieldcloud.project.models import (
+    Project,
+    QgisLayer,
+    QgisLayerField,
+    QgisProject,
+)
 
 logging.disable(logging.CRITICAL)
 
 
 class QfcTestCase(TestCase):
-    """Tests for `QgisLayer` model."""
+    """Tests for `QgisLayer` and `QgisLayerField` models."""
 
     def setUp(self):
         setup_subscription_plans()
@@ -174,4 +184,199 @@ class QfcTestCase(TestCase):
                         "solution": "To make the layer editable on QField, store the layer data in a GeoPackage or PostGIS layer, using a single column for the primary key.",
                     }
                 ],
+            )
+
+    def test_layer_sync_also_syncs_the_layer_fields(self):
+        with self.subTest("Test the layer sync creates the fields in order"):
+            QgisLayer.objects.update_from_details(
+                self.qgis_project,
+                ["layer1"],
+                {
+                    "layer1": self._layer_details(
+                        fields=[
+                            {"name": "id", "type": QtType.Int},
+                            {"name": "label", "type": QtType.QString},
+                        ]
+                    ),
+                },
+            )
+
+            layer = self.qgis_project.layers.get(qgis_layer_id="layer1")
+
+            self.assertEqual(
+                list(layer.fields.values_list("name", "ordering", "type")),
+                [("id", 0, QtType.Int), ("label", 1, QtType.QString)],
+            )
+
+        with self.subTest(
+            "Test the layer sync removes the fields when the details have none"
+        ):
+            QgisLayer.objects.update_from_details(
+                self.qgis_project,
+                ["layer1"],
+                {"layer1": self._layer_details(fields=None)},
+            )
+
+            self.assertEqual(list(layer.fields.values_list("name", flat=True)), [])
+
+    def test_very_long_field_name_does_not_break_unique_constraint(self):
+        """Test very long field names.
+
+        A field `name` long enough to overflow the Postgres btree index row size limit.
+        """
+        layer = self._create_layer("layer1")
+        long_name = "x" * 10000
+
+        QgisLayerField.objects.update_from_details(layer, [{"name": long_name}])
+
+        self.assertEqual(layer.fields.get().name, long_name)
+
+    def test_duplicate_field_name_in_same_layer_violates_constraint(self):
+        layer = self._create_layer("layer1")
+        QgisLayerField.objects.create(layer=layer, name="field1", ordering=0)
+
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            QgisLayerField.objects.create(layer=layer, name="field1", ordering=1)
+
+    def test_field_sync_falls_back_on_missing_or_invalid_values(self):
+        """Test malformed field details from the worker.
+
+        If `after_docker_run` raises, the job fails and the project's `QgisProject` is deleted,
+        so no single unexpected value may break the save.
+        """
+        layer = self._create_layer("layer1")
+
+        QgisLayerField.objects.update_from_details(
+            layer,
+            [
+                {"name": "only_name"},
+                {
+                    "name": "explicit_nulls",
+                    "alias": None,
+                    "comment": None,
+                    "type": None,
+                    "type_display": None,
+                    "length": None,
+                    "precision": None,
+                    "constraint_strength": None,
+                    "constraint_expression": None,
+                    "constraint_expression_description": None,
+                    "constraint_expression_strength": None,
+                    "is_unique_strength": None,
+                    "default_value": None,
+                    "set_default_value_on_update": None,
+                    "widget_type": None,
+                    "widget_config": None,
+                },
+                {"name": "type_name_string", "type": "String"},
+                {"name": "unknown_type", "type": 0},
+                {"name": "unknown_strength", "constraint_strength": "very_hard"},
+                {"name": "", "alias": "skipped"},
+                {
+                    "name": "long_values",
+                    "type_display": "t" * 500,
+                    "widget_type": "w" * 500,
+                },
+            ],
+        )
+
+        with self.subTest("Test a field with only a name gets the default values"):
+            field = layer.fields.get(name="only_name")
+            self.assertEqual(field.alias, "")
+            self.assertEqual(field.comment, "")
+            self.assertIsNone(field.type)
+            self.assertEqual(field.type_display, "")
+            self.assertEqual(field.length, 0)
+            self.assertEqual(field.precision, 0)
+            self.assertEqual(
+                field.is_not_null_strength, QgsFieldConstraintStrength.NOT_SET
+            )
+            self.assertEqual(field.constraint_expression, "")
+            self.assertEqual(field.constraint_expression_description, "")
+            self.assertEqual(
+                field.constraint_expression_strength,
+                QgsFieldConstraintStrength.NOT_SET,
+            )
+            self.assertEqual(
+                field.is_unique_strength, QgsFieldConstraintStrength.NOT_SET
+            )
+            self.assertEqual(field.default_value, "")
+            self.assertFalse(field.set_default_value_on_update)
+            self.assertEqual(field.widget_type, "")
+            self.assertEqual(field.widget_config, {})
+
+        with self.subTest("Test explicit null values fall back to the default values"):
+            field = layer.fields.get(name="explicit_nulls")
+            self.assertEqual(field.alias, "")
+            self.assertIsNone(field.type)
+            self.assertEqual(field.length, 0)
+            self.assertEqual(
+                field.is_not_null_strength, QgsFieldConstraintStrength.NOT_SET
+            )
+            self.assertFalse(field.set_default_value_on_update)
+            self.assertEqual(field.widget_config, {})
+
+        with self.subTest("Test a non-integer type is saved as null"):
+            self.assertIsNone(layer.fields.get(name="type_name_string").type)
+
+        with self.subTest("Test type 0 is saved as `UnknownType`, not null"):
+            self.assertEqual(
+                layer.fields.get(name="unknown_type").type, QtType.UnknownType
+            )
+
+        with self.subTest("Test an unknown constraint strength is saved as not set"):
+            self.assertEqual(
+                layer.fields.get(name="unknown_strength").is_not_null_strength,
+                QgsFieldConstraintStrength.NOT_SET,
+            )
+
+        with self.subTest("Test the sync skips a field without a name"):
+            self.assertEqual(
+                list(layer.fields.values_list("name", flat=True)),
+                [
+                    "only_name",
+                    "explicit_nulls",
+                    "type_name_string",
+                    "unknown_type",
+                    "unknown_strength",
+                    "long_values",
+                ],
+            )
+
+        with self.subTest("Test long type display and widget type values save in full"):
+            field = layer.fields.get(name="long_values")
+            self.assertEqual(field.type_display, "t" * 500)
+            self.assertEqual(field.widget_type, "w" * 500)
+
+    def test_field_sync_create_update_delete_cycle(self):
+        layer = self._create_layer("layer1")
+
+        with self.subTest("Test the first sync creates the fields in order"):
+            QgisLayerField.objects.update_from_details(
+                layer,
+                [
+                    {"name": "field1", "alias": "Field 1"},
+                    {"name": "field2"},
+                ],
+            )
+
+            self.assertEqual(
+                list(layer.fields.values_list("name", "ordering", "alias")),
+                [("field1", 0, "Field 1"), ("field2", 1, "")],
+            )
+
+        with self.subTest(
+            "Test a re-sync adds, reorders and updates fields and deletes the missing one"
+        ):
+            QgisLayerField.objects.update_from_details(
+                layer,
+                [
+                    {"name": "field3"},
+                    {"name": "field1", "alias": "Field 1 renamed"},
+                ],
+            )
+
+            self.assertEqual(
+                list(layer.fields.values_list("name", "ordering", "alias")),
+                [("field3", 0, ""), ("field1", 1, "Field 1 renamed")],
             )

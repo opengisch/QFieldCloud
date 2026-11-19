@@ -14,10 +14,10 @@ def redirect_to_admin_project_view(
 ) -> HttpResponseRedirect | HttpResponsePermanentRedirect:
     try:
         project = Project.objects.only("id").get(
-            name=project_name,
+            name__iexact=project_name,
             owner__username=username,
         )
     except Project.DoesNotExist:
         raise Http404()
 
-    return redirect(reverse("admin:core_project_change", args=(project.id,)))
+    return redirect(reverse("admin:project_project_change", args=(project.id,)))

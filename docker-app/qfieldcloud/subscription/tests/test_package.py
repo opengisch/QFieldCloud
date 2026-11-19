@@ -8,7 +8,7 @@ from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
 from qfieldcloud.authentication.models import AuthToken
-from qfieldcloud.core.models import Person
+from qfieldcloud.core.models import Organization, Person, User
 from qfieldcloud.core.tests.utils import get_random_file, setup_subscription_plans
 from qfieldcloud.project.models import Project
 from qfieldcloud.subscription.exceptions import NotPremiumPlanException
@@ -713,6 +713,7 @@ class QfcTestCase(APITransactionTestCase):
             storage_threshold_warning_bytes=2_000_000,
             storage_threshold_critical_bytes=1_000_000,
             is_premium=True,
+            user_type=User.Type.ORGANIZATION,
         )
         plan_20mb = Plan.objects.create(
             code="plan_20mb",
@@ -721,21 +722,27 @@ class QfcTestCase(APITransactionTestCase):
             storage_threshold_warning_bytes=4_000_000,
             storage_threshold_critical_bytes=2_000_000,
             is_premium=True,
+            user_type=User.Type.ORGANIZATION,
         )
 
-        u10mb = Person.objects.create(username="u10mb")
-        u10mb_subscription = u10mb.useraccount.current_subscription
-        u10mb_subscription.regular_plan = plan_10mb
-        u10mb_subscription.save()
+        # both organizations are owned by the same user, as users can only transfer projects to accounts they can create projects in
+        o20mb = Organization.objects.create(
+            username="o20mb", organization_owner=self.u1
+        )
+        o20mb_subscription = o20mb.useraccount.current_subscription
+        o20mb_subscription.regular_plan = plan_20mb
+        o20mb_subscription.save()
 
-        u20mb = Person.objects.create(username="u20mb")
-        u20mb_subscription = u20mb.useraccount.current_subscription
-        u20mb_subscription.regular_plan = plan_20mb
-        u20mb_subscription.save()
+        o10mb = Organization.objects.create(
+            username="o10mb", organization_owner=self.u1
+        )
+        o10mb_subscription = o10mb.useraccount.current_subscription
+        o10mb_subscription.regular_plan = plan_10mb
+        o10mb_subscription.save()
 
-        p1 = Project.objects.create(name="p1", owner=u20mb)
+        p1 = Project.objects.create(name="p1", owner=o20mb)
 
-        self._login(u20mb)
+        self._login(self.u1)
 
         self.assertStorage(
             active_storage_total_mb=10,
@@ -749,7 +756,7 @@ class QfcTestCase(APITransactionTestCase):
             future_storage_package_changed_mb=0,
             storage_used_mb=0,
             storage_free_mb=10,
-            user=u10mb,
+            user=o10mb,
         )
         self.assertStorage(
             active_storage_total_mb=20,
@@ -763,17 +770,17 @@ class QfcTestCase(APITransactionTestCase):
             future_storage_package_changed_mb=0,
             storage_used_mb=0,
             storage_free_mb=20,
-            user=u20mb,
+            user=o20mb,
         )
 
-        # User 2 uploads a 15mb file
+        # o20mb uploads a 15mb file
         apipath = f"/api/v1/files/{p1.id}/file.data/"
         response = self.client.post(
             apipath, {"file": get_random_file(mb=15)}, format="multipart"
         )
         self.assertTrue(status.is_success(response.status_code))
-        self.assertFalse(Project.objects.filter(owner=u10mb).exists())
-        self.assertTrue(Project.objects.filter(owner=u20mb).exists())
+        self.assertFalse(Project.objects.filter(owner=o10mb).exists())
+        self.assertTrue(Project.objects.filter(owner=o20mb).exists())
 
         self.assertStorage(
             active_storage_total_mb=20,
@@ -787,21 +794,21 @@ class QfcTestCase(APITransactionTestCase):
             future_storage_package_changed_mb=0,
             storage_used_mb=15,
             storage_free_mb=5,
-            user=u20mb,
+            user=o20mb,
         )
 
-        # Transfers to user1, but too much for his quota, so we refuse transfer
+        # Transfers to o10mb, but too much for its quota, so we refuse transfer
         apipath = f"/api/v1/projects/{p1.id}/"
-        response = self.client.patch(apipath, {"owner": "u10mb"})
+        response = self.client.patch(apipath, {"owner": "o10mb"})
         self.assertEqual(response.status_code, 402)
-        self.assertFalse(Project.objects.filter(owner=u10mb).exists())
-        self.assertTrue(Project.objects.filter(owner=u20mb).exists())
+        self.assertFalse(Project.objects.filter(owner=o10mb).exists())
+        self.assertTrue(Project.objects.filter(owner=o20mb).exists())
 
-        # User 1 buys a package, transfer now works
+        # o10mb buys a package, transfer now works
         (
             _old_package,
             new_package,
-        ) = u10mb.useraccount.current_subscription.set_package_quantity(
+        ) = o10mb.useraccount.current_subscription.set_package_quantity(
             PackageType.get_storage_package_type(), 1
         )
 
@@ -817,13 +824,13 @@ class QfcTestCase(APITransactionTestCase):
             future_storage_package_changed_mb=0,
             storage_used_mb=0,
             storage_free_mb=1010,
-            user=u10mb,
+            user=o10mb,
         )
 
-        response = self.client.patch(apipath, {"owner": "u10mb"})
+        response = self.client.patch(apipath, {"owner": "o10mb"})
         self.assertTrue(status.is_success(response.status_code))
-        self.assertTrue(Project.objects.filter(owner=u10mb).exists())
-        self.assertFalse(Project.objects.filter(owner=u20mb).exists())
+        self.assertTrue(Project.objects.filter(owner=o10mb).exists())
+        self.assertFalse(Project.objects.filter(owner=o20mb).exists())
 
         self.assertStorage(
             active_storage_total_mb=1010,
@@ -837,5 +844,5 @@ class QfcTestCase(APITransactionTestCase):
             future_storage_package_changed_mb=0,
             storage_used_mb=15,
             storage_free_mb=995,
-            user=u10mb,
+            user=o10mb,
         )

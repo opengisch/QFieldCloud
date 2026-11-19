@@ -7,8 +7,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <meta name="color-scheme" content="dark light">
 
-  {% sri_static 'css/vendor.css' %}
-  {% sri_static 'css/qfieldcloud.css' %}
+  <link rel="stylesheet" href="{% static 'css/vendor.css' %}" {% sri_attrs 'css/vendor.css' %} />
+  <link rel="stylesheet" href="{% static 'css/qfieldcloud.css' %}" {% sri_attrs 'css/qfieldcloud.css' %} />
+
   <link rel="shortcut icon" type="image/x-icon" href="{% static whitelabel.favicon %}" />
 
   <title>
@@ -65,9 +66,9 @@
     </div>
   </footer>
 
-  {% sri_static 'js/vendor/jquery.js' %}
-  {% sri_static 'js/vendor/popper.min.js' %}
-  {% sri_static 'js/vendor/bootstrap.min.js' %}
+  <script src="{% static 'js/vendor/jquery.js' %}" {% sri_attrs 'js/vendor/jquery.js' %}></script>
+  <script src="{% static 'js/vendor/popper.min.js' %}" {% sri_attrs 'js/vendor/popper.min.js' %}></script>
+  <script src="{% static 'js/vendor/bootstrap.min.js' %}" {% sri_attrs 'js/vendor/bootstrap.min.js' %}></script>
 
   {% block additional_js %}{% endblock additional_js %}
 </body>

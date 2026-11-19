@@ -22,9 +22,10 @@ from django.db import transaction
 from django.db.models import Case, Exists, F, OuterRef, Prefetch, Q, When
 from django.db.models import Value as V
 from django.db.models.aggregates import Count, Sum
-from django.db.models.functions import MD5
+from django.db.models.functions import MD5, Upper
 from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
+from django.utils.html import format_html
 from django.utils.translation import gettext as _
 
 from qfieldcloud.core import validators
@@ -44,8 +45,10 @@ from qfieldcloud.core.models_utils import get_stored_value
 from qfieldcloud.project.enums import (
     LayerErrorCode,
     ProjectCollaboratorRole,
+    QgsFieldConstraintStrength,
     QgsGeometryType,
     QgsLayerType,
+    QtType,
 )
 
 if TYPE_CHECKING:
@@ -57,7 +60,11 @@ if TYPE_CHECKING:
         SecretQueryset,
     )
     from qfieldcloud.filestorage.models import File, FileQueryset, FileVersion
-    from qfieldcloud.project.type_defs import LayerDetails, QgisProjectDetails
+    from qfieldcloud.project.type_defs import (
+        FieldDetails,
+        LayerDetails,
+        QgisProjectDetails,
+    )
 
     pass
 
@@ -303,7 +310,10 @@ class Project(models.Model):
         ordering = ["-is_featured", "owner__username", "name"]
         constraints = [
             models.UniqueConstraint(
-                fields=["owner", "name"], name="project_owner_name_uniq"
+                "owner",
+                Upper("name"),
+                name="project_owner_name_uniq",
+                violation_error_message="Project with the same name already exists.",
             )
         ]
 
@@ -349,7 +359,7 @@ class Project(models.Model):
     is_public = models.BooleanField(
         default=False,
         help_text=_(
-            "Projects marked as public are visible to (but not editable by) anyone."
+            "Projects marked as public are accessible to all users. Their access level is set by the public collaborator role."
         ),
     )
 
@@ -914,24 +924,32 @@ class Project(models.Model):
                             "project": self.shared_datasets_project.name,
                         },
                     )
-                    missing_localized_file_solution = _(
-                        'Upload the missing file to the "<a href="{}">{}</a>" project or update the layer to point to an available file.'
-                    ).format(localized_project_url, SHARED_DATASETS_PROJECT_NAME)
+                    missing_localized_file_solution = format_html(
+                        _(
+                            'Upload the missing file to the "<a href="{}">{}</a>" project or update the layer to point to an available file.'
+                        ),
+                        localized_project_url,
+                        SHARED_DATASETS_PROJECT_NAME,
+                    )
                 else:
                     problems.append(
                         {
                             "layer": None,
                             "level": "warning",
                             "code": "missing_localized_project",
-                            "description": _('Cannot find the "{}" project.').format(
-                                SHARED_DATASETS_PROJECT_NAME
+                            "description": format_html(
+                                _('Cannot find the "{}" project.'),
+                                SHARED_DATASETS_PROJECT_NAME,
                             ),
                             "solution": _("Ensure the shared dataset project exists."),
                         }
                     )
-                    missing_localized_file_solution = _(
-                        'Upload the missing file to the "{}" project or update the layer to point to an available file.'
-                    ).format(SHARED_DATASETS_PROJECT_NAME)
+                    missing_localized_file_solution = format_html(
+                        _(
+                            'Upload the missing file to the "{}" project or update the layer to point to an available file.'
+                        ),
+                        SHARED_DATASETS_PROJECT_NAME,
+                    )
 
                 for missing_layer in self.get_missing_localized_layers():
                     problems.append(
@@ -939,9 +957,10 @@ class Project(models.Model):
                             "layer": missing_layer.file_name,
                             "level": "warning",
                             "code": "missing_localized_file",
-                            "description": _(
-                                'Localized dataset stored at "{}" is missing.'
-                            ).format(missing_layer.file_name),
+                            "description": format_html(
+                                _('Localized dataset stored at "{}" is missing.'),
+                                missing_layer.file_name,
+                            ),
                             "solution": missing_localized_file_solution,
                         }
                     )
@@ -959,9 +978,8 @@ class Project(models.Model):
                             "layer": layer_name,
                             "level": "warning",
                             "code": "layer_problem",
-                            "description": _(
-                                'Layer "{}" has an error with code "{}": {}'
-                            ).format(
+                            "description": format_html(
+                                _('Layer "{}" has an error with code "{}": {}'),
                                 layer_name,
                                 layer.error_code,
                                 layer.error_summary,
@@ -982,9 +1000,12 @@ class Project(models.Model):
                                 "layer": layer_name,
                                 "level": "warning",
                                 "code": "layer_problem",
-                                "description": _(
-                                    'Layer "{}" does not support the `primary key` attribute. The layer will be read-only on QField.'
-                                ).format(layer_name),
+                                "description": format_html(
+                                    _(
+                                        'Layer "{}" does not support the `primary key` attribute. The layer will be read-only on QField.'
+                                    ),
+                                    layer_name,
+                                ),
                                 "solution": _(
                                     "To make the layer editable on QField, store the layer data in a GeoPackage or PostGIS layer, using a single column for the primary key."
                                 ),
@@ -1000,11 +1021,12 @@ class Project(models.Model):
                             "layer": layer_name,
                             "level": "warning",
                             "code": "hardcoded_pg_credentials",
-                            "description": _(
+                            "description": format_html(
                                 _(
                                     'Layer "{}" has a hard-coded postgres credentials in the datasource.'
-                                )
-                            ).format(layer_name),
+                                ),
+                                layer_name,
+                            ),
                             "solution": _(
                                 _(
                                     "Consider using a pg_service entry and a QFieldCloud Secret instead."
@@ -1588,12 +1610,14 @@ class QgisLayerQuerySet(models.QuerySet):
             # If it does, update only the fields that changed, otherwise skip the
             # save entirely.
             if existing_layer is None:
-                QgisLayer(
+                layer = QgisLayer(
                     qgis_project=qgis_project,
                     qgis_layer_id=qgis_layer_id,
                     **defaults,
-                ).save()
+                )
+                layer.save()
             else:
+                layer = existing_layer
                 changed_fields = []
                 for field, value in defaults.items():
                     if getattr(existing_layer, field) != value:
@@ -1605,9 +1629,20 @@ class QgisLayerQuerySet(models.QuerySet):
                         update_fields=[*changed_fields, "updated_at"],
                     )
 
+            QgisLayerField.objects.update_from_details(  # type: ignore[attr-defined]
+                layer, layer_data.get("fields") or []
+            )
+
             qgis_layer_ids_to_keep.add(qgis_layer_id)
 
-        qgis_project.layers.exclude(qgis_layer_id__in=qgis_layer_ids_to_keep).delete()
+        # Delete by primary key the layers that were not present in this update.
+        layer_ids_to_delete = []
+        for qgis_layer_id, existing_layer in existing_layers_by_qgis_layer_id.items():
+            if qgis_layer_id not in qgis_layer_ids_to_keep:
+                layer_ids_to_delete.append(existing_layer.id)
+
+        if layer_ids_to_delete:
+            qgis_project.layers.filter(id__in=layer_ids_to_delete).delete()
 
 
 class QgisLayer(models.Model):
@@ -1730,6 +1765,9 @@ class QgisLayer(models.Model):
         ),
     )
 
+    # The fields that belong to this layer.
+    fields: "QgisLayerFieldQuerySet"
+
     class Meta:
         verbose_name = _("QGIS layer")
         verbose_name_plural = _("QGIS layers")
@@ -1741,5 +1779,227 @@ class QgisLayer(models.Model):
                 F("qgis_project"),
                 MD5("qgis_layer_id"),
                 name="layer_qgis_project_qgis_layer_id_md5_uniq",
+            )
+        ]
+
+
+class QgisLayerFieldQuerySet(models.QuerySet):
+    @staticmethod
+    def _get_constraint_strength(value: str | None) -> QgsFieldConstraintStrength:
+        """Returns the matching `QgsFieldConstraintStrength`, or `NOT_SET` if `value` is missing or unknown."""
+        if value in QgsFieldConstraintStrength.values:
+            return QgsFieldConstraintStrength(value)
+
+        return QgsFieldConstraintStrength.NOT_SET
+
+    @transaction.atomic()
+    def update_from_details(
+        self,
+        layer: "QgisLayer",
+        fields: "list[FieldDetails]",
+    ) -> None:
+        """Sync a `QgisLayer`'s `QgisLayerField`'s to match `fields`.
+
+        Creates/updates a `QgisLayerField` per entry in `fields`, in the
+        given order, then deletes any existing `QgisLayerField` for the
+        layer that were not present in this update.
+
+        Existing fields are only updated in the database if a field actually
+        changed, to avoid needless writes on re-sync.
+        """
+        existing_fields_by_name = {}
+        for field in layer.fields.select_for_update():
+            existing_fields_by_name[field.name] = field
+
+        field_names_to_keep = set()
+
+        for ordering, field_data in enumerate(fields):
+            name = field_data.get("name")
+            if not name:
+                continue
+
+            # Store `type` only if it is an integer, otherwise store `None`.
+            field_type = field_data.get("type")
+            if not isinstance(field_type, int):
+                field_type = None
+
+            defaults = {
+                "ordering": ordering,
+                "alias": field_data.get("alias") or "",
+                "comment": field_data.get("comment") or "",
+                "type": field_type,
+                "type_display": field_data.get("type_display") or "",
+                "length": field_data.get("length") or 0,
+                "precision": field_data.get("precision") or 0,
+                "is_not_null_strength": self._get_constraint_strength(
+                    field_data.get("constraint_strength")
+                ),
+                "constraint_expression": field_data.get("constraint_expression") or "",
+                "constraint_expression_description": field_data.get(
+                    "constraint_expression_description"
+                )
+                or "",
+                "constraint_expression_strength": self._get_constraint_strength(
+                    field_data.get("constraint_expression_strength")
+                ),
+                "is_unique_strength": self._get_constraint_strength(
+                    field_data.get("is_unique_strength")
+                ),
+                "default_value": field_data.get("default_value") or "",
+                "set_default_value_on_update": bool(
+                    field_data.get("set_default_value_on_update")
+                ),
+                "widget_type": field_data.get("widget_type") or "",
+                "widget_config": field_data.get("widget_config") or {},
+            }
+
+            existing_field = existing_fields_by_name.get(name)
+
+            # If this `name` has no match, create a new `QgisLayerField`.
+            # If it does, update only the fields that changed, otherwise
+            # skip the save entirely.
+            if existing_field is None:
+                QgisLayerField(layer=layer, name=name, **defaults).save()
+            else:
+                changed_fields = []
+                for field, value in defaults.items():
+                    if getattr(existing_field, field) != value:
+                        setattr(existing_field, field, value)
+                        changed_fields.append(field)
+
+                if changed_fields:
+                    existing_field.save(update_fields=changed_fields)
+
+            field_names_to_keep.add(name)
+
+        # Delete by primary key the fields that were not present in this update.
+        field_ids_to_delete = []
+        for name, existing_field in existing_fields_by_name.items():
+            if name not in field_names_to_keep:
+                field_ids_to_delete.append(existing_field.id)
+
+        if field_ids_to_delete:
+            layer.fields.filter(id__in=field_ids_to_delete).delete()
+
+
+class QgisLayerField(models.Model):
+    """A single field  of a QgisLayer, as read from the QGIS project.
+
+    Close mirror to QGIS's `QgsField` class, with additional fields for QFieldCloud's purposes.
+    QGIS repo source: https://github.com/qgis/QGIS/blob/master/src/core/qgsfield.h
+    """
+
+    objects = QgisLayerFieldQuerySet.as_manager()
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    layer = models.ForeignKey(
+        to=QgisLayer,
+        on_delete=models.CASCADE,
+        related_name="fields",
+        help_text=_("The QGIS layer that owns this field."),
+    )
+
+    ordering = models.PositiveIntegerField(
+        help_text=_("The position in order of the field within the layer.")
+    )
+
+    name = models.TextField(
+        help_text=_("Field name as defined in the QGIS layer data source.")
+    )
+
+    alias = models.TextField(
+        blank=True, help_text=_("Optional user-facing alias configured in QGIS.")
+    )
+
+    comment = models.TextField(
+        blank=True,
+        help_text=_("Optional field comment or description configured in QGIS."),
+    )
+
+    type = models.PositiveIntegerField(
+        null=True,
+        choices=QtType.choices,
+        help_text=_("QGIS field type as a Qt type enum value."),
+    )
+
+    # NOTE The provider type name is unbounded.
+    type_display = models.TextField(
+        blank=True,
+        help_text=_("QGIS field type display name"),
+    )
+
+    length = models.IntegerField(
+        default=0, help_text=_("Declared field length reported by QGIS.")
+    )
+
+    precision = models.IntegerField(
+        default=0, help_text=_("Declared numeric precision reported by QGIS.")
+    )
+
+    is_not_null_strength = models.CharField(
+        max_length=10,
+        choices=QgsFieldConstraintStrength.choices,
+        default=QgsFieldConstraintStrength.NOT_SET,
+        help_text=_("Strength of the not-null constraint."),
+    )
+
+    constraint_expression = models.TextField(
+        blank=True,
+        help_text=_("Optional QGIS constraint expression."),
+    )
+
+    constraint_expression_description = models.TextField(
+        blank=True,
+        help_text=_(
+            "Optional human-readable error message when the constraint expression is violated."
+        ),
+    )
+
+    constraint_expression_strength = models.CharField(
+        max_length=10,
+        choices=QgsFieldConstraintStrength.choices,
+        default=QgsFieldConstraintStrength.NOT_SET,
+        help_text=_("Strength of the expression constraint."),
+    )
+
+    is_unique_strength = models.CharField(
+        max_length=10,
+        choices=QgsFieldConstraintStrength.choices,
+        default=QgsFieldConstraintStrength.NOT_SET,
+        help_text=_("Strength of the unique constraint."),
+    )
+
+    default_value = models.TextField(
+        blank=True, help_text=_("QGIS default value expression for new features.")
+    )
+
+    set_default_value_on_update = models.BooleanField(
+        default=False,
+        help_text=_(
+            "Whether QGIS reapplies the default value when a feature is updated."
+        ),
+    )
+
+    # NOTE Plugins can register editor widgets with arbitrary names.
+    widget_type = models.TextField(
+        blank=True,
+        help_text=_("QGIS editor widget type configured for the field."),
+    )
+
+    widget_config = models.JSONField(
+        blank=True, default=dict, help_text=_("QGIS editor widget configuration.")
+    )
+
+    class Meta:
+        verbose_name = _("QGIS layer field")
+        verbose_name_plural = _("QGIS layer fields")
+        ordering = ["layer_id", "ordering"]
+        constraints = [
+            # `name` is unbounded and can be too large for a Postgres btree index row, so this indexes MD5(name) instead.
+            models.UniqueConstraint(
+                F("layer"),
+                MD5("name"),
+                name="field_layer_name_md5_uniq",
             )
         ]

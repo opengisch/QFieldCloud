@@ -77,7 +77,19 @@ class ActiveUntilFilter(admin.SimpleListFilter):
             return queryset.filter(active_until__range=(now, future_date))
 
 
-class SubscriptionModelForm(forms.ModelForm):
+class SubscriptionAccountFormMixin:
+    def clean_account(self):
+        account = self.cleaned_data["account"]  # type: ignore[attr-defined]
+
+        if account and account.user.is_team:
+            raise forms.ValidationError(
+                _("Subscriptions can only be assigned to people or organizations.")
+            )
+
+        return account
+
+
+class SubscriptionModelForm(SubscriptionAccountFormMixin, forms.ModelForm):
     class Meta:
         model = Subscription
         fields = "__all__"
