@@ -607,6 +607,9 @@ class Project(models.Model):
         help_text=_("The time at which the project lock expires, if any."),
     )
 
+    # whether the project lock was explicitly acquired:
+    # explicit meaning the user explicitly acquired the lock,
+    # non-explicit meaning that the lock was acquired during the internal mechanism / logic.
     lock_is_explicit = models.BooleanField(
         default=False,
         editable=False,
