@@ -25,8 +25,8 @@ from django.db.models.aggregates import Count, Sum
 from django.db.models.functions import MD5, Upper
 from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
-from django.utils.html import format_html
 from django.utils import timezone
+from django.utils.html import format_html
 from django.utils.translation import gettext as _
 
 from qfieldcloud.core import exceptions, validators
@@ -318,9 +318,11 @@ class Project(models.Model):
             ),
             models.CheckConstraint(
                 condition=(
-                    Q(lock_acquired_by__isnull=True) & Q(lock_expires_at__isnull=True)
-                    | Q(lock_acquired_by__isnull=False)
-                    & Q(lock_expires_at__isnull=False)
+                    (Q(lock_acquired_by__isnull=True) & Q(lock_expires_at__isnull=True))
+                    | (
+                        Q(lock_acquired_by__isnull=False)
+                        & Q(lock_expires_at__isnull=False)
+                    )
                 ),
                 name="project_locking_fields_integrity",
                 violation_error_message="Project lock fields must be all null or all set.",
