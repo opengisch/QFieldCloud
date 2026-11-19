@@ -19,6 +19,7 @@ from typing import Any, NamedTuple, TextIO, TypedDict, cast
 from uuid import UUID
 
 from libqfieldsync.layer import LayerSource
+from libqfieldsync.project import ProjectConfig
 from libqfieldsync.utils.bad_layer_handler import (
     bad_layer_handler,
     set_bad_layer_handler,
@@ -1184,15 +1185,38 @@ def get_qgis_xml_error_context(
 
 
 def save_project(
-    project: QgsProject, ref_extent: QgsReferencedRectangle | None
+    project: QgsProject,
+    ref_extent: QgsReferencedRectangle | None,
+    set_area_of_interest: bool = False,
 ) -> None:
-    """Saves the project with `theMapCanvas`, and if an extent is provided, sets the extent of the map canvas."""
+    """Saves the project with `theMapCanvas`, and if an extent is provided, sets the extent of the map canvas.
+
+    If `set_area_of_interest` is `True`, the extent is also stored as the project's area of interest.
+    """
     assert project.fileName()
 
     extent = QgsRectangle()
 
     if ref_extent and ref_extent.isFinite():
         assert ref_extent.crs().authid() == "EPSG:4326"
+
+        if set_area_of_interest:
+            project_config = ProjectConfig(project)
+
+            if project_config.area_of_interest:
+                logging.info(
+                    "Project already has an area of interest, keeping it unchanged: %s %s.",
+                    project_config.area_of_interest,
+                    project_config.area_of_interest_crs,
+                )
+            else:
+                aoi_wkt = QgsRectangle(ref_extent).asWktPolygon()
+                aoi_crs = ref_extent.crs().authid()
+
+                logging.info("Setting area of interest to %s %s.", aoi_wkt, aoi_crs)
+
+                project_config.area_of_interest = aoi_wkt
+                project_config.area_of_interest_crs = aoi_crs
 
         safe_source_rect = QgsRectangle(ref_extent)
         # the CRS bounds are always in WGS 84 CRS, see https://qgis.org/pyqgis/latest/core/QgsCoordinateReferenceSystem.html#qgis.core.QgsCoordinateReferenceSystem.bounds
