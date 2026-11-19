@@ -105,6 +105,32 @@ class QfcTestCase(APITestCase):
         self.assertEqual(members[0].created_by, self.user1)
         self.assertEqual(members[0].updated_by, self.user1)
 
+    def test_create_member_of_another_organization(self):
+        Organization.objects.create(
+            username="organization2",
+            password="abc123",
+            type=2,
+            organization_owner=self.user2,
+        )
+
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token2.key)
+        response = self.client.post(
+            "/api/v1/members/organization1/",
+            {
+                "organization": "organization2",
+                "member": "user2",
+                "role": "admin",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertFalse(
+            OrganizationMember.objects.filter(
+                organization=self.organization1, member=self.user2
+            ).exists()
+        )
+
     def test_update_member(self):
         # Set user2 as member of organization1
         OrganizationMember.objects.create(

@@ -1,6 +1,7 @@
-from typing import Literal
+from typing import Any, Literal
 
 from django.utils.translation import gettext as _
+from rest_framework.request import Request
 
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
@@ -169,17 +170,14 @@ def user_has_organization_role_origins(
     )
 
 
-def get_param_from_request(request, param):
-    """Try to get the param from the request data or the request context, returns None otherwise."""
-    if isinstance(request.data, dict):
-        result = request.data.get(param, None)
-    else:
-        result = None
+def get_url_kwarg(request: Request, param: str) -> Any:
+    """Return the `param` URL kwarg of the request, or `None` if it is missing.
 
-    if not result:
-        result = request.parser_context["kwargs"].get(param, None)
-
-    return result
+    NOTE never read resource identifiers for permission checks from the request body.
+    The views act on the resource from the URL, so a body value would make the
+    permission check run against a different resource than the one being modified.
+    """
+    return request.parser_context["kwargs"].get(param)
 
 
 def can_create_project(
