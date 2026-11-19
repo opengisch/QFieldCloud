@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from enum import Enum
 from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Self, cast
 
 from constance import config
 from django.conf import settings
@@ -609,7 +609,7 @@ class OrganizationQueryset(models.QuerySet):
         ORGANIZATIONOWNER = "organization_owner", _("Organization owner")
         ORGANIZATIONMEMBER = "organization_member", _("Organization member")
 
-    def of_user(self, user):
+    def of_user(self, user: Person) -> Self:
         qs = (
             self.defer("membership_roles__user_id", "membership_roles__organization_id")
             .filter(
@@ -624,7 +624,7 @@ class OrganizationQueryset(models.QuerySet):
 
         return qs
 
-    def where_user_can_create_projects(self, user):
+    def where_user_can_create_projects(self, user: Person) -> Self:
         """Filter only the organizations where the `user` is allowed to create projects, i.e. where they are an admin or a creator."""
         return self.of_user(user).filter(
             membership_role__in=[
@@ -635,13 +635,13 @@ class OrganizationQueryset(models.QuerySet):
 
 
 class OrganizationManager(UserManager):
-    def get_queryset(self):
+    def get_queryset(self) -> OrganizationQueryset:
         return OrganizationQueryset(self.model, using=self._db)
 
-    def of_user(self, user):
+    def of_user(self, user: Person) -> OrganizationQueryset:
         return self.get_queryset().select_related("useraccount").of_user(user)
 
-    def where_user_can_create_projects(self, user):
+    def where_user_can_create_projects(self, user: Person) -> OrganizationQueryset:
         return (
             self.get_queryset()
             .select_related("useraccount")
