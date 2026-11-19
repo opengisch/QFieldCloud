@@ -1,8 +1,26 @@
 from collections.abc import Iterable
 
 from django.db.models import QuerySet
-from rest_framework import filters, views
+from rest_framework import filters, parsers, views
+from rest_framework.exceptions import ParseError
 from rest_framework.request import Request
+
+
+class ObjectJSONParser(parsers.JSONParser):
+    """JSON parser that accepts only a JSON object as value.
+
+    No API endpoint takes a JSON array.
+    Views read `request.data` with `dict` methods, so a `list` body used to crash with a 500.
+    This returns a 400.
+    """
+
+    def parse(self, stream, media_type=None, parser_context=None):
+        data = super().parse(stream, media_type, parser_context)
+
+        if not isinstance(data, dict):
+            raise ParseError("The request body must be a JSON object.")
+
+        return data
 
 
 class QfcOrderingFilter(filters.OrderingFilter):
