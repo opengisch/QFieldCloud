@@ -5,7 +5,8 @@ permissions:
   contents: read
 
 env:
-  # Tie every commit-tagged image to the exact commit under test.
+  # Tie every image to the exact checkout under test. For a pull request,
+  # github.sha is GitHub's temporary merge commit, not the branch head commit.
   DOCKER_IMAGE_TAG: commit-${{ github.sha }}
   # Fork and Dependabot PR tokens cannot push commit images to GHCR.
   # For those PRs, each test job builds its images on the GitHub Actions runner.

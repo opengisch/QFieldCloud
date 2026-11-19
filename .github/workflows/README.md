@@ -9,7 +9,7 @@ rebuilding them.
 
 | Event | Images and tags | Tests |
 | --- | --- | --- |
-| Pull request from this repository (draft or ready) | Six test images receive `commit-<sha>` tags in GHCR and update their `buildcache` tags. Docker Hub, `edge`, and version tags are unchanged. | Pull the commit-tagged images and run with `--no-build`. |
+| Pull request from this repository (draft or ready) | Six test images receive `commit-<pr-merge-sha>` tags in GHCR and update their `buildcache` tags. Docker Hub, `edge`, and version tags are unchanged. | Pull the commit-tagged images and run with `--no-build`. |
 | Fork or Dependabot pull request (draft or ready) | No images or tags are pushed because these pull requests receive a token that cannot write to this repository's GHCR packages. | Build images separately on each GitHub Actions runner. |
 | Push to an ordinary branch | Does not trigger `ci.yml`. If the branch has an open pull request, its `pull_request` event runs the pull-request behavior above. | Not run directly by the branch push. |
 | Push to `release` | Six test images receive `commit-<sha>` tags in GHCR and update their `buildcache` tags. | Pull the commit-tagged images and run with `--no-build`. |
@@ -18,6 +18,16 @@ rebuilding them.
 | Manual workflow run | Not available because `ci.yml` has no `workflow_dispatch` trigger. Re-running an existing run repeats its original event behavior. | Depends on the original event. |
 
 ## Image groups
+
+For a [`pull_request` event](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#pull_request),
+GitHub checks out a temporary merge commit combining the pull request branch
+with its target branch. The workflow uses this merge commit's `github.sha` for
+`commit-<pr-merge-sha>`; it is not the pull request branch's head SHA. These tags
+identify the exact source tested by Classic CI and cannot be derived from a
+downstream repository's Classic submodule pointer.
+
+Pull requests publish `app-test`, not the runtime `app` image. Downstream image
+publishing must use runtime images produced for a Classic `master` commit.
 
 Test images receive commit-scoped tags and are consumed by CI:
 
@@ -40,8 +50,9 @@ Runtime images receive `edge`, version, or `latest` tags for deployment:
 
 ## Tag meanings
 
-- `commit-<sha>` uses the full commit SHA to identify an exact test image or
-  runtime `app` image built during normal CI.
+- `commit-<sha>` uses the full event commit SHA. For a pull request this is
+  GitHub's temporary merge commit; for a `master` or `release` push it is the
+  commit pushed to that branch.
 - `release-commit-<sha>` identifies an exact runtime image rebuilt without
   cache when a GitHub Release was published.
 - `edge` identifies the latest runtime image built from `master`.
