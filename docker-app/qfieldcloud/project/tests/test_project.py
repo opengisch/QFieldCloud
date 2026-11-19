@@ -2215,6 +2215,54 @@ class QfcTestCase(APITransactionTestCase):
         project.refresh_from_db(fields=["owner"])
         self.assertEqual(project.owner_id, self.user1.id)
 
+    def test_owner_can_transfer_project_to_own_organization(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+        organization = Organization.objects.create(
+            username="org1", organization_owner=self.user1
+        )
+        project = Project.objects.create(name="survey", owner=self.user1)
+
+        response = self.client.patch(
+            f"/api/v1/projects/{project.id}/", {"owner": organization.username}
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        project.refresh_from_db(fields=["owner"])
+        self.assertEqual(project.owner_id, organization.id)
+
+    def test_owner_cannot_transfer_project_to_another_person(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+        project = Project.objects.create(name="survey", owner=self.user1)
+
+        response = self.client.patch(
+            f"/api/v1/projects/{project.id}/", {"owner": self.user2.username}
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        project.refresh_from_db(fields=["owner"])
+        self.assertEqual(project.owner_id, self.user1.id)
+
+    def test_manager_cannot_transfer_organization_project(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token2.key)
+        organization = Organization.objects.create(
+            username="org1", organization_owner=self.user1
+        )
+        OrganizationMember.objects.create(organization=organization, member=self.user2)
+        project = Project.objects.create(name="survey", owner=organization)
+        ProjectCollaborator.objects.create(
+            project=project,
+            collaborator=self.user2,
+            role=ProjectCollaboratorRole.MANAGER,
+        )
+
+        response = self.client.patch(
+            f"/api/v1/projects/{project.id}/", {"owner": self.user2.username}
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        project.refresh_from_db(fields=["owner"])
+        self.assertEqual(project.owner_id, organization.id)
+
     def test_database_rejects_name_differing_only_by_case(self):
         Project.objects.create(name="survey", owner=self.user1)
 

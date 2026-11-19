@@ -303,6 +303,27 @@ def can_update_project(user: QfcUser, project: Project) -> bool:
     )
 
 
+def can_transfer_project(user: QfcUser, project: Project, new_owner: QfcUser) -> bool:
+    """Return True if the `user` can transfer the `project` to `new_owner`.
+
+    Only the project owner, or the owner or an admin of the organization owning the project,
+    can give the project away. Collaborators cannot, regardless of their role.
+    The `new_owner` must be an account the `user` can create projects for.
+    """
+    if not user_has_project_role_origins(
+        user,
+        project,
+        [
+            ProjectRoleOrigins.PROJECTOWNER,
+            ProjectRoleOrigins.ORGANIZATIONOWNER,
+            ProjectRoleOrigins.ORGANIZATIONADMIN,
+        ],
+    ):
+        return False
+
+    return can_create_project(user, new_owner)
+
+
 def can_delete_project(user: QfcUser, project: Project) -> bool:
     return user_has_project_roles(
         user,

@@ -19,7 +19,7 @@ from rest_framework.parsers import MultiPartParser
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from qfieldcloud.core import pagination, permissions_utils
+from qfieldcloud.core import exceptions, pagination, permissions_utils
 from qfieldcloud.core.drf_utils import QfcOrderingFilter
 from qfieldcloud.core.models import Job
 from qfieldcloud.project.enums import ProjectRoleOrigins
@@ -290,6 +290,19 @@ class ProjectViewSet(viewsets.ModelViewSet):
         # But then it would also be enforced by admin, which we don't want I guess...
 
         old_owner = serializer.instance.owner
+        requested_owner = serializer.validated_data.get("owner")
+
+        if (
+            requested_owner is not None
+            and requested_owner != old_owner
+            and not permissions_utils.can_transfer_project(
+                self.request.user, serializer.instance, requested_owner
+            )
+        ):
+            raise exceptions.PermissionDeniedError(
+                "Not allowed to transfer the project to the given owner."
+            )
+
         super().perform_update(serializer)
         new_owner = serializer.instance.owner
 
