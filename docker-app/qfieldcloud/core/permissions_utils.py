@@ -3,6 +3,7 @@ from typing import Literal
 from django.utils.translation import gettext as _
 
 from qfieldcloud.authentication.models import AuthToken
+from qfieldcloud.core.middleware.current_request import cache_for_request
 from qfieldcloud.core.models import (
     Delta,
     Job,
@@ -56,13 +57,18 @@ def user_eq(user1: QfcUser, user2: QfcUser) -> bool:
     return user1.pk == user2.pk
 
 
-def _project_for_owner(user: QfcUser, project: Project, skip_invalid: bool):
+def _project_for_owner_qs(user: QfcUser, project: Project, skip_invalid: bool):
     return (
         Project.objects.slim()
         .for_user(user, skip_invalid)
         .select_related(None)
         .filter(pk=project.pk)
     )
+
+
+@cache_for_request(lambda u, p, _s, **kwargs: (((u.username, p.id)), kwargs))
+def _project_for_owner(user: QfcUser, project: Project, skip_invalid: bool):
+    return _project_for_owner_qs(user, project, skip_invalid).first()
 
 
 def _organization_of_owner(user: QfcUser, organization: Organization):
@@ -79,11 +85,9 @@ def user_has_project_roles(
     roles: list[ProjectCollaboratorRole],
     skip_invalid: bool = False,
 ):
-    return (
-        _project_for_owner(user, project, skip_invalid)
-        .filter(user_role__in=roles)
-        .exists()
-    )
+    project = _project_for_owner(user, project, skip_invalid)
+
+    return project.user_role in roles
 
 
 def check_user_has_project_roles(
@@ -105,7 +109,7 @@ def check_user_has_project_role_origins(
     user: QfcUser, project: Project, origins: list[ProjectRoleOrigins]
 ) -> Literal[True]:
     if (
-        _project_for_owner(user, project, skip_invalid=False)
+        _project_for_owner_qs(user, project, skip_invalid=False)
         .filter(user_role_origin__in=origins)
         .exists()
     ):
