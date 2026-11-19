@@ -25,6 +25,7 @@ from django.db.models.aggregates import Count, Sum
 from django.db.models.functions import MD5, Upper
 from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
+from django.utils.html import format_html
 from django.utils.translation import gettext as _
 
 from qfieldcloud.core import validators
@@ -923,24 +924,32 @@ class Project(models.Model):
                             "project": self.shared_datasets_project.name,
                         },
                     )
-                    missing_localized_file_solution = _(
-                        'Upload the missing file to the "<a href="{}">{}</a>" project or update the layer to point to an available file.'
-                    ).format(localized_project_url, SHARED_DATASETS_PROJECT_NAME)
+                    missing_localized_file_solution = format_html(
+                        _(
+                            'Upload the missing file to the "<a href="{}">{}</a>" project or update the layer to point to an available file.'
+                        ),
+                        localized_project_url,
+                        SHARED_DATASETS_PROJECT_NAME,
+                    )
                 else:
                     problems.append(
                         {
                             "layer": None,
                             "level": "warning",
                             "code": "missing_localized_project",
-                            "description": _('Cannot find the "{}" project.').format(
-                                SHARED_DATASETS_PROJECT_NAME
+                            "description": format_html(
+                                _('Cannot find the "{}" project.'),
+                                SHARED_DATASETS_PROJECT_NAME,
                             ),
                             "solution": _("Ensure the shared dataset project exists."),
                         }
                     )
-                    missing_localized_file_solution = _(
-                        'Upload the missing file to the "{}" project or update the layer to point to an available file.'
-                    ).format(SHARED_DATASETS_PROJECT_NAME)
+                    missing_localized_file_solution = format_html(
+                        _(
+                            'Upload the missing file to the "{}" project or update the layer to point to an available file.'
+                        ),
+                        SHARED_DATASETS_PROJECT_NAME,
+                    )
 
                 for missing_layer in self.get_missing_localized_layers():
                     problems.append(
@@ -948,9 +957,10 @@ class Project(models.Model):
                             "layer": missing_layer.file_name,
                             "level": "warning",
                             "code": "missing_localized_file",
-                            "description": _(
-                                'Localized dataset stored at "{}" is missing.'
-                            ).format(missing_layer.file_name),
+                            "description": format_html(
+                                _('Localized dataset stored at "{}" is missing.'),
+                                missing_layer.file_name,
+                            ),
                             "solution": missing_localized_file_solution,
                         }
                     )
@@ -968,9 +978,8 @@ class Project(models.Model):
                             "layer": layer_name,
                             "level": "warning",
                             "code": "layer_problem",
-                            "description": _(
-                                'Layer "{}" has an error with code "{}": {}'
-                            ).format(
+                            "description": format_html(
+                                _('Layer "{}" has an error with code "{}": {}'),
                                 layer_name,
                                 layer.error_code,
                                 layer.error_summary,
@@ -991,9 +1000,12 @@ class Project(models.Model):
                                 "layer": layer_name,
                                 "level": "warning",
                                 "code": "layer_problem",
-                                "description": _(
-                                    'Layer "{}" does not support the `primary key` attribute. The layer will be read-only on QField.'
-                                ).format(layer_name),
+                                "description": format_html(
+                                    _(
+                                        'Layer "{}" does not support the `primary key` attribute. The layer will be read-only on QField.'
+                                    ),
+                                    layer_name,
+                                ),
                                 "solution": _(
                                     "To make the layer editable on QField, store the layer data in a GeoPackage or PostGIS layer, using a single column for the primary key."
                                 ),
@@ -1009,11 +1021,12 @@ class Project(models.Model):
                             "layer": layer_name,
                             "level": "warning",
                             "code": "hardcoded_pg_credentials",
-                            "description": _(
+                            "description": format_html(
                                 _(
                                     'Layer "{}" has a hard-coded postgres credentials in the datasource.'
-                                )
-                            ).format(layer_name),
+                                ),
+                                layer_name,
+                            ),
                             "solution": _(
                                 _(
                                     "Consider using a pg_service entry and a QFieldCloud Secret instead."
