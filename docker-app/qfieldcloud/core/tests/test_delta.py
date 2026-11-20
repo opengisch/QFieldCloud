@@ -196,6 +196,18 @@ class QfcTestCase(APITransactionTestCase):
 
         raise Exception("Projectfile never set on project")
 
+    def test_push_delta_rejects_json_array_body_with_400(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+        response = self.client.post(
+            f"/api/v1/deltas/{self.project1.id}/",
+            ["file"],
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json()["code"], "api_error")
+        self.assertFalse(Delta.objects.filter(project=self.project1).exists())
+
     def test_push_apply_delta_file_add_feature_default_value(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 

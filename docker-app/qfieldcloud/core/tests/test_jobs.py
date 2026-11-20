@@ -295,6 +295,22 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
         self.assertEqual(response.status_code, 201)
 
+    def test_create_job_rejects_json_array_body_with_400(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.t1.key)
+        response = self.client.post(
+            "/api/v1/jobs/",
+            [{"project_id": str(self.p1.id), "type": "process_projectfile"}],
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json()["code"], "api_error")
+        self.assertFalse(
+            Job.objects.filter(
+                project=self.p1, type=Job.Type.PROCESS_PROJECTFILE
+            ).exists()
+        )
+
     def test_can_create_and_read_job_created_by_their_own(self):
         for idx, role in enumerate(ProjectCollaboratorRole):
             user = Person.objects.create_user(

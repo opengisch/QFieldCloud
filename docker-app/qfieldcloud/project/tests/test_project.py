@@ -126,6 +126,18 @@ class QfcTestCase(APITransactionTestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_create_project_rejects_json_array_body_with_400(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+        response = self.client.post(
+            "/api/v1/projects/",
+            [{"name": "api_created_project", "owner": "user1"}],
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json()["code"], "api_error")
+        self.assertFalse(Project.objects.filter(name="api_created_project").exists())
+
     def test_create_project_with_seed_and_xlsform(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
