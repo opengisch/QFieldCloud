@@ -1019,9 +1019,11 @@ UNFOLD = {
     "ENVIRONMENT_TITLE_PREFIX": "qfieldcloud.core.admin.get_admin_environment_title_prefix",
     "STYLES": [
         lambda request: static("css/qfc_admin.css"),
+        lambda request: static("css/datetime_tooltip.css"),
     ],
     "SCRIPTS": [
         lambda request: static("js/qfc_admin.js"),
+        lambda request: static("js/datetime_tooltip.js"),
     ],
     "SITE_DROPDOWN": [
         # Unfold drops the logo's home link once a dropdown is set
