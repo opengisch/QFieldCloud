@@ -3,8 +3,11 @@ from django.utils import formats
 from django.utils.html import avoid_wrapping
 from django.utils.translation import gettext as _
 from django.utils.translation import ngettext
+from qfieldcloud.core.datetime_tooltip import datetime_tooltip_attrs
 
 register = template.Library()
+
+register.filter("datetime_tooltip_attrs", datetime_tooltip_attrs)
 
 
 @register.filter(is_safe=True)

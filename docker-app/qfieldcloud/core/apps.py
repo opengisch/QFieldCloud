@@ -6,3 +6,6 @@ class CoreConfig(AppConfig):
 
     def ready(self):
         from qfieldcloud.core import signals  # noqa
+        from qfieldcloud.core.datetime_tooltip import patch_admin_datetime_display
+
+        patch_admin_datetime_display()
