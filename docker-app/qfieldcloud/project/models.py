@@ -25,10 +25,11 @@ from django.db.models.aggregates import Count, Sum
 from django.db.models.functions import MD5, Upper
 from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
+from django.utils import timezone
 from django.utils.html import format_html
 from django.utils.translation import gettext as _
 
-from qfieldcloud.core import validators
+from qfieldcloud.core import exceptions, validators
 from qfieldcloud.core.fields import DynamicStorageFileField
 from qfieldcloud.core.models import (
     Job,
@@ -314,7 +315,18 @@ class Project(models.Model):
                 Upper("name"),
                 name="project_owner_name_uniq",
                 violation_error_message="Project with the same name already exists.",
-            )
+            ),
+            models.CheckConstraint(
+                condition=(
+                    (Q(lock_acquired_by__isnull=True) & Q(lock_expires_at__isnull=True))
+                    | (
+                        Q(lock_acquired_by__isnull=False)
+                        & Q(lock_expires_at__isnull=False)
+                    )
+                ),
+                name="project_locking_fields_integrity",
+                violation_error_message="Project lock fields must be all null or all set.",
+            ),
         ]
 
     # All files related to the project, including both the `PROJECT_FILE` and `PACKAGE_FILE` file types.
@@ -578,6 +590,66 @@ class Project(models.Model):
         null=True,
         editable=False,
     )
+
+    lock_acquired_by = models.ForeignKey(
+        Person,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        editable=False,
+        help_text=_("The person who has acquired the project lock, if any."),
+    )
+
+    lock_expires_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        editable=False,
+        help_text=_("The time at which the project lock expires, if any."),
+    )
+
+    # whether the project lock was explicitly acquired:
+    # explicit meaning the user explicitly acquired the lock,
+    # non-explicit meaning that the lock was acquired during the internal mechanism / logic.
+    lock_is_explicit = models.BooleanField(
+        default=False,
+        editable=False,
+        help_text=_("Whether the project lock was explicitly acquired."),
+    )
+
+    def is_locked(self) -> bool:
+        """Returns whether the project is currently locked."""
+        return self.lock_acquired_by and self.lock_expires_at >= timezone.now()
+
+    @transaction.atomic
+    def lock(self, acquired_by: Person, is_explicit: bool) -> None:
+        """Acquires the project lock.
+
+        Args:
+            acquired_by: The person acquiring the lock.
+            is_explicit: Whether the lock is explicit.
+        """
+        if self.is_locked():
+            raise exceptions.ProjectAlreadyLockedError()
+
+        self.lock_acquired_by = acquired_by
+        self.lock_expires_at = timezone.now() + timedelta(
+            seconds=settings.QFIELDCLOUD_WORKER_TIMEOUT_S
+        )
+        self.lock_is_explicit = is_explicit
+
+        self.save(
+            update_fields=["lock_acquired_by", "lock_expires_at", "lock_is_explicit"]
+        )
+
+    @transaction.atomic
+    def unlock(self) -> None:
+        """Releases the project lock."""
+        self.lock_acquired_by = None
+        self.lock_expires_at = None
+        self.lock_is_explicit = False
+        self.save(
+            update_fields=["lock_acquired_by", "lock_expires_at", "lock_is_explicit"]
+        )
 
     @cached_property
     def shared_datasets_project(self) -> Project | None:
