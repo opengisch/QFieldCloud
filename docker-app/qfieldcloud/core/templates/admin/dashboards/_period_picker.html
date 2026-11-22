@@ -1,0 +1,33 @@
+{% load i18n %}
+
+{% comment %}
+A button with the selected dashboard time period opens a dropdown that lists every time period.
+
+Picking one reloads the page with its key in the `period` parameter.
+The markup and classes follow Unfold's `unfold/helpers/display_dropdown.html`.
+
+Args:
+    periods: the periods to list, a dict from period key to a dict with a `title`, e.g. `DASHBOARD_PERIODS`
+    selected: the key of the selected period, e.g. "30d"
+    selected_title: the title of the selected period, shown on the button, e.g. "Last 30 days"
+{% endcomment %}
+<div x-data="{ open: false }">
+    <button type="button" class="qfc-dashboard-period" x-ref="periodPicker" x-on:click="open = !open" aria-haspopup="true" x-bind:aria-expanded="open">
+        <span class="material-symbols-outlined" aria-hidden="true">calendar_today</span>
+        {{ selected_title }}
+        <span class="material-symbols-outlined" aria-hidden="true">unfold_more</span>
+    </button>
+
+    <template x-teleport="body">
+        <nav class="bg-white border border-base-200 flex flex-col py-1 rounded-default shadow-lg text-sm z-50 w-48 dark:bg-base-800 dark:border-base-700" aria-label="{% trans 'Period' %}" x-cloak x-transition x-anchor.bottom-end.offset.4="$refs.periodPicker" x-show="open" x-on:click.outside="open = false">
+            {% for period, period_option in periods.items %}
+                <a href="{% querystring period=period %}" class="flex items-center gap-2 mx-1 px-3 py-2 rounded-default hover:bg-base-100 dark:hover:bg-base-700 dark:hover:text-base-200" {% if period == selected %}aria-current="true"{% endif %}>
+                    <span class="grow truncate">{{ period_option.title }}</span>
+                    {% if period == selected %}
+                        <span class="material-symbols-outlined" aria-hidden="true">check</span>
+                    {% endif %}
+                </a>
+            {% endfor %}
+        </nav>
+    </template>
+</div>

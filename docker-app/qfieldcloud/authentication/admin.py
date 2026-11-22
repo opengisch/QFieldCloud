@@ -1,12 +1,16 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from django.contrib import admin
 from django.db.models import Q, QuerySet
-from django.http import HttpRequest
+from django.http import HttpRequest, HttpResponse
 from django.utils import timezone
 
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.admin import QFieldCloudModelAdmin, qfc_admin_site
+from qfieldcloud.core.admin_dashboards.active_users import (
+    get_active_users_by_client_card,
+)
+from qfieldcloud.core.admin_dashboards.utils import DASHBOARD_PERIODS, get_period
 
 if TYPE_CHECKING:
     from django_stubs_ext import StrOrPromise
@@ -71,6 +75,29 @@ class AuthTokenAdmin(QFieldCloudModelAdmin):
     actions = ("expire_selected_tokens",)
 
     search_fields = ("user__username__iexact", "client_type", "key__startswith")
+
+    list_before_template = "admin/authentication/authtoken/active_users.html"
+
+    def changelist_view(
+        self, request: HttpRequest, extra_context: dict[str, Any] | None = None
+    ) -> HttpResponse:
+        """Shows the auth tokens list, with the active users card of the period in the `period` parameter above it."""
+        period = get_period(request.GET)
+
+        # `period` is not a field of the tokens, the changelist would reject it as a filter
+        query_dict = request.GET.copy()
+        query_dict.pop("period", None)
+        request.GET = query_dict  # type: ignore[assignment]
+
+        if extra_context is None:
+            extra_context = {}
+
+        extra_context["active_users_card"] = get_active_users_by_client_card(period)
+        extra_context["dashboard_period"] = period
+        extra_context["dashboard_period_title"] = DASHBOARD_PERIODS[period]["title"]
+        extra_context["dashboard_periods"] = DASHBOARD_PERIODS
+
+        return super().changelist_view(request, extra_context)
 
     def expire_selected_tokens(self, request: HttpRequest, queryset: QuerySet) -> None:
         """Sets a set of tokens to expired by updating the `expires_at` date to now. Expires only valid tokens."""

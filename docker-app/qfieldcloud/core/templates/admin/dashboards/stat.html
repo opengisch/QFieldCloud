@@ -1,0 +1,51 @@
+{% load i18n humanize unfold %}
+
+{% comment %}
+Shows one total as a big number, such as the active users of the period.
+
+Below it, optional rows split the total by source, each with a bar.
+Reuse it for any card that shows a single total.
+
+Args:
+    card: the card to render, a dict with:
+        title: the title in the card header
+        hint: the text shown on hover of the info icon next to the title
+        value: the total, shown as the big number
+        subvalue_count: the number in the subline, e.g. "1,747". Defaults to no subline.
+        subvalue_text: the text after it, e.g. "worked on projects (25%)". Defaults to no subline.
+        breakdown: the rows below, each a dict with a `label`, a `count` and the `percent` of the total its bar shows. Defaults to no rows.
+        computed_at: when the stats were computed, shown as "Updated 5 minutes ago"
+        wide: whether the card spans two columns of the dashboard. Defaults to `False`.
+{% endcomment %}
+{% capture as hint silent %}
+    <span class="material-symbols-outlined qfc-card-hint" title="{{ card.hint }}" role="img" aria-label="{{ card.hint }}">info</span>
+{% endcapture %}
+{% capture as footer silent %}
+    {% include "admin/dashboards/_footer.html" with since=card.computed_at %}
+{% endcapture %}
+{% capture as card_class silent %}{% if card.wide %}qfc-card-wide{% endif %}{% endcapture %}
+
+{% component "unfold/components/card.html" with title=card.title size="md" action=hint footer=footer class=card_class %}
+    <div class="flex flex-col gap-2 text-xs">
+        <p class="qfc-card-value">{{ card.value|intcomma }}</p>
+
+        {% if card.subvalue_text %}
+            <p class="qfc-card-subvalue">
+                <span class="qfc-card-count">{{ card.subvalue_count|intcomma }}</span>
+                {{ card.subvalue_text }}
+            </p>
+        {% endif %}
+
+        {% if card.breakdown %}
+            <ul class="qfc-card-breakdown">
+                {% for row in card.breakdown %}
+                    <li title="{% blocktrans with percent=row.percent %}{{ percent }}% of the total{% endblocktrans %}">
+                        <span>{{ row.label }}</span>
+                        <span class="qfc-card-count">{{ row.count|intcomma }}</span>
+                        <span class="qfc-card-bar" style="--qfc-card-bar-width: {{ row.percent }}%"></span>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+{% endcomponent %}

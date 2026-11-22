@@ -1,0 +1,16 @@
+{% comment %}
+Shows the active users card above the auth tokens list, see `AuthTokenAdmin.list_before_template`.
+
+Args:
+    active_users_card: the card, see `get_active_users_by_client_card`
+    dashboard_period: the key of the selected period, e.g. "30d"
+    dashboard_period_title: the title of the selected period, e.g. "Last 30 days"
+    dashboard_periods: the periods to pick from, `DASHBOARD_PERIODS`
+{% endcomment %}
+<div class="qfc-dashboard-toolbar">
+    {% include "admin/dashboards/_period_picker.html" with periods=dashboard_periods selected=dashboard_period selected_title=dashboard_period_title %}
+</div>
+
+<div class="qfc-dashboard">
+    {% include active_users_card.template with card=active_users_card %}
+</div>
