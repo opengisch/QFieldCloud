@@ -176,6 +176,21 @@
 
 /* Admin index dashboard cards */
 
+/* The colors of the chart series, e.g. the job types. Neighbouring colors stay distinguishable. */
+:root {
+    --qfc-chart-series-1: #2a78d6;
+    --qfc-chart-series-2: #eb6834;
+    --qfc-chart-series-3: #1baf7a;
+    --qfc-chart-series-4: #eda100;
+}
+
+.dark {
+    --qfc-chart-series-1: #3987e5;
+    --qfc-chart-series-2: #d95926;
+    --qfc-chart-series-3: #199e70;
+    --qfc-chart-series-4: #c98500;
+}
+
 /* dark mode only swaps these variables */
 :root {
     --qfc-card-important: var(--color-font-important-light);
@@ -234,15 +249,30 @@
 
 .qfc-dashboard {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    grid-template-columns: minmax(15rem, 1fr) 2fr 2fr;
     gap: 1rem;
     margin-bottom: 1.5rem;
+}
+
+.qfc-dashboard > * {
+    min-width: 0;
+}
+
+@media (max-width: 1024px) {
+    .qfc-dashboard {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* the cards use Unfold's `unfold/components/card.html`, these rules style what goes inside them */
 .qfc-card-hint {
     color: var(--color-base-400);
     cursor: help;
+}
+
+.qfc-card-chart {
+    position: relative;
+    height: 10rem;
 }
 
 .qfc-card-value,
