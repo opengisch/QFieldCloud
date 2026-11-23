@@ -126,7 +126,7 @@ django-ranged-response==0.2.0
     # via django-simple-captcha
 django-schema-viewer==0.5.3
     # via -r requirements.in
-django-simple-captcha==0.7.0
+django-simple-captcha==0.8.0
     # via -r requirements.in
 django-sri==1.0.0
     # via -r requirements.in
