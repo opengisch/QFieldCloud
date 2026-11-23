@@ -1,4 +1,4 @@
 # NOTE dependency versions should be defined in the `*.tar.gz` format, not `git+https://` to make `wheel` happy
-libqfieldsync @ git+https://github.com/opengisch/libqfieldsync@c2814cfe9d800d7d1cc3c67245e83c99097938af
+libqfieldsync @ git+https://github.com/opengisch/libqfieldsync@2cd330e3e8f6d0c8b623d265d860d98d0404b400
 # NOTE keep in sync with the `convert2qgis` version in `docker-app/requirements/requirements_test.in`
 convert2qgis @ git+https://github.com/opengisch/convert2qgis@bc85533c8e840cdfa6fa802e1f4bce7a4942773e
