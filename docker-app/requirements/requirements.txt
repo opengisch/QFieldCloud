@@ -176,7 +176,7 @@ oauthlib==4.0.1
     # via django-allauth
 packaging==26.3
     # via django-notifications-hq
-phonenumbers==9.0.38
+phonenumbers==9.0.44
     # via -r requirements.in
 pillow==13.0.0
     # via
