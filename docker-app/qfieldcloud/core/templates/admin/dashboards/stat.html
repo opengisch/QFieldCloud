@@ -15,7 +15,6 @@ Args:
         subvalue_text: the text after it, e.g. "worked on projects (25%)". Defaults to no subline.
         breakdown: the rows below, each a dict with a `label`, a `count` and the `percent` of the total its bar shows. Defaults to no rows.
         computed_at: when the stats were computed, shown as "Updated 5 minutes ago"
-        wide: whether the card spans two columns of the dashboard. Defaults to `False`.
 {% endcomment %}
 {% capture as hint silent %}
     <span class="material-symbols-outlined qfc-card-hint" title="{{ card.hint }}" role="img" aria-label="{{ card.hint }}">info</span>
@@ -23,9 +22,8 @@ Args:
 {% capture as footer silent %}
     {% include "admin/dashboards/_footer.html" with since=card.computed_at %}
 {% endcapture %}
-{% capture as card_class silent %}{% if card.wide %}qfc-card-wide{% endif %}{% endcapture %}
 
-{% component "unfold/components/card.html" with title=card.title size="md" action=hint footer=footer class=card_class %}
+{% component "unfold/components/card.html" with title=card.title size="md" action=hint footer=footer class="h-full" %}
     <div class="flex flex-col gap-2 text-xs">
         <p class="qfc-card-value">{{ card.value|intcomma }}</p>
 
