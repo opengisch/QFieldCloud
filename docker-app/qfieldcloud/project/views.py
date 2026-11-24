@@ -33,6 +33,7 @@ from qfieldcloud.project.serializers import (
     ProjectCreateJSONRequestSerializer,
     ProjectCreateRequestSerializer,
     ProjectDetailSerializer,
+    ProjectLockSerializer,
     ProjectSeedSerializer,
     ProjectSerializer,
     ProjectThumbnailSerializer,
@@ -97,6 +98,8 @@ class ProjectViewSetPermissions(permissions.BasePermission):
             return permissions_utils.can_update_project(user, project)
         elif view.action == "upload_thumbnail":
             return permissions_utils.can_create_files(user, project)
+        elif view.action in ["lock", "unlock"]:
+            return permissions_utils.can_lock_or_unlock_project(user, project)
 
         return False
 
@@ -155,6 +158,24 @@ class ProjectViewSetPermissions(permissions.BasePermission):
         description="Retrieve the seed JSON2QGIS file of the project or 404 if no such file exists.",
         responses={
             (200, "application/octet-stream"): OpenApiTypes.BINARY,
+            404: None,
+        },
+    ),
+    lock=extend_schema(
+        description="Explicitly lock the project.",
+        request=None,
+        responses={
+            200: ProjectLockSerializer,
+            400: None,
+            404: None,
+        },
+    ),
+    unlock=extend_schema(
+        description="Unlock the project.",
+        request=None,
+        responses={
+            200: ProjectLockSerializer,
+            400: None,
             404: None,
         },
     ),
@@ -376,6 +397,28 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 "Content-Disposition": f'attachment; filename="json2qgis{extension}"',
             },
         )
+
+    @action(detail=True, methods=["post"], serializer_class=ProjectLockSerializer)
+    def lock(self, request: Request, projectid: UUID) -> Response:
+        project = Project.objects.get(id=projectid)
+        project.lock(acquired_by=request.user, is_explicit=True)
+
+        serializer = self.get_serializer(project)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=["post"], serializer_class=ProjectLockSerializer)
+    def unlock(self, request: Request, projectid: UUID) -> Response:
+        project = Project.objects.get(id=projectid)
+
+        # NOTE: here we check if the project is locked and if the lock is explicit,
+        # before attempting to unlock it.
+        if not project.is_locked() and not project.lock_is_explicit:
+            raise exceptions.ProjectNotLockedError()
+
+        project.unlock()
+
+        serializer = self.get_serializer(project)
+        return Response(serializer.data)
 
 
 @extend_schema_view(get=extend_schema(description="List all public projects"))

@@ -253,3 +253,11 @@ class ProjectAlreadyLockedError(QFieldCloudError):
     code = "project_already_locked"
     message = "The project is already locked."
     status_code = status.HTTP_400_BAD_REQUEST
+
+
+class ProjectNotLockedError(QFieldCloudError):
+    """Raised when attempting to unlock a project that is not locked."""
+
+    code = "project_not_locked"
+    message = "The project is not locked."
+    status_code = status.HTTP_400_BAD_REQUEST
