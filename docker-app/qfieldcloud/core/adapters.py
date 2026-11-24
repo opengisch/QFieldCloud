@@ -289,7 +289,12 @@ class SocialAccountAdapter(DefaultSocialAccountAdapter):
         Only matches Person type users with a verified email address,
         since Organization cannot login using a 3rd party IDP.
         """
-        emails = sociallogin.email_addresses
+        emails = [
+            email_address
+            for email_address in sociallogin.email_addresses
+            if email_address.verified
+        ]
+
         if not emails:
             return None
 
