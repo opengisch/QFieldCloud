@@ -73,7 +73,10 @@ class QfcTestCase(TestCase):
             email="the_email@qfield.cloud",
         )
 
-        email_address = EmailAddress(email="the_email@qfield.cloud")
+        email_address = EmailAddress(
+            email="the_email@qfield.cloud",
+            verified=True,
+        )
         sociallogin = SocialLogin(
             provider=self.dummy_provider, email_addresses=[email_address]
         )
@@ -114,7 +117,10 @@ class QfcTestCase(TestCase):
             primary=True,
         )
 
-        email_address = EmailAddress(email="shared@qfield.cloud")
+        email_address = EmailAddress(
+            email="shared@qfield.cloud",
+            verified=True,
+        )
         sociallogin = SocialLogin(
             provider=self.dummy_provider, email_addresses=[email_address]
         )
@@ -177,7 +183,10 @@ class QfcTestCase(TestCase):
             primary=True,
         )
 
-        email_address = EmailAddress(email="the_email@qfield.cloud")
+        email_address = EmailAddress(
+            email="the_email@qfield.cloud",
+            verified=True,
+        )
         sociallogin = SocialLogin(
             provider=self.dummy_provider, email_addresses=[email_address]
         )
@@ -192,3 +201,33 @@ class QfcTestCase(TestCase):
         self.assertEqual(matched_user.pk, person.pk)
         self.assertEqual(matched_email, "The_Email@qfield.cloud")
         self.assertEqual(matched_user.email, "The_Email@qfield.cloud")
+
+    @override_settings(
+        ACCOUNT_EMAIL_VERIFICATION=app_settings.EmailVerificationMethod.MANDATORY,
+        SOCIALACCOUNT_PROVIDERS={"dummy": {"EMAIL_AUTHENTICATION": True}},
+    )
+    def test_3rd_party_auth_linking_requires_verified_email(self):
+        person = Person.objects.create(
+            username="the_person",
+            email="the_email@qfield.cloud",
+        )
+
+        EmailAddress.objects.create(
+            user=person,
+            email="the_email@qfield.cloud",
+            verified=True,
+            primary=True,
+        )
+
+        email_address = EmailAddress(
+            email="the_email@qfield.cloud",
+            verified=False,
+        )
+        sociallogin = SocialLogin(
+            provider=self.dummy_provider, email_addresses=[email_address]
+        )
+
+        adapter = SocialAccountAdapter()
+        match_result = adapter.authenticate_by_email(sociallogin)
+
+        self.assertIsNone(match_result)
