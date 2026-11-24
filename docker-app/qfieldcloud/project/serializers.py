@@ -362,6 +362,32 @@ class ProjectSeedRequestSerializer(serializers.Serializer):
     )
 
 
+class ProjectLockSerializer(serializers.ModelSerializer):
+    """Serializer for the project lock state."""
+
+    class Meta:
+        model = Project
+        fields = (
+            "is_locked",
+            "lock_acquired_by",
+            "lock_expires_at",
+            "lock_is_explicit",
+        )
+        read_only_fields = fields
+
+    is_locked = serializers.SerializerMethodField(
+        help_text="Indicates whether the project is currently locked."
+    )
+    lock_acquired_by = serializers.SlugRelatedField(
+        slug_field="username",
+        read_only=True,
+        help_text="Username of the user which acquired the lock.",
+    )
+
+    def get_is_locked(self, obj: Project) -> bool:
+        return obj.is_locked()
+
+
 class ProjectCreateRequestSerializer(ProjectSerializer):
     """Documentation only request schema for `POST /api/v1/projects/`."""
 
