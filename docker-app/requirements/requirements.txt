@@ -15,7 +15,7 @@ beautifulsoup4==4.15.0
     # via django-bootstrap4
 boto3==1.43.126
     # via -r requirements.in
-boto3-stubs==1.43.126
+boto3-stubs==1.44.7
     # via -r requirements.in
 botocore==1.43.127
     # via
@@ -112,7 +112,7 @@ django-ipware==8.0.0
     # via -r requirements.in
 django-log-request-id==2.1.2
     # via -r requirements.in
-django-migrate-sql-deux==2.1.0
+django-migrate-sql-deux==3.0.0
     # via -r requirements.in
 django-model-utils==5.0.0
     # via
@@ -126,7 +126,7 @@ django-ranged-response==0.2.0
     # via django-simple-captcha
 django-schema-viewer==0.5.3
     # via -r requirements.in
-django-simple-captcha==0.7.0
+django-simple-captcha==0.8.0
     # via -r requirements.in
 django-sri==1.0.0
     # via -r requirements.in
@@ -170,7 +170,7 @@ jsonschema==4.26.0
     # via drf-spectacular
 jsonschema-specifications==2025.9.1
     # via jsonschema
-mypy-boto3-s3==1.43.106
+mypy-boto3-s3==1.44.6
     # via -r requirements.in
 oauthlib==4.0.1
     # via django-allauth
