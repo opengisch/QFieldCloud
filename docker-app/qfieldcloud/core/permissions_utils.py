@@ -301,6 +301,19 @@ def can_update_project(user: QfcUser, project: Project) -> bool:
     )
 
 
+def can_lock_or_unlock_project(user: QfcUser, project: Project) -> bool:
+    return user_has_project_roles(
+        user,
+        project,
+        [
+            ProjectCollaboratorRole.ADMIN,
+            ProjectCollaboratorRole.MANAGER,
+            ProjectCollaboratorRole.EDITOR,
+            ProjectCollaboratorRole.REPORTER,
+        ],
+    )
+
+
 def can_transfer_project(user: QfcUser, project: Project, new_owner: QfcUser) -> bool:
     """Return True if the `user` can transfer the `project` to `new_owner`.
 
