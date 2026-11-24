@@ -112,7 +112,7 @@ django-ipware==8.0.0
     # via -r requirements.in
 django-log-request-id==2.1.2
     # via -r requirements.in
-django-migrate-sql-deux==2.1.0
+django-migrate-sql-deux==3.0.0
     # via -r requirements.in
 django-model-utils==5.0.0
     # via
