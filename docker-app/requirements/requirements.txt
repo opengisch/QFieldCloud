@@ -170,7 +170,7 @@ jsonschema==4.26.0
     # via drf-spectacular
 jsonschema-specifications==2025.9.1
     # via jsonschema
-mypy-boto3-s3==1.43.106
+mypy-boto3-s3==1.44.6
     # via -r requirements.in
 oauthlib==4.0.1
     # via django-allauth
