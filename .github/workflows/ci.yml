@@ -5,9 +5,10 @@ permissions:
   contents: read
 
 env:
-  # Tie every image to the exact checkout under test. For a pull request,
-  # github.sha is GitHub's temporary merge commit, not the branch head commit.
-  DOCKER_IMAGE_TAG: commit-${{ github.sha }}
+  # PRs use their branch head for checkout and image tags, including fork PRs.
+  SOURCE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+  # Keep the selected SHA expression aligned with SOURCE_SHA.
+  DOCKER_IMAGE_TAG: commit-${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
   # Fork and Dependabot PR tokens cannot push commit images to GHCR.
   # For those PRs, each test job builds its images on the GitHub Actions runner.
   USE_PREBUILT_IMAGES: ${{ github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]') }}
@@ -36,6 +37,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v7
         with:
+          ref: ${{ env.SOURCE_SHA }}
           submodules: recursive
 
       - name: Setup Python
@@ -136,6 +138,8 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v7
+        with:
+          ref: ${{ env.SOURCE_SHA }}
 
       - name: Docker Metadata (GHCR)
         id: ghcr_metadata
@@ -146,7 +150,7 @@ jobs:
           images: ghcr.io/opengisch/qfieldcloud-${{ matrix.services.service_name }}
 
           # Test images receive an exact commit tag. Master builds also tag the
-          # runtime app for downstream consumers. Published releases use a
+          # runtime app with its commit SHA. Published releases use a
           # separate exact tag to identify their clean, cache-free builds.
           tags: |
             type=raw,value=${{ env.DOCKER_IMAGE_TAG }},enable=${{ env.BUILD_FOR_TESTS == 'true' }}
@@ -258,6 +262,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v7
         with:
+          ref: ${{ env.SOURCE_SHA }}
           submodules: recursive
 
       - name: Check env vars configuration
@@ -395,6 +400,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v7
         with:
+          ref: ${{ env.SOURCE_SHA }}
           submodules: recursive
 
       - name: Export the env variables file
@@ -443,6 +449,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v7
         with:
+          ref: ${{ env.SOURCE_SHA }}
           submodules: recursive
 
       - name: Export the env variables file
