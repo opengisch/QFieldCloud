@@ -4,7 +4,9 @@ import shutil
 import tempfile
 
 import geopandas as gpd
+import pandas as pd
 from django.http import FileResponse
+from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 from shapely.geometry import Polygon
 
@@ -91,7 +93,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             follow=True,
         )
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsInstance(response, FileResponse)
 
         # check the number of features in the downloaded geopackage
@@ -172,7 +174,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             follow=True,
         )
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsInstance(response, FileResponse)
 
         # check the number and types of features in the downloaded gpkg
@@ -233,7 +235,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             follow=True,
         )
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsInstance(response, FileResponse)
 
         # check the number and types of features in the downloaded gpkg
@@ -251,3 +253,65 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
             self.assertEqual(len(packaged_gdf), 1)
             self.assertEqual(packaged_gdf.geometry.geom_type.iloc[0], "MultiPolygon")
+
+    def test_packaging_keeps_json_field_values_when_first_value_is_null(self):
+        self._upload_file(
+            self.user1,
+            self.project1,
+            "points_with_json.gpkg",
+            io.FileIO(
+                testdata_path(
+                    "project_with_nullable_json_fields/points_with_json.gpkg"
+                ),
+                "rb",
+            ),
+        )
+        self._upload_file(
+            self.user1,
+            self.project1,
+            "points_with_json.qgs",
+            io.FileIO(
+                testdata_path("project_with_nullable_json_fields/points_with_json.qgs"),
+                "rb",
+            ),
+        )
+
+        wait_for_project_ok_status(self.project1)
+        self.project1.refresh_from_db()
+
+        # trigger a project package job for user1
+        repackage(self.project1, self.user1)
+        wait_for_project_ok_status(self.project1)
+        self.project1.refresh_from_db()
+
+        # download the packaged gpkg
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+        response = self.client.get(
+            f"/api/v1/packages/{self.project1.id}/latest/files/data.gpkg/",
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # check the JSON field definition and values in the downloaded gpkg
+        with tempfile.NamedTemporaryFile(delete=True, suffix=".gpkg") as tmp:
+            with open(tmp.name, "wb") as f:
+                for chunk in response.streaming_content:
+                    f.write(chunk)
+
+            # here we check for the packaged `points` and geometry-less `tags` layers
+            layers = gpd.list_layers(tmp.name)
+
+            self.assertEqual(len(layers), 2)
+
+            point_layer = layers.loc[layers["geometry_type"] == "Point", "name"].iloc[0]
+            packaged_points_gdf = gpd.read_file(tmp.name, layer=point_layer).set_index(
+                "id"
+            )
+
+            self.assertEqual(sorted(packaged_points_gdf.index), ["001", "002"])
+
+            # check that the first point has a null JSON field value
+            self.assertTrue(pd.isna(packaged_points_gdf.loc["001", "tag_ids"]))
+            # check that the second point has the expected JSON field values (must not be null)
+            self.assertEqual(packaged_points_gdf.loc["002", "tag_ids"], [1, 2])
