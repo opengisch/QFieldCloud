@@ -6,9 +6,9 @@ permissions:
 
 env:
   # PRs use their branch head for checkout and image tags, including fork PRs.
-  SOURCE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+  SOURCE_SHA: ${{ (github.event_name == 'pull_request' && github.event.pull_request.head.sha) || github.sha }}
   # Keep the selected SHA expression aligned with SOURCE_SHA.
-  DOCKER_IMAGE_TAG: commit-${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+  DOCKER_IMAGE_TAG: commit-${{ (github.event_name == 'pull_request' && github.event.pull_request.head.sha) || github.sha }}
   # Fork and Dependabot PR tokens cannot push commit images to GHCR.
   # For those PRs, each test job builds its images on the GitHub Actions runner.
   USE_PREBUILT_IMAGES: ${{ github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]') }}
