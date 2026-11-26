@@ -43,7 +43,7 @@
                                 <td>{{ person_result.email|default:"-" }}</td>
                                 <td>{{ person_result.first_name|default:"-" }}</td>
                                 <td>{{ person_result.last_name|default:"-" }}</td>
-                                <td>{{ person_result.date_joined|date:"M. j, Y, g:i a"|default:"-" }}</td>
+                                <td>{{ person_result.date_joined|datetime|default:"-" }}</td>
                                 <td>
                                     {% url 'admin:core_person_change' person_result.pk as person_url %}
                                     {% component "unfold/components/link.html" with class="text-link" href=person_url external=1 %}
@@ -78,20 +78,20 @@
                                             {% if model_key == 'organizations' %}
                                                 <td>{{ obj.username|default:"-" }}</td>
                                                 <td>{{ obj.organization_owner|default:"-" }}</td>
-                                                <td>{{ obj.created_at|date:"M. j, Y, g:i a"|default:"-" }}</td>
+                                                <td>{{ obj.created_at|datetime|default:"-" }}</td>
                                             {% elif model_key == 'projects' %}
                                                 <td>{{ obj.name|default:"-" }}</td>
                                                 <td>{{ obj.owner|default:"-" }}</td>
                                                 <td>
                                                     {% include "unfold/helpers/boolean.html" with value=obj.is_public %}
                                                 </td>
-                                                <td>{{ obj.created_at|date:"M. j, Y, g:i a"|default:"-" }}</td>
+                                                <td>{{ obj.created_at|datetime|default:"-" }}</td>
                                             {% elif model_key == 'subscriptions' %}
                                                 <td>{{ obj.id|default:"-" }}</td>
                                                 <td>{{ obj.account.user|default:"-" }}</td>
                                                 <td>{{ obj.regular_plan.display_name|default:"-" }}</td>
                                                 <td>{{ obj.status|default:"-" }}</td>
-                                                <td>{{ obj.active_since|date:"M. j, Y, g:i a"|default:"-" }}</td>
+                                                <td>{{ obj.active_since|datetime|default:"-" }}</td>
                                             {% endif %}
                                             <td>
                                                 {% url 'admin:'|add:data.app_label|add:'_'|add:data.model_name|add:'_change' obj.pk as obj_url %}
