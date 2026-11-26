@@ -245,3 +245,11 @@ class UnexpectedProjectCollaboratorError(QFieldCloudError):
     code = "unexpected_project_collaborator"
     message = "Project creator is already a project collaborator."
     status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+
+
+class ProjectAlreadyLockedError(QFieldCloudError):
+    """Raised when attempting to lock a project that is already locked."""
+
+    code = "project_already_locked"
+    message = "The project is already locked."
+    status_code = status.HTTP_400_BAD_REQUEST
