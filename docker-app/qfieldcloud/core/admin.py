@@ -32,6 +32,7 @@ from django.contrib.sites.admin import SiteAdmin as SiteAdminBase
 from django.contrib.sites.models import Site
 from django.core.exceptions import (
     ImproperlyConfigured,
+    PermissionDenied,
     ValidationError,
 )
 from django.core.paginator import Paginator
@@ -52,6 +53,7 @@ from django.utils.http import urlencode
 from django.utils.safestring import SafeText
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.cache import never_cache
+from django.views.decorators.http import require_POST
 from django_cron.admin import CronJobLogAdmin as CronJobLogAdminBase
 from django_cron.models import CronJobLock, CronJobLog
 from invitations.admin import InvitationAdmin as InvitationAdminBase
@@ -69,6 +71,8 @@ from unfold.widgets import (
     UnfoldAdminSelectWidget,
 )
 
+from qfieldcloud.core.admin_dashboards import clear_admin_dashboards_cache
+from qfieldcloud.core.admin_dashboards.utils import get_period
 from qfieldcloud.core.models import (
     ApplyJob,
     ApplyJobDelta,
@@ -107,6 +111,7 @@ class QfcAdminSite(UnfoldAdminSite):
     site_header = _("QFieldCloud Admin")
     site_title = _("QFieldCloud Admin")
     index_title = _("QFieldCloud Admin")
+    index_template = "admin/qfc_index.html"
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -183,8 +188,27 @@ class QfcAdminSite(UnfoldAdminSite):
                 self.admin_view(self.global_search_view),
                 name="global_search",
             ),
+            path(
+                "dashboards/refresh/",
+                self.admin_view(self.refresh_dashboards_view),
+                name="refresh_dashboards",
+            ),
         ]
         return custom_urls + urls
+
+    @method_decorator(require_POST)
+    def refresh_dashboards_view(self, request: HttpRequest) -> HttpResponse:
+        """Clears the cached dashboard stats, so the admin index recomputes them, and returns to the period the user was looking at."""
+        if not request.user.is_superuser:  # type: ignore[union-attr]
+            raise PermissionDenied
+
+        clear_admin_dashboards_cache()
+        messages.success(request, _("Dashboards have been refreshed."))
+
+        index_url = reverse("admin:index", current_app=self.name)
+        period = get_period(request.POST)
+
+        return HttpResponseRedirect(f"{index_url}?period={period}")
 
     def global_search_view(self, request: HttpRequest) -> HttpResponse:
         """Custom multi-model search view with exact username/email matching.

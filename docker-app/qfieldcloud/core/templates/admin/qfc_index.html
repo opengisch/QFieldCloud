@@ -1,0 +1,30 @@
+{% extends "admin/index.html" %}
+
+{% load i18n %}
+
+{% block content %}
+    <div class="qfc-dashboard-toolbar">
+        {% include "admin/dashboards/_period_picker.html" with periods=dashboard_periods selected=dashboard_period selected_title=dashboard_period_title %}
+
+        {% if request.user.is_superuser %}
+            <form method="post" action="{% url 'admin:refresh_dashboards' %}">
+                {% csrf_token %}
+                <input type="hidden" name="period" value="{{ dashboard_period }}">
+                <button type="submit" class="qfc-card-icon-button" title="{% trans 'Refresh' %}" aria-label="{% trans 'Refresh' %}">
+                    <span class="material-symbols-outlined" aria-hidden="true">refresh</span>
+                </button>
+            </form>
+        {% endif %}
+    </div>
+
+    {# each section has its `cards`, each card names its template, see `admin_dashboard_callback` #}
+    {% for section in dashboard_sections %}
+        <div class="qfc-dashboard">
+            {% for card in section.cards %}
+                {% include card.template with card=card %}
+            {% endfor %}
+        </div>
+    {% endfor %}
+
+    {{ block.super }}
+{% endblock %}

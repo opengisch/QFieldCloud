@@ -200,6 +200,36 @@ class PersonQueryset(models.QuerySet):
 
         raise RuntimeError(f"Unsupported entity : {entity}")
 
+    def active(self, period_since: datetime, period_until: datetime) -> PersonQueryset:
+        """Returns the active users in the given time interval.
+
+        Active users are users triggering a job or pushing a delta.
+
+        Args:
+            period_since: inclusive beginning of the interval
+            period_until: inclusive end of the interval
+        """
+        users_with_delta = (
+            Delta.objects.filter(
+                created_at__gte=period_since,
+                created_at__lte=period_until,
+            )
+            .values_list("created_by_id", flat=True)
+            .distinct()
+        )
+        users_with_jobs = (
+            Job.objects.filter(
+                created_at__gte=period_since,
+                created_at__lte=period_until,
+            )
+            .values_list("created_by_id", flat=True)
+            .distinct()
+        )
+
+        return self.filter(
+            Q(id__in=users_with_delta) | Q(id__in=users_with_jobs),
+        )
+
 
 class UserManager(InheritanceManagerMixin, DjangoUserManager):
     # NOTE you should never have `select_related("user")` if you want the polymorphism to work.
@@ -234,6 +264,9 @@ class PersonManager(UserManager):
 
     def for_entity(self, entity):
         return self.get_queryset().for_entity(entity)
+
+    def active(self, period_since: datetime, period_until: datetime):
+        return self.get_queryset().active(period_since, period_until)
 
 
 class User(AbstractUser):
