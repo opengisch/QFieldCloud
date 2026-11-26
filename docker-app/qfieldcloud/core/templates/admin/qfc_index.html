@@ -17,11 +17,14 @@
         {% endif %}
     </div>
 
-    {# each section has its `cards`, each card names its template, see `admin_dashboard_callback` #}
+    {# each section has an optional `title` and its `cards`, each card names its template, see `admin_dashboard_callback` #}
     {% for section in dashboard_sections %}
         <div class="qfc-dashboard">
             {% for card in section.cards %}
-                {% include card.template with card=card %}
+                {# the optional `columns` and `rows` of a card are how many grid cells it spans #}
+                <div class="qfc-dashboard-cell" style="--qfc-columns: {{ card.columns|default:1 }}; --qfc-rows: {{ card.rows|default:1 }}">
+                    {% include card.template with card=card %}
+                </div>
             {% endfor %}
         </div>
     {% endfor %}

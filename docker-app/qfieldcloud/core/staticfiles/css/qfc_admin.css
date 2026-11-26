@@ -258,10 +258,41 @@
     min-width: 0;
 }
 
+/* the grid cell of a card, spanning the `columns` and `rows` of the card, see `qfc_index.html` */
+.qfc-dashboard-cell {
+    grid-column: span var(--qfc-columns);
+    grid-row: span var(--qfc-rows);
+}
+
 @media (max-width: 1024px) {
     .qfc-dashboard {
         grid-template-columns: 1fr;
     }
+
+    .qfc-dashboard-cell {
+        grid-column: auto;
+        grid-row: auto;
+    }
+}
+
+/* a line with a label between rows of dashboard cards that behave differently based on a rule for example a time period */
+.qfc-dashboard-separator {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    font-size: 0.75rem;
+    color: var(--color-font-subtle-light);
+}
+
+.dark .qfc-dashboard-separator {
+    color: var(--color-font-subtle-dark);
+}
+
+.qfc-dashboard-separator::after {
+    content: "";
+    flex: 1;
+    border-top: 1px solid var(--qfc-card-border);
 }
 
 /* the cards use Unfold's `unfold/components/card.html`, these rules style what goes inside them */

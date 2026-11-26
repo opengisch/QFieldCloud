@@ -7,6 +7,7 @@ from qfieldcloud.core.admin_dashboards import (
     active_users,
     new_jobs,
     new_projects,
+    storage_sizes,
 )
 from qfieldcloud.core.admin_dashboards.utils import DASHBOARD_PERIODS, get_period
 
@@ -16,6 +17,7 @@ CARD_CACHE_KEYS = (
     active_users.ACTIVE_USERS_STATS_CACHE_KEY,
     new_projects.NEW_PROJECTS_CACHE_KEY,
     new_jobs.NEW_JOBS_CACHE_KEY,
+    storage_sizes.STORAGE_STATS_CACHE_KEY,
 )
 
 
@@ -24,7 +26,9 @@ def admin_dashboard_callback(
 ) -> dict[str, Any]:
     """Adds the dashboard sections to the admin index context. Unfold calls this callback through `UNFOLD["DASHBOARD_CALLBACK"]`.
 
-    A section lists its `cards` in display order. A card is a dict whose `template` key names the template that renders it.
+    A section lists its `cards` in display order, below its optional `title` on a separator line.
+    A card is a dict whose `template` key names the template that renders it.
+    Optional `columns` and `rows` are how many cells of the dashboard grid a chart card spans, 1 by default.
     To add a card, call its function in a section below. If the card is cached, also add its cache key to `CARD_CACHE_KEYS`.
     """
     period = get_period(request.GET)
@@ -37,10 +41,13 @@ def admin_dashboard_callback(
             "dashboard_periods": DASHBOARD_PERIODS,
             "dashboard_sections": [
                 {
+                    "title": None,
+                    # New projects and new jobs charts span two rows, so the storage card fills the cell below the active users
                     "cards": [
                         active_users.get_active_users_card(period),
-                        new_projects.get_new_projects_card(period),
-                        new_jobs.get_new_jobs_card(period),
+                        {**new_projects.get_new_projects_card(period), "rows": 2},
+                        {**new_jobs.get_new_jobs_card(period), "rows": 2},
+                        storage_sizes.get_storage_card(),
                     ],
                 },
             ],
