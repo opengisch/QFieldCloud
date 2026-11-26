@@ -1,0 +1,36 @@
+{% load humanize unfold %}
+
+{% comment %}
+Shows a bar chart of items counted over time, such as the new projects of each day of a given period.
+
+The card decides what one bar covers, e.g. an hour or a day. Above the chart, the total of all bars is shown.
+Reuse it for any card that counts items over time.
+
+Args:
+    card: the card to render, a dict with:
+        title: the title in the card header
+        hint: the text shown on hover of the info icon next to the title
+        value: the total, shown as the big number
+        chart_data: the `Chart.js` data as `JSON`, with the `labels` of the bars and their `datasets`
+        chart_options: the `Chart.js` options as `JSON`, see `get_bar_chart_options`
+        computed_at: when the stats were computed, shown as "Updated 5 minutes ago"
+        wide: whether the card spans two columns of the dashboard. Defaults to `False`.
+{% endcomment %}
+{% capture as hint silent %}
+    <span class="material-symbols-outlined qfc-card-hint" title="{{ card.hint }}" role="img" aria-label="{{ card.hint }}">info</span>
+{% endcapture %}
+{% capture as footer silent %}
+    {% include "admin/dashboards/_footer.html" with since=card.computed_at %}
+{% endcapture %}
+{% capture as card_class silent %}{% if card.wide %}qfc-card-wide{% endif %}{% endcapture %}
+
+{% component "unfold/components/card.html" with title=card.title size="md" action=hint footer=footer class=card_class %}
+    <div class="flex flex-col gap-2 text-xs">
+        <p class="qfc-card-value">{{ card.value|intcomma }}</p>
+
+        {# Unfold renders every `canvas.chart` with Chart.js, see `unfold/js/app.js` #}
+        <div class="qfc-card-chart">
+            <canvas class="chart" data-type="bar" data-value="{{ card.chart_data }}" data-options="{{ card.chart_options }}"></canvas>
+        </div>
+    </div>
+{% endcomponent %}

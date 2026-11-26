@@ -1,3 +1,26 @@
+// Chart.js draws dark tooltips on both themes, so use Unfold's theme colors, read on every draw.
+// Unfold loads Chart.js before `UNFOLD["SCRIPTS"]`, so these defaults apply to every chart.
+if (window.Chart) {
+    const themeColor = (lightVariable, darkVariable) => () => {
+        let variable = lightVariable;
+        if (document.documentElement.classList.contains('dark')) {
+            variable = darkVariable;
+        }
+
+        return getComputedStyle(document.documentElement).getPropertyValue(variable).trim();
+    };
+    // the color of the axis ticks and legend labels
+    Chart.defaults.color = themeColor('--color-base-400', '--color-base-400');
+
+    const tooltip = Chart.defaults.plugins.tooltip;
+
+    tooltip.backgroundColor = themeColor('--color-white', '--color-base-800');
+    tooltip.titleColor = themeColor('--color-font-important-light', '--color-font-important-dark');
+    tooltip.bodyColor = themeColor('--color-font-default-light', '--color-font-default-dark');
+    tooltip.borderColor = themeColor('--color-base-200', '--color-base-700');
+    tooltip.borderWidth = 1;
+}
+
 // Unfold loads `UNFOLD["SCRIPTS"]` in `<head>`, so wait for the page content
 document.addEventListener('DOMContentLoaded', () => {
     function jsonSyntaxHighlight(json) {

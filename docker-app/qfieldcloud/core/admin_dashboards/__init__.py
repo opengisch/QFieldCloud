@@ -3,12 +3,20 @@ from typing import Any
 from django.core.cache import cache
 from django.http import HttpRequest
 
-from qfieldcloud.core.admin_dashboards import active_users
+from qfieldcloud.core.admin_dashboards import (
+    active_users,
+    new_jobs,
+    new_projects,
+)
 from qfieldcloud.core.admin_dashboards.utils import DASHBOARD_PERIODS, get_period
 
 # The cache key of every cached card, cleared together by the dashboard refresh button.
 # A `{period}` in a key is filled in with every period label, a key without it is the same for all periods.
-CARD_CACHE_KEYS = (active_users.ACTIVE_USERS_STATS_CACHE_KEY,)
+CARD_CACHE_KEYS = (
+    active_users.ACTIVE_USERS_STATS_CACHE_KEY,
+    new_projects.NEW_PROJECTS_CACHE_KEY,
+    new_jobs.NEW_JOBS_CACHE_KEY,
+)
 
 
 def admin_dashboard_callback(
@@ -31,6 +39,8 @@ def admin_dashboard_callback(
                 {
                     "cards": [
                         active_users.get_active_users_card(period),
+                        new_projects.get_new_projects_card(period),
+                        new_jobs.get_new_jobs_card(period),
                     ],
                 },
             ],
