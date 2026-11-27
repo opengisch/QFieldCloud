@@ -111,7 +111,6 @@ class QfcAdminSite(UnfoldAdminSite):
     site_header = _("QFieldCloud Admin")
     site_title = _("QFieldCloud Admin")
     index_title = _("QFieldCloud Admin")
-    index_template = "admin/qfc_index.html"
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)

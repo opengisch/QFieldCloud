@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from operator import itemgetter
-from typing import TYPE_CHECKING, Any, TypedDict
+from typing import TYPE_CHECKING, TypedDict
 
 from django.db.models import Count, Q
 from django.utils import timezone
@@ -10,6 +10,8 @@ from django.utils.translation import gettext_lazy as _
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.admin_dashboards.utils import (
     DASHBOARD_PERIODS,
+    DashboardCard,
+    DashboardCardBreakdownRow,
     get_or_compute_cached,
 )
 from qfieldcloud.core.models import Person, User
@@ -34,20 +36,6 @@ class ActiveUsersStats(TypedDict):
     computed_at: datetime
 
 
-def get_counted_client_types() -> list[AuthToken.ClientType]:
-    """Returns the token client types that count as user activity."""
-    client_types = []
-
-    for client_type in AuthToken.ClientType:
-        # Worker tokens are excluded from the counted client types.
-        if client_type == AuthToken.ClientType.WORKER:
-            continue
-
-        client_types.append(client_type)
-
-    return client_types
-
-
 def compute_active_users_stats(period_duration: timedelta) -> ActiveUsersStats:
     """Computes the active users stats for a given time period."""
     now = timezone.now()
@@ -55,10 +43,9 @@ def compute_active_users_stats(period_duration: timedelta) -> ActiveUsersStats:
 
     active_tokens_qs = AuthToken.objects.filter(
         last_used_at__gte=period_start,
+        client_type__in=AuthToken.INTERACTIVE_CLIENT_TYPES,
         user__type=User.Type.PERSON,
         user__is_active=True,
-    ).exclude(
-        client_type=AuthToken.ClientType.WORKER,
     )
 
     persons_qs = Person.objects.filter(
@@ -76,7 +63,7 @@ def compute_active_users_stats(period_duration: timedelta) -> ActiveUsersStats:
     web_login_count = persons_qs.filter(last_login__gte=period_start).count()
 
     client_type_counts: dict[str, int] = {}
-    for client_type in get_counted_client_types():
+    for client_type in AuthToken.INTERACTIVE_CLIENT_TYPES:
         client_type_counts[client_type.value] = 0
 
     client_type_rows = (
@@ -105,8 +92,8 @@ def get_active_users_stats(period: str) -> ActiveUsersStats:
     )
 
 
-def get_active_users_card(period: str) -> dict[str, Any]:
-    """Returns the dashboard card with the number of active users in the `period`, e.g. `30d`."""
+def get_active_users_card(period: str) -> DashboardCard:
+    """Returns the dashboard card data with the number of active users in the `period`, e.g. `30d`."""
     stats = get_active_users_stats(period)
 
     return {
@@ -118,19 +105,26 @@ def get_active_users_card(period: str) -> dict[str, Any]:
     }
 
 
-def get_active_users_by_client_card(period: str) -> dict[str, Any]:
-    """Returns the card with the active users in the `period`, split by web login and client type, shown above the auth tokens list."""
+def get_active_users_by_client_type_card(period: str) -> DashboardCard:
+    """Returns the card data with the active users in the `period`, split by web login and client type, shown above the auth tokens list."""
     stats = get_active_users_stats(period)
+    # Calculate the percentages, at least 1 to avoid dividing by zero
     percent_base = max(stats["total_active_users"], 1)
 
+    # Collect the label and the number of users of every row of the card.
+    # The web logins come first, as they are counted separately.
     counts_by_label: list[tuple[StrOrPromise, int]] = [
         (_("Web login"), stats["web_login_count"]),
     ]
-    for client_type in get_counted_client_types():
+    # Then add the counts for each interactive client type.
+    for client_type in AuthToken.INTERACTIVE_CLIENT_TYPES:
         count = stats["client_type_counts"].get(client_type.value, 0)
         counts_by_label.append((client_type.label, count))
 
-    breakdown: list[dict[str, Any]] = []
+    # Turn the counts into the breakdown rows for the card.
+    # Each row gets a share of the total in percent.
+    # Rows without any users are skipped.
+    breakdown: list[DashboardCardBreakdownRow] = []
     for label, count in counts_by_label:
         if count == 0:
             continue
@@ -143,8 +137,10 @@ def get_active_users_by_client_card(period: str) -> dict[str, Any]:
             }
         )
 
+    # Most used is first
     breakdown.sort(key=itemgetter("count"), reverse=True)
 
+    # Calculate the percentage of active users who also worked on projects, shown in the subline of the card.
     project_active_percent = round(stats["project_active_count"] * 100 / percent_base)
 
     return {

@@ -2,7 +2,7 @@
 Shows the active users card above the auth tokens list, see `AuthTokenAdmin.list_before_template`.
 
 Args:
-    active_users_card: the card, see `get_active_users_by_client_card`
+    dashboard_card: the card, see `get_dashboard_card_context`
     dashboard_period: the key of the selected period, e.g. "30d"
     dashboard_period_title: the title of the selected period, e.g. "Last 30 days"
     dashboard_periods: the periods to pick from, `DASHBOARD_PERIODS`
@@ -12,5 +12,5 @@ Args:
 </div>
 
 <div class="qfc-dashboard">
-    {% include active_users_card.template with card=active_users_card %}
+    {% include dashboard_card.template with card=dashboard_card %}
 </div>

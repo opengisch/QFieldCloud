@@ -4,7 +4,11 @@ from django.core.cache import cache
 from django.http import HttpRequest
 
 from qfieldcloud.core.admin_dashboards import active_users
-from qfieldcloud.core.admin_dashboards.utils import DASHBOARD_PERIODS, get_period
+from qfieldcloud.core.admin_dashboards.utils import (
+    DASHBOARD_PERIODS,
+    get_period,
+    get_period_context,
+)
 
 # The cache key of every cached card, cleared together by the dashboard refresh button.
 # A `{period}` in a key is filled in with every period label, a key without it is the same for all periods.
@@ -21,12 +25,9 @@ def admin_dashboard_callback(
     """
     period = get_period(request.GET)
 
+    context.update(get_period_context(period))
     context.update(
         {
-            "dashboard_period": period,
-            # shown on the period picker button, e.g. "Last 30 days"
-            "dashboard_period_title": DASHBOARD_PERIODS[period]["title"],
-            "dashboard_periods": DASHBOARD_PERIODS,
             "dashboard_sections": [
                 {
                     "cards": [
