@@ -27,6 +27,16 @@ class AuthToken(models.Model):
         WORKER = "worker", _("Worker")
         UNKNOWN = "unknown", _("Unknown")
 
+    # The client types used by a person, every type except the worker's, e.g. for counting the active users.
+    INTERACTIVE_CLIENT_TYPES = (
+        ClientType.BROWSER,
+        ClientType.CLI,
+        ClientType.SDK,
+        ClientType.QFIELD,
+        ClientType.QFIELDSYNC,
+        ClientType.UNKNOWN,
+    )
+
     @staticmethod
     def guess_client_type(user_agent: str) -> ClientType:
         if not user_agent:

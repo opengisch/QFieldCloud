@@ -1,0 +1,6 @@
+{% load i18n %}
+
+{# the "Updated 5 minutes ago" a cached card ends with #}
+<footer class="qfc-card-meta" title="{{ since|date:'DATETIME_FORMAT' }}">
+    {% blocktrans with since=since|timesince %}Updated {{ since }} ago{% endblocktrans %}
+</footer>

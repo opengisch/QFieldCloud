@@ -694,6 +694,7 @@ QFIELDCLOUD_TEST_SKIP_VIEW_ADMIN_URLS = (
     "/admin/password_change/",
     "/admin/password_change/done/",
     "/admin/autocomplete/",
+    "/admin/dashboards/refresh/",
     "/admin/core/delta/add/",
     "/admin/core/job/add/",
     "/admin/axes/accessattempt/add/",
@@ -815,6 +816,11 @@ CONSTANCE_CONFIG = {
         "User inactivity threshold in days. Set to 0 to disable the inactivity threshold.",
         int,
     ),
+    "ADMIN_DASHBOARDS_CACHE_TTL_MINUTES": (
+        60,
+        "How long, in minutes, the admin dashboard stats are cached before being recomputed. Set to 0 to disable the cache.",
+        int,
+    ),
 }
 CONSTANCE_ADDITIONAL_FIELDS = {
     # Unfold widgets for the builtin types (`str`, `int`, `bool`, `datetime` etc.)
@@ -856,6 +862,7 @@ CONSTANCE_CONFIG_FIELDSETS = {
         "STATUS_PAGE_URL",
         "WEB_USER_INACTIVITY_THRESHOLD_DAYS",
     ),
+    "Admin dashboards": ("ADMIN_DASHBOARDS_CACHE_TTL_MINUTES",),
 }
 
 # Minimum number of bytes to ask a range when requesting a file part, otherwise a HTTP 416 is returned. Set to 0 to allow any number of bytes in the range.
@@ -1056,6 +1063,7 @@ UNFOLD = {
         },
     },
     "COMMAND": {"show_history": True},
+    "DASHBOARD_CALLBACK": "qfieldcloud.core.admin_dashboards.admin_dashboard_callback",
 }
 
 # Whitelabel configuration
